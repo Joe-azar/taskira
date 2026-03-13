@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskira-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskira
+      POSTGRES_USER: taskira
+      POSTGRES_PASSWORD: taskira
+    ports:
+      - "5432:5432"
+    volumes:
+      - taskira_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  taskira_postgres_data:
