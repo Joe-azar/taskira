@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 
 import { DashboardSummary } from '../../../../core/models/dashboard.models';
 import { DashboardService } from '../../../../core/services/dashboard.service';
@@ -13,6 +13,7 @@ import { DashboardService } from '../../../../core/services/dashboard.service';
 })
 export class DashboardPage implements OnInit {
   private readonly dashboardService = inject(DashboardService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   loading = true;
   errorMessage = '';
@@ -23,6 +24,7 @@ export class DashboardPage implements OnInit {
       next: (summary) => {
         this.summary = summary;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         this.errorMessage =
@@ -30,6 +32,7 @@ export class DashboardPage implements OnInit {
           error?.message ||
           'Impossible de charger le dashboard.';
         this.loading = false;
+        this.cdr.detectChanges();
       },
     });
   }

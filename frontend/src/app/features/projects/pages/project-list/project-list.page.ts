@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 
@@ -16,6 +16,7 @@ import { ProjectService } from '../../services/project.service';
 export class ProjectListPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly projectService = inject(ProjectService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   loading = true;
   saving = false;
@@ -41,6 +42,7 @@ export class ProjectListPage implements OnInit {
       next: (projects) => {
         this.projects = projects;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         this.errorMessage =
@@ -48,6 +50,7 @@ export class ProjectListPage implements OnInit {
           error?.message ||
           'Impossible de charger les projets.';
         this.loading = false;
+        this.cdr.detectChanges();
       },
     });
   }
@@ -55,12 +58,14 @@ export class ProjectListPage implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.cdr.detectChanges();
       return;
     }
 
     this.saving = true;
     this.errorMessage = '';
     this.successMessage = '';
+    this.cdr.detectChanges();
 
     const raw = this.form.getRawValue();
 
@@ -72,7 +77,10 @@ export class ProjectListPage implements OnInit {
 
     this.projectService
       .createProject(payload)
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(finalize(() => {
+        this.saving = false;
+        this.cdr.detectChanges();
+      }))
       .subscribe({
         next: (project) => {
           this.projects = [project, ...this.projects];
@@ -82,12 +90,14 @@ export class ProjectListPage implements OnInit {
             code: '',
             description: '',
           });
+          this.cdr.detectChanges();
         },
         error: (error) => {
           this.errorMessage =
             error?.error?.message ||
             error?.message ||
             'Impossible de créer le projet.';
+          this.cdr.detectChanges();
         },
       });
   }
