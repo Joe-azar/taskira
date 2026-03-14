@@ -53,3 +53,7 @@ export interface CreateTicketRequest {
 export interface UpdateTicketStatusRequest {
   status: string;
 }
+
+export interface UpdateTicketAssigneeRequest {
+  assigneeId: number | null;
+}

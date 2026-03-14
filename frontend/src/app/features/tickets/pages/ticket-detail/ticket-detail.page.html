@@ -126,6 +126,153 @@
 
     <section class="panel">
       <div class="panel__header">
+        <h3>Assigner le ticket</h3>
+      </div>
+
+      <form class="status-form" [formGroup]="assigneeForm" (ngSubmit)="submitAssignee()">
+        <div class="form-row">
+          <div class="form-field">
+            <label for="assigneeId">Membre du projet</label>
+            <select id="assigneeId" formControlName="assigneeId">
+              <option [ngValue]="0">Non assigné</option>
+              <option *ngFor="let member of vm.projectMembers" [ngValue]="member.userId">
+                {{ member.displayName }} — {{ member.email }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="messages">
+          <div class="alert alert--error" *ngIf="assigneeErrorMessage">
+            {{ assigneeErrorMessage }}
+          </div>
+          <div class="alert alert--success" *ngIf="assigneeSuccessMessage">
+            {{ assigneeSuccessMessage }}
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" [disabled]="savingAssignee">
+            {{ savingAssignee ? 'Mise à jour...' : 'Mettre à jour l’assignation' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Ajouter un commentaire</h3>
+      </div>
+
+      <form class="comment-form" [formGroup]="commentForm" (ngSubmit)="submitComment()">
+        <div class="form-field">
+          <label for="commentContent">Commentaire</label>
+          <textarea
+            id="commentContent"
+            rows="4"
+            formControlName="content"
+            placeholder="Écrire un commentaire"
+          ></textarea>
+          <small class="error" *ngIf="commentContent.touched && commentContent.invalid">
+            Le commentaire est obligatoire.
+          </small>
+        </div>
+
+        <div class="messages">
+          <div class="alert alert--error" *ngIf="commentErrorMessage">
+            {{ commentErrorMessage }}
+          </div>
+          <div class="alert alert--success" *ngIf="commentSuccessMessage">
+            {{ commentSuccessMessage }}
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" [disabled]="savingComment || commentForm.invalid">
+            {{ savingComment ? 'Ajout...' : 'Ajouter le commentaire' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Commentaires</h3>
+      </div>
+
+      <div *ngIf="vm.comments.length === 0" class="state-card">
+        Aucun commentaire.
+      </div>
+
+      <div *ngIf="vm.comments.length > 0" class="comment-list">
+        <article class="comment-item" *ngFor="let comment of vm.comments">
+          <div class="comment-top">
+            <div>
+              <h4>{{ comment.authorName }}</h4>
+              <p>{{ comment.authorEmail }}</p>
+            </div>
+
+            <div class="comment-meta">
+              <small *ngIf="comment.createdAt">
+                {{ comment.createdAt | date:'dd/MM/yyyy HH:mm' }}
+              </small>
+            </div>
+          </div>
+
+          <div *ngIf="editingCommentId !== comment.id" class="comment-content">
+            {{ comment.content }}
+          </div>
+
+          <form
+            *ngIf="editingCommentId === comment.id"
+            class="comment-edit-form"
+            [formGroup]="editCommentForm"
+            (ngSubmit)="submitEditComment(comment.id)"
+          >
+            <div class="form-field">
+              <textarea rows="4" formControlName="content"></textarea>
+              <small class="error" *ngIf="editCommentContent.touched && editCommentContent.invalid">
+                Le commentaire est obligatoire.
+              </small>
+            </div>
+
+            <div class="messages">
+              <div class="alert alert--error" *ngIf="editCommentErrorMessage">
+                {{ editCommentErrorMessage }}
+              </div>
+              <div class="alert alert--success" *ngIf="editCommentSuccessMessage">
+                {{ editCommentSuccessMessage }}
+              </div>
+            </div>
+
+            <div class="comment-actions">
+              <button
+                type="submit"
+                class="btn-secondary"
+                [disabled]="savingEditedComment || editCommentForm.invalid"
+              >
+                {{ savingEditedComment ? 'Enregistrement...' : 'Enregistrer' }}
+              </button>
+              <button type="button" class="btn-light" (click)="cancelEditComment()">
+                Annuler
+              </button>
+            </div>
+          </form>
+
+          <div class="comment-actions" *ngIf="editingCommentId !== comment.id && canManageComment(comment)">
+            <button type="button" class="btn-light" (click)="startEditComment(comment)">
+              Modifier
+            </button>
+            <button type="button" class="btn-danger-light" (click)="deleteComment(comment.id)">
+              Supprimer
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
         <h3>Historique</h3>
       </div>
 
