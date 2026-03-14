@@ -28,6 +28,13 @@ export const appRoutes: Routes = [
             (m) => m.DashboardPage
           ),
       },
+      {
+        path: 'projects',
+        loadComponent: () =>
+          import('./features/projects/pages/project-list/project-list.page').then(
+            (m) => m.ProjectListPage
+          ),
+      },
     ],
   },
   {

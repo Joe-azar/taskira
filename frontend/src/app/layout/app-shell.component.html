@@ -16,6 +16,14 @@
       >
         Dashboard
       </a>
+
+      <a
+        routerLink="/projects"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Projects
+      </a>
     </nav>
 
     <div class="sidebar__footer" *ngIf="authService.currentUser$ | async as user">

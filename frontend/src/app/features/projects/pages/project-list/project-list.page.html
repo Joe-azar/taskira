@@ -1,0 +1,84 @@
+<div class="projects-page">
+  <div class="page-header">
+    <div>
+      <h2>Projects</h2>
+      <p>Liste et création des projets Taskira</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel__header">
+      <h3>Nouveau projet</h3>
+    </div>
+
+    <form class="project-form" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="name">Nom</label>
+          <input id="name" type="text" formControlName="name" placeholder="Application mobile" />
+          <small class="error" *ngIf="name.touched && name.invalid">
+            Le nom est obligatoire.
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label for="key">Clé projet</label>
+          <input id="key" type="text" formControlName="key" placeholder="APP" />
+          <small class="hint">Exemple : APP, CRM, API</small>
+          <small class="error" *ngIf="key.touched && key.invalid">
+            La clé est obligatoire (2 à 10 caractères).
+          </small>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label for="description">Description</label>
+        <textarea
+          id="description"
+          rows="4"
+          formControlName="description"
+          placeholder="Description courte du projet"
+        ></textarea>
+      </div>
+
+      <div class="messages">
+        <div class="alert alert--error" *ngIf="errorMessage">{{ errorMessage }}</div>
+        <div class="alert alert--success" *ngIf="successMessage">{{ successMessage }}</div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" [disabled]="saving">
+          {{ saving ? 'Création...' : 'Créer le projet' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="panel__header">
+      <h3>Liste des projets</h3>
+    </div>
+
+    <div *ngIf="loading" class="state-card">
+      Chargement des projets...
+    </div>
+
+    <div *ngIf="!loading && projects.length === 0" class="state-card">
+      Aucun projet pour le moment.
+    </div>
+
+    <div *ngIf="!loading && projects.length > 0" class="project-list">
+      <article class="project-item" *ngFor="let project of projects">
+        <div class="project-main">
+          <div class="project-title-row">
+            <h4>{{ project.name }}</h4>
+            <span class="badge">{{ project.key }}</span>
+          </div>
+
+          <p *ngIf="project.description">{{ project.description }}</p>
+          <p *ngIf="!project.description" class="muted">Aucune description.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>
