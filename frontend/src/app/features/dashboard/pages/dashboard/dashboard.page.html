@@ -1,0 +1,81 @@
+<div class="dashboard-page">
+  <div class="page-header">
+    <div>
+      <h2>Dashboard</h2>
+      <p>Vue synthétique de votre activité Taskira</p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="state-card">
+    Chargement du dashboard...
+  </div>
+
+  <div *ngIf="!loading && errorMessage" class="state-card state-card--error">
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!loading && summary as data">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span>Total projets</span>
+        <strong>{{ data.totalProjects }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span>Total tickets</span>
+        <strong>{{ data.totalTickets }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span>Ouverts</span>
+        <strong>{{ data.openTickets }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span>En cours</span>
+        <strong>{{ data.inProgressTickets }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span>Terminés</span>
+        <strong>{{ data.doneTickets }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span>Mes tickets</span>
+        <strong>{{ data.myTickets }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span>Critiques</span>
+        <strong>{{ data.criticalTickets }}</strong>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__header">
+        <h3>Tickets récents</h3>
+      </div>
+
+      <div *ngIf="data.recentTickets.length === 0" class="empty-state">
+        Aucun ticket récent.
+      </div>
+
+      <div *ngIf="data.recentTickets.length > 0" class="ticket-list">
+        <article class="ticket-item" *ngFor="let ticket of data.recentTickets">
+          <div class="ticket-main">
+            <div class="ticket-ref">
+              {{ ticket.reference || ('#' + ticket.id) }}
+            </div>
+            <div class="ticket-title">{{ ticket.title }}</div>
+          </div>
+
+          <div class="ticket-meta">
+            <span class="badge">{{ ticket.status }}</span>
+            <span class="priority" *ngIf="ticket.priority">{{ ticket.priority }}</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </ng-container>
+</div>

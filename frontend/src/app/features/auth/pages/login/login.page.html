@@ -1,0 +1,34 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-card__header">
+      <h1>Connexion</h1>
+      <p>Connectez-vous à votre espace Taskira</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+      <div class="form-field">
+        <label for="email">Email</label>
+        <input id="email" type="email" formControlName="email" placeholder="joe@taskira.com" />
+        <small class="error" *ngIf="email.touched && email.invalid">
+          Veuillez saisir un email valide.
+        </small>
+      </div>
+
+      <div class="form-field">
+        <label for="password">Mot de passe</label>
+        <input id="password" type="password" formControlName="password" placeholder="••••••••" />
+        <small class="error" *ngIf="password.touched && password.invalid">
+          Veuillez saisir votre mot de passe.
+        </small>
+      </div>
+
+      <div class="alert" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <button type="submit" [disabled]="loading">
+        {{ loading ? 'Connexion...' : 'Se connecter' }}
+      </button>
+    </form>
+  </div>
+</div>

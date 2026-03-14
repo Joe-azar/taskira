@@ -1,0 +1,40 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand__logo">T</div>
+      <div>
+        <div class="brand__title">Taskira</div>
+        <div class="brand__subtitle">Ticket platform</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Dashboard
+      </a>
+    </nav>
+
+    <div class="sidebar__footer" *ngIf="authService.currentUser$ | async as user">
+      <div class="user-name">{{ user.displayName }}</div>
+      <div class="user-email">{{ user.email }}</div>
+      <button type="button" class="logout-btn" (click)="logout()">Se déconnecter</button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <h1>Taskira</h1>
+        <p>Plateforme de gestion de tickets</p>
+      </div>
+    </header>
+
+    <section class="page-content">
+      <router-outlet></router-outlet>
+    </section>
+  </main>
+</div>
