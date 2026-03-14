@@ -33,6 +33,7 @@ public class TicketService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
+    private final TicketHistoryService ticketHistoryService;
 
     public TicketResponse createTicket(CreateTicketRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -77,6 +78,14 @@ public class TicketService {
 
         ticket = ticketRepository.save(ticket);
 
+        ticketHistoryService.logChange(
+                ticket,
+                currentUser,
+                "CREATED",
+                null,
+                ticket.getReference()
+        );
+
         return TicketResponse.from(ticketRepository.findByIdWithRelations(ticket.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found after creation")));
     }
@@ -105,7 +114,22 @@ public class TicketService {
         Ticket ticket = findTicketOrThrow(ticketId);
         assertCanAccessProject(ticket.getProject());
 
+        User currentUser = userRepository.findById(SecurityUtils.getCurrentUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
+
+        String oldStatus = ticket.getStatus().name();
+        String newStatus = request.status().name();
+
         ticket.setStatus(request.status());
+
+        ticketHistoryService.logChange(
+                ticket,
+                currentUser,
+                "STATUS",
+                oldStatus,
+                newStatus
+        );
+
         return TicketResponse.from(ticket);
     }
 
@@ -115,8 +139,22 @@ public class TicketService {
 
         assertCanManageAssignments(project);
 
+        User currentUser = userRepository.findById(SecurityUtils.getCurrentUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
+
+        String oldAssignee = ticket.getAssignee() != null ? ticket.getAssignee().getEmail() : null;
+
         if (request.assigneeId() == null) {
             ticket.setAssignee(null);
+
+            ticketHistoryService.logChange(
+                    ticket,
+                    currentUser,
+                    "ASSIGNEE",
+                    oldAssignee,
+                    null
+            );
+
             return TicketResponse.from(ticket);
         }
 
@@ -132,6 +170,15 @@ public class TicketService {
         }
 
         ticket.setAssignee(assignee);
+
+        ticketHistoryService.logChange(
+                ticket,
+                currentUser,
+                "ASSIGNEE",
+                oldAssignee,
+                assignee.getEmail()
+        );
+
         return TicketResponse.from(ticket);
     }
 

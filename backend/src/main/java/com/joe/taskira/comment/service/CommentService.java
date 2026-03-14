@@ -15,6 +15,7 @@ import com.joe.taskira.project.repository.ProjectMemberRepository;
 import com.joe.taskira.security.model.AuthenticatedUser;
 import com.joe.taskira.ticket.entity.Ticket;
 import com.joe.taskira.ticket.repository.TicketRepository;
+import com.joe.taskira.ticket.service.TicketHistoryService;
 import com.joe.taskira.user.entity.User;
 import com.joe.taskira.user.enums.GlobalRole;
 import com.joe.taskira.user.repository.UserRepository;
@@ -33,6 +34,7 @@ public class CommentService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final TicketHistoryService ticketHistoryService;
 
     public CommentResponse createComment(Long ticketId, CreateCommentRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -52,6 +54,14 @@ public class CommentService {
                 .build();
 
         comment = commentRepository.save(comment);
+
+        ticketHistoryService.logChange(
+                ticket,
+                currentUser,
+                "COMMENT_CREATED",
+                null,
+                comment.getContent()
+        );
 
         return CommentResponse.from(commentRepository.findByIdWithRelations(comment.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found after creation")));
@@ -78,7 +88,19 @@ public class CommentService {
             throw new ForbiddenException("You can only edit your own comments");
         }
 
-        comment.setContent(request.content().trim());
+        String oldContent = comment.getContent();
+        String newContent = request.content().trim();
+
+        comment.setContent(newContent);
+
+        ticketHistoryService.logChange(
+                comment.getTicket(),
+                comment.getUser(),
+                "COMMENT_UPDATED",
+                oldContent,
+                newContent
+        );
+
         return CommentResponse.from(comment);
     }
 
@@ -103,6 +125,14 @@ public class CommentService {
                 throw new ForbiddenException("You are not allowed to delete this comment");
             }
         }
+
+        ticketHistoryService.logChange(
+                comment.getTicket(),
+                comment.getUser(),
+                "COMMENT_DELETED",
+                comment.getContent(),
+                null
+        );
 
         commentRepository.delete(comment);
     }

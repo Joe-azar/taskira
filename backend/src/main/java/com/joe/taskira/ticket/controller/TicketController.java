@@ -1,6 +1,8 @@
 package com.joe.taskira.ticket.controller;
 
 import com.joe.taskira.ticket.dto.*;
+import com.joe.taskira.ticket.dto.TicketHistoryResponse;
+import com.joe.taskira.ticket.service.TicketHistoryService;
 import com.joe.taskira.ticket.service.TicketService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import java.util.List;
 public class TicketController {
 
     private final TicketService ticketService;
+    private final TicketHistoryService ticketHistoryService;
 
     @PostMapping("/api/tickets")
     @ResponseStatus(HttpStatus.CREATED)
@@ -29,6 +32,11 @@ public class TicketController {
     @GetMapping("/api/tickets/{ticketId}")
     public TicketResponse getTicketById(@PathVariable Long ticketId) {
         return ticketService.getTicketById(ticketId);
+    }
+
+    @GetMapping("/api/tickets/{ticketId}/history")
+    public List<TicketHistoryResponse> listTicketHistory(@PathVariable Long ticketId) {
+        return ticketHistoryService.listTicketHistory(ticketId);
     }
 
     @PatchMapping("/api/tickets/{ticketId}/status")
