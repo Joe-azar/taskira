@@ -25,7 +25,7 @@ export class ProjectListPage implements OnInit {
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
-    key: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(10)]],
+    code: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(10)]],
     description: [''],
   });
 
@@ -66,7 +66,7 @@ export class ProjectListPage implements OnInit {
 
     const payload: CreateProjectRequest = {
       name: raw.name.trim(),
-      key: raw.key.trim().toUpperCase(),
+      code: raw.code.trim().toUpperCase(),
       description: raw.description.trim(),
     };
 
@@ -79,7 +79,7 @@ export class ProjectListPage implements OnInit {
           this.successMessage = 'Projet créé avec succès.';
           this.form.reset({
             name: '',
-            key: '',
+            code: '',
             description: '',
           });
         },
@@ -96,7 +96,7 @@ export class ProjectListPage implements OnInit {
     return this.form.controls.name;
   }
 
-  get key() {
-    return this.form.controls.key;
+  get code() {
+    return this.form.controls.code;
   }
 }

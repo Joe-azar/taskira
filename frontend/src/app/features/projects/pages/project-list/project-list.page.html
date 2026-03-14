@@ -22,10 +22,10 @@
         </div>
 
         <div class="form-field">
-          <label for="key">Clé projet</label>
-          <input id="key" type="text" formControlName="key" placeholder="APP" />
+          <label for="code">Clé projet</label>
+          <input id="code" type="text" formControlName="code" placeholder="APP" />
           <small class="hint">Exemple : APP, CRM, API</small>
-          <small class="error" *ngIf="key.touched && key.invalid">
+          <small class="error" *ngIf="code.touched && code.invalid">
             La clé est obligatoire (2 à 10 caractères).
           </small>
         </div>
@@ -72,7 +72,7 @@
         <div class="project-main">
           <div class="project-title-row">
             <h4>{{ project.name }}</h4>
-            <span class="badge">{{ project.key }}</span>
+            <span class="badge">{{ project.code }}</span>
           </div>
 
           <p *ngIf="project.description">{{ project.description }}</p>

@@ -27,7 +27,7 @@ export class ProjectService {
     return {
       id: Number(raw?.id ?? 0),
       name: raw?.name ?? raw?.title ?? '',
-      key: raw?.key ?? raw?.projectKey ?? raw?.code ?? '',
+      code: raw?.code ?? raw?.key ?? raw?.projectKey ?? '',
       description: raw?.description ?? '',
       createdAt: raw?.createdAt ?? null,
     };
