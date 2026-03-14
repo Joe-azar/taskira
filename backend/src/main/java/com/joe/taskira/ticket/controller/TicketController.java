@@ -1,0 +1,49 @@
+package com.joe.taskira.ticket.controller;
+
+import com.joe.taskira.ticket.dto.*;
+import com.joe.taskira.ticket.service.TicketService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequiredArgsConstructor
+public class TicketController {
+
+    private final TicketService ticketService;
+
+    @PostMapping("/api/tickets")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TicketResponse createTicket(@Valid @RequestBody CreateTicketRequest request) {
+        return ticketService.createTicket(request);
+    }
+
+    @GetMapping("/api/projects/{projectId}/tickets")
+    public List<TicketSummaryResponse> listProjectTickets(@PathVariable Long projectId) {
+        return ticketService.listProjectTickets(projectId);
+    }
+
+    @GetMapping("/api/tickets/{ticketId}")
+    public TicketResponse getTicketById(@PathVariable Long ticketId) {
+        return ticketService.getTicketById(ticketId);
+    }
+
+    @PatchMapping("/api/tickets/{ticketId}/status")
+    public TicketResponse updateStatus(
+            @PathVariable Long ticketId,
+            @Valid @RequestBody UpdateTicketStatusRequest request
+    ) {
+        return ticketService.updateStatus(ticketId, request);
+    }
+
+    @PatchMapping("/api/tickets/{ticketId}/assignee")
+    public TicketResponse updateAssignee(
+            @PathVariable Long ticketId,
+            @RequestBody UpdateTicketAssigneeRequest request
+    ) {
+        return ticketService.updateAssignee(ticketId, request);
+    }
+}
