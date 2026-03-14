@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { BehaviorSubject, catchError, finalize, map, of, startWith, switchMap } from 'rxjs';
 
 import { CreateProjectRequest, ProjectSummary } from '../../models/project.models';
@@ -15,7 +16,7 @@ type ProjectsVm = {
 @Component({
   selector: 'app-project-list-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './project-list.page.html',
   styleUrl: './project-list.page.scss',
 })

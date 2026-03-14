@@ -72,7 +72,11 @@
     </div>
 
     <div *ngIf="!vm.loading && vm.projects.length > 0" class="project-list">
-      <article class="project-item" *ngFor="let project of vm.projects">
+      <a
+        class="project-item project-item--link"
+        *ngFor="let project of vm.projects"
+        [routerLink]="['/projects', project.id]"
+      >
         <div class="project-main">
           <div class="project-title-row">
             <h4>{{ project.name }}</h4>
@@ -82,7 +86,7 @@
           <p *ngIf="project.description">{{ project.description }}</p>
           <p *ngIf="!project.description" class="muted">Aucune description.</p>
         </div>
-      </article>
+      </a>
     </div>
   </section>
 </div>

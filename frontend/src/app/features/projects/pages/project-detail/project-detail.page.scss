@@ -1,16 +1,67 @@
-.projects-page {
+.project-detail-page {
   display: grid;
   gap: 1.5rem;
 }
 
 .page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
   h2 {
-    margin: 0;
-    font-size: 1.6rem;
+    margin: 0.35rem 0 0;
+    font-size: 1.8rem;
   }
 
   p {
-    margin: 0.4rem 0 0;
+    margin: 0.35rem 0 0;
+    color: #6b7280;
+  }
+}
+
+.back-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.info-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.45rem;
+
+  span {
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+
+  strong {
+    color: #111827;
+    font-size: 1.2rem;
+  }
+
+  small {
     color: #6b7280;
   }
 }
@@ -29,9 +80,13 @@
       margin: 0;
     }
   }
+
+  &__body {
+    padding: 1.25rem;
+  }
 }
 
-.project-form {
+.member-form {
   padding: 1.25rem;
   display: grid;
   gap: 1rem;
@@ -52,25 +107,19 @@
     color: #111827;
   }
 
-  input,
-  textarea {
+  select {
     border: 1px solid #d1d5db;
     border-radius: 12px;
     padding: 0.9rem 1rem;
     font-size: 1rem;
     outline: none;
+    background: #ffffff;
   }
 
-  input:focus,
-  textarea:focus {
+  select:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   }
-}
-
-.hint {
-  color: #6b7280;
-  font-size: 0.85rem;
 }
 
 .error {
@@ -123,38 +172,44 @@
 .state-card {
   padding: 1rem 1.2rem;
   color: #6b7280;
+
+  &--error {
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 16px;
+  }
 }
 
-.project-list {
+.member-list {
   display: grid;
 }
 
-.project-item {
+.member-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 1rem 1.25rem;
   border-top: 1px solid #f3f4f6;
 }
 
-.project-item--link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  transition: background 0.2s ease;
+.member-main {
+  h4 {
+    margin: 0 0 0.35rem;
+    color: #111827;
+  }
+
+  p {
+    margin: 0;
+    color: #6b7280;
+  }
 }
 
-.project-item--link:hover {
-  background: #f9fafb;
-}
-
-.project-title-row {
+.member-meta {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.45rem;
-
-  h4 {
-    margin: 0;
-    color: #111827;
-  }
+  white-space: nowrap;
 }
 
 .badge {
@@ -172,8 +227,29 @@
   color: #6b7280;
 }
 
+@media (max-width: 1100px) {
+  .info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .member-item {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

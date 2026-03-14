@@ -1,0 +1,138 @@
+<div class="project-detail-page" *ngIf="vm$ | async as vm">
+  <div class="page-header">
+    <div>
+      <a routerLink="/projects" class="back-link">← Retour aux projets</a>
+      <h2>{{ vm.project?.name || 'Projet' }}</h2>
+      <p *ngIf="vm.project">
+        Détail du projet et gestion des membres
+      </p>
+    </div>
+
+    <span class="header-badge" *ngIf="vm.project">
+      {{ vm.project.code }}
+    </span>
+  </div>
+
+  <div *ngIf="vm.loading" class="state-card">
+    Chargement du projet...
+  </div>
+
+  <div *ngIf="!vm.loading && vm.errorMessage" class="state-card state-card--error">
+    {{ vm.errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!vm.loading && vm.project as project">
+    <div class="info-grid">
+      <div class="info-card">
+        <span>Code</span>
+        <strong>{{ project.code }}</strong>
+      </div>
+
+      <div class="info-card">
+        <span>Statut</span>
+        <strong>{{ project.status }}</strong>
+      </div>
+
+      <div class="info-card">
+        <span>Owner</span>
+        <strong>{{ project.ownerName }}</strong>
+        <small *ngIf="project.ownerEmail">{{ project.ownerEmail }}</small>
+      </div>
+
+      <div class="info-card">
+        <span>Membres</span>
+        <strong>{{ project.memberCount }}</strong>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Description</h3>
+      </div>
+
+      <div class="panel__body">
+        <p *ngIf="project.description">{{ project.description }}</p>
+        <p *ngIf="!project.description" class="muted">Aucune description.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Ajouter un membre</h3>
+      </div>
+
+      <form class="member-form" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="userId">Utilisateur</label>
+            <select id="userId" formControlName="userId">
+              <option [ngValue]="0">Sélectionner un utilisateur</option>
+              <option *ngFor="let user of vm.availableUsers" [ngValue]="user.id">
+                {{ user.displayName }} — {{ user.email }}
+              </option>
+            </select>
+            <small class="error" *ngIf="userId.touched && userId.invalid">
+              Veuillez sélectionner un utilisateur.
+            </small>
+          </div>
+
+          <div class="form-field">
+            <label for="projectRole">Rôle projet</label>
+            <select id="projectRole" formControlName="projectRole">
+              <option value="MEMBER">MEMBER</option>
+              <option value="MANAGER">MANAGER</option>
+            </select>
+          </div>
+        </div>
+
+        <div *ngIf="vm.availableUsers.length === 0" class="state-card">
+          Aucun utilisateur disponible à ajouter.
+        </div>
+
+        <div class="messages">
+          <div class="alert alert--error" *ngIf="addMemberErrorMessage">
+            {{ addMemberErrorMessage }}
+          </div>
+          <div class="alert alert--success" *ngIf="successMessage">
+            {{ successMessage }}
+          </div>
+        </div>
+
+        <div class="actions">
+          <button
+            type="submit"
+            [disabled]="saving || form.invalid || vm.availableUsers.length === 0"
+          >
+            {{ saving ? 'Ajout...' : 'Ajouter le membre' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Membres du projet</h3>
+      </div>
+
+      <div *ngIf="vm.members.length === 0" class="state-card">
+        Aucun membre pour le moment.
+      </div>
+
+      <div *ngIf="vm.members.length > 0" class="member-list">
+        <article class="member-item" *ngFor="let member of vm.members">
+          <div class="member-main">
+            <h4>{{ member.displayName }}</h4>
+            <p>{{ member.email }}</p>
+          </div>
+
+          <div class="member-meta">
+            <span class="badge">{{ member.projectRole }}</span>
+            <span class="muted" *ngIf="member.globalRole">
+              {{ member.globalRole }}
+            </span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+</div>
