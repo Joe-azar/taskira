@@ -3,9 +3,7 @@
     <div>
       <a routerLink="/projects" class="back-link">← Retour aux projets</a>
       <h2>{{ vm.project?.name || 'Projet' }}</h2>
-      <p *ngIf="vm.project">
-        Détail du projet et gestion des membres
-      </p>
+      <p *ngIf="vm.project">Détail du projet, tickets et gestion des membres</p>
     </div>
 
     <span class="header-badge" *ngIf="vm.project">
@@ -58,10 +56,119 @@
 
     <section class="panel">
       <div class="panel__header">
+        <h3>Créer un ticket</h3>
+      </div>
+
+      <form class="ticket-form" [formGroup]="ticketForm" (ngSubmit)="submitTicket()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="ticketTitle">Titre</label>
+            <input
+              id="ticketTitle"
+              type="text"
+              formControlName="title"
+              placeholder="Corriger le bug de connexion"
+            />
+            <small class="error" *ngIf="ticketTitle.touched && ticketTitle.invalid">
+              Le titre est obligatoire.
+            </small>
+          </div>
+
+          <div class="form-field">
+            <label for="ticketDueDate">Échéance</label>
+            <input id="ticketDueDate" type="date" formControlName="dueDate" />
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="ticketType">Type</label>
+            <select id="ticketType" formControlName="type">
+              <option value="BUG">BUG</option>
+              <option value="TASK">TASK</option>
+              <option value="STORY">STORY</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="ticketPriority">Priorité</label>
+            <select id="ticketPriority" formControlName="priority">
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+              <option value="CRITICAL">CRITICAL</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="ticketDescription">Description</label>
+          <textarea
+            id="ticketDescription"
+            rows="4"
+            formControlName="description"
+            placeholder="Décrivez le ticket"
+          ></textarea>
+          <small class="error" *ngIf="ticketDescription.touched && ticketDescription.invalid">
+            La description est obligatoire.
+          </small>
+        </div>
+
+        <div class="messages">
+          <div class="alert alert--error" *ngIf="createTicketErrorMessage">
+            {{ createTicketErrorMessage }}
+          </div>
+          <div class="alert alert--success" *ngIf="ticketSuccessMessage">
+            {{ ticketSuccessMessage }}
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" [disabled]="savingTicket || ticketForm.invalid">
+            {{ savingTicket ? 'Création...' : 'Créer le ticket' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Tickets du projet</h3>
+      </div>
+
+      <div *ngIf="vm.tickets.length === 0" class="state-card">
+        Aucun ticket pour le moment.
+      </div>
+
+      <div *ngIf="vm.tickets.length > 0" class="ticket-list">
+        <a
+          class="ticket-item ticket-item--link"
+          *ngFor="let ticket of vm.tickets"
+          [routerLink]="['/tickets', ticket.id]"
+        >
+          <div class="ticket-main">
+            <div class="ticket-ref">{{ ticket.reference }}</div>
+            <h4>{{ ticket.title }}</h4>
+            <p>{{ ticket.type }}</p>
+          </div>
+
+          <div class="ticket-meta">
+            <span class="badge">{{ ticket.status }}</span>
+            <span class="muted">{{ ticket.priority }}</span>
+            <span class="muted">
+              {{ ticket.assigneeFullName || 'Non assigné' }}
+            </span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
         <h3>Ajouter un membre</h3>
       </div>
 
-      <form class="member-form" [formGroup]="form" (ngSubmit)="submit()">
+      <form class="member-form" [formGroup]="memberForm" (ngSubmit)="submitMember()">
         <div class="form-grid">
           <div class="form-field">
             <label for="userId">Utilisateur</label>
@@ -93,17 +200,17 @@
           <div class="alert alert--error" *ngIf="addMemberErrorMessage">
             {{ addMemberErrorMessage }}
           </div>
-          <div class="alert alert--success" *ngIf="successMessage">
-            {{ successMessage }}
+          <div class="alert alert--success" *ngIf="memberSuccessMessage">
+            {{ memberSuccessMessage }}
           </div>
         </div>
 
         <div class="actions">
           <button
             type="submit"
-            [disabled]="saving || form.invalid || vm.availableUsers.length === 0"
+            [disabled]="savingMember || memberForm.invalid || vm.availableUsers.length === 0"
           >
-            {{ saving ? 'Ajout...' : 'Ajouter le membre' }}
+            {{ savingMember ? 'Ajout...' : 'Ajouter le membre' }}
           </button>
         </div>
       </form>

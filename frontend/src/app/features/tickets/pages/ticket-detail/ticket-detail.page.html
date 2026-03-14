@@ -1,0 +1,161 @@
+<div class="ticket-detail-page" *ngIf="vm$ | async as vm">
+  <div class="page-header">
+    <div>
+      <a
+        *ngIf="vm.ticket"
+        [routerLink]="['/projects', vm.ticket.projectId]"
+        class="back-link"
+      >
+        ← Retour au projet
+      </a>
+      <h2>{{ vm.ticket?.reference || 'Ticket' }}</h2>
+      <p *ngIf="vm.ticket">{{ vm.ticket.title }}</p>
+    </div>
+
+    <span class="header-badge" *ngIf="vm.ticket">
+      {{ vm.ticket.status }}
+    </span>
+  </div>
+
+  <div *ngIf="vm.loading" class="state-card">
+    Chargement du ticket...
+  </div>
+
+  <div *ngIf="!vm.loading && vm.errorMessage" class="state-card state-card--error">
+    {{ vm.errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!vm.loading && vm.ticket as ticket">
+    <div class="info-grid">
+      <div class="info-card">
+        <span>Projet</span>
+        <strong>{{ ticket.projectCode }}</strong>
+        <small>{{ ticket.projectName }}</small>
+      </div>
+
+      <div class="info-card">
+        <span>Type</span>
+        <strong>{{ ticket.type }}</strong>
+      </div>
+
+      <div class="info-card">
+        <span>Priorité</span>
+        <strong>{{ ticket.priority }}</strong>
+      </div>
+
+      <div class="info-card">
+        <span>Assigné à</span>
+        <strong>{{ ticket.assigneeName || 'Non assigné' }}</strong>
+        <small *ngIf="ticket.assigneeEmail">{{ ticket.assigneeEmail }}</small>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Description</h3>
+      </div>
+
+      <div class="panel__body">
+        <p *ngIf="ticket.description">{{ ticket.description }}</p>
+        <p *ngIf="!ticket.description" class="muted">Aucune description.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Informations</h3>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span>Créateur</span>
+          <strong>{{ ticket.creatorName }}</strong>
+          <small *ngIf="ticket.creatorEmail">{{ ticket.creatorEmail }}</small>
+        </div>
+
+        <div class="meta-item">
+          <span>Rôle créateur</span>
+          <strong>{{ ticket.creatorGlobalRole || '—' }}</strong>
+        </div>
+
+        <div class="meta-item">
+          <span>Échéance</span>
+          <strong>{{ ticket.dueDate ? (ticket.dueDate | date:'dd/MM/yyyy') : '—' }}</strong>
+        </div>
+
+        <div class="meta-item">
+          <span>Créé le</span>
+          <strong>{{ ticket.createdAt ? (ticket.createdAt | date:'dd/MM/yyyy HH:mm') : '—' }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Changer le statut</h3>
+      </div>
+
+      <form class="status-form" [formGroup]="statusForm" (ngSubmit)="submitStatus()">
+        <div class="form-row">
+          <div class="form-field">
+            <label for="status">Statut</label>
+            <select id="status" formControlName="status">
+              <option value="OPEN">OPEN</option>
+              <option value="IN_PROGRESS">IN_PROGRESS</option>
+              <option value="DONE">DONE</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="messages">
+          <div class="alert alert--error" *ngIf="statusErrorMessage">
+            {{ statusErrorMessage }}
+          </div>
+          <div class="alert alert--success" *ngIf="statusSuccessMessage">
+            {{ statusSuccessMessage }}
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" [disabled]="savingStatus || statusForm.invalid">
+            {{ savingStatus ? 'Mise à jour...' : 'Mettre à jour le statut' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Historique</h3>
+      </div>
+
+      <div *ngIf="vm.history.length === 0" class="state-card">
+        Aucun historique.
+      </div>
+
+      <div *ngIf="vm.history.length > 0" class="history-list">
+        <article class="history-item" *ngFor="let item of vm.history">
+          <div class="history-main">
+            <h4>{{ item.fieldName }}</h4>
+            <p>
+              <strong>Ancienne valeur :</strong>
+              {{ item.oldValue || '—' }}
+            </p>
+            <p>
+              <strong>Nouvelle valeur :</strong>
+              {{ item.newValue || '—' }}
+            </p>
+          </div>
+
+          <div class="history-meta">
+            <span>{{ item.changedByName }}</span>
+            <small *ngIf="item.changedByEmail">{{ item.changedByEmail }}</small>
+            <small *ngIf="item.changedAt">
+              {{ item.changedAt | date:'dd/MM/yyyy HH:mm' }}
+            </small>
+          </div>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+</div>

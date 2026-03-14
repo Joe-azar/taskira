@@ -42,6 +42,13 @@ export const appRoutes: Routes = [
             (m) => m.ProjectListPage
           ),
       },
+      {
+        path: 'tickets/:id',
+        loadComponent: () =>
+          import('./features/tickets/pages/ticket-detail/ticket-detail.page').then(
+            (m) => m.TicketDetailPage
+          ),
+      },
     ],
   },
   {

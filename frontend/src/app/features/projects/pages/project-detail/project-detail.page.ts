@@ -16,6 +16,8 @@ import {
 
 import { UserOption } from '../../../../core/models/user.models';
 import { UserService } from '../../../../core/services/user.service';
+import { TicketService } from '../../../../features/tickets/services/ticket.service';
+import { TicketSummary, CreateTicketRequest } from '../../../../features/tickets/models/ticket.models';
 import {
   AddProjectMemberRequest,
   ProjectDetail,
@@ -28,6 +30,7 @@ type ProjectDetailVm = {
   project: ProjectDetail | null;
   members: ProjectMember[];
   availableUsers: UserOption[];
+  tickets: TicketSummary[];
   errorMessage: string;
 };
 
@@ -43,15 +46,28 @@ export class ProjectDetailPage {
   private readonly fb = inject(FormBuilder);
   private readonly projectService = inject(ProjectService);
   private readonly userService = inject(UserService);
+  private readonly ticketService = inject(TicketService);
   private readonly reloadSubject = new BehaviorSubject<void>(undefined);
 
-  saving = false;
+  savingMember = false;
   addMemberErrorMessage = '';
-  successMessage = '';
+  memberSuccessMessage = '';
 
-  readonly form = this.fb.nonNullable.group({
+  savingTicket = false;
+  createTicketErrorMessage = '';
+  ticketSuccessMessage = '';
+
+  readonly memberForm = this.fb.nonNullable.group({
     userId: [0, [Validators.required, Validators.min(1)]],
     projectRole: ['MEMBER', [Validators.required]],
+  });
+
+  readonly ticketForm = this.fb.nonNullable.group({
+    title: ['', [Validators.required, Validators.minLength(3)]],
+    description: ['', [Validators.required, Validators.minLength(5)]],
+    type: ['BUG', [Validators.required]],
+    priority: ['HIGH', [Validators.required]],
+    dueDate: [''],
   });
 
   private readonly projectId$ = this.route.paramMap.pipe(
@@ -66,6 +82,7 @@ export class ProjectDetailPage {
           project: null,
           members: [],
           availableUsers: [],
+          tickets: [],
           errorMessage: 'Projet invalide.',
         } as ProjectDetailVm);
       }
@@ -74,8 +91,9 @@ export class ProjectDetailPage {
         project: this.projectService.getProjectById(projectId),
         members: this.projectService.getProjectMembers(projectId),
         users: this.userService.getUsers(),
+        tickets: this.ticketService.getProjectTickets(projectId),
       }).pipe(
-        map(({ project, members, users }) => {
+        map(({ project, members, users, tickets }) => {
           const memberIds = new Set(members.map((m) => m.userId));
           const availableUsers = users.filter((u) => !memberIds.has(u.id));
 
@@ -84,6 +102,7 @@ export class ProjectDetailPage {
             project,
             members,
             availableUsers,
+            tickets,
             errorMessage: '',
           } as ProjectDetailVm;
         }),
@@ -92,6 +111,7 @@ export class ProjectDetailPage {
           project: null,
           members: [],
           availableUsers: [],
+          tickets: [],
           errorMessage: '',
         } as ProjectDetailVm),
         catchError((error) =>
@@ -100,6 +120,7 @@ export class ProjectDetailPage {
             project: null,
             members: [],
             availableUsers: [],
+            tickets: [],
             errorMessage:
               error?.error?.message ||
               error?.message ||
@@ -110,9 +131,9 @@ export class ProjectDetailPage {
     })
   );
 
-  submit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+  submitMember(): void {
+    if (this.memberForm.invalid) {
+      this.memberForm.markAllAsTouched();
       return;
     }
 
@@ -122,11 +143,11 @@ export class ProjectDetailPage {
       return;
     }
 
-    this.saving = true;
+    this.savingMember = true;
     this.addMemberErrorMessage = '';
-    this.successMessage = '';
+    this.memberSuccessMessage = '';
 
-    const raw = this.form.getRawValue();
+    const raw = this.memberForm.getRawValue();
 
     const payload: AddProjectMemberRequest = {
       userId: Number(raw.userId),
@@ -135,11 +156,11 @@ export class ProjectDetailPage {
 
     this.projectService
       .addProjectMember(projectId, payload)
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(finalize(() => (this.savingMember = false)))
       .subscribe({
         next: () => {
-          this.successMessage = 'Membre ajouté avec succès.';
-          this.form.reset({
+          this.memberSuccessMessage = 'Membre ajouté avec succès.';
+          this.memberForm.reset({
             userId: 0,
             projectRole: 'MEMBER',
           });
@@ -154,11 +175,70 @@ export class ProjectDetailPage {
       });
   }
 
+  submitTicket(): void {
+    if (this.ticketForm.invalid) {
+      this.ticketForm.markAllAsTouched();
+      return;
+    }
+
+    const projectId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
+    if (!projectId) {
+      this.createTicketErrorMessage = 'Projet invalide.';
+      return;
+    }
+
+    this.savingTicket = true;
+    this.createTicketErrorMessage = '';
+    this.ticketSuccessMessage = '';
+
+    const raw = this.ticketForm.getRawValue();
+
+    const payload: CreateTicketRequest = {
+      projectId,
+      title: raw.title.trim(),
+      description: raw.description.trim(),
+      type: raw.type,
+      priority: raw.priority,
+      dueDate: raw.dueDate ? raw.dueDate : null,
+    };
+
+    this.ticketService
+      .createTicket(payload)
+      .pipe(finalize(() => (this.savingTicket = false)))
+      .subscribe({
+        next: () => {
+          this.ticketSuccessMessage = 'Ticket créé avec succès.';
+          this.ticketForm.reset({
+            title: '',
+            description: '',
+            type: 'BUG',
+            priority: 'HIGH',
+            dueDate: '',
+          });
+          this.reloadSubject.next();
+        },
+        error: (error) => {
+          this.createTicketErrorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Impossible de créer le ticket.';
+        },
+      });
+  }
+
   get userId() {
-    return this.form.controls.userId;
+    return this.memberForm.controls.userId;
   }
 
   get projectRole() {
-    return this.form.controls.projectRole;
+    return this.memberForm.controls.projectRole;
+  }
+
+  get ticketTitle() {
+    return this.ticketForm.controls.title;
+  }
+
+  get ticketDescription() {
+    return this.ticketForm.controls.description;
   }
 }
