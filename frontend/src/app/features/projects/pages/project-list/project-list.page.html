@@ -1,4 +1,4 @@
-<div class="projects-page">
+<div class="projects-page" *ngIf="vm$ | async as vm">
   <div class="page-header">
     <div>
       <h2>Projects</h2>
@@ -26,7 +26,7 @@
           <input id="code" type="text" formControlName="code" placeholder="APP" />
           <small class="hint">Exemple : APP, CRM, API</small>
           <small class="error" *ngIf="code.touched && code.invalid">
-            La clé est obligatoire (2 à 10 caractères).
+            La clé projet est obligatoire (2 à 10 caractères).
           </small>
         </div>
       </div>
@@ -42,12 +42,12 @@
       </div>
 
       <div class="messages">
-        <div class="alert alert--error" *ngIf="errorMessage">{{ errorMessage }}</div>
+        <div class="alert alert--error" *ngIf="createErrorMessage">{{ createErrorMessage }}</div>
         <div class="alert alert--success" *ngIf="successMessage">{{ successMessage }}</div>
       </div>
 
       <div class="actions">
-        <button type="submit" [disabled]="saving">
+        <button type="submit" [disabled]="saving || form.invalid">
           {{ saving ? 'Création...' : 'Créer le projet' }}
         </button>
       </div>
@@ -59,16 +59,20 @@
       <h3>Liste des projets</h3>
     </div>
 
-    <div *ngIf="loading" class="state-card">
+    <div *ngIf="vm.loading" class="state-card">
       Chargement des projets...
     </div>
 
-    <div *ngIf="!loading && projects.length === 0" class="state-card">
+    <div *ngIf="!vm.loading && vm.errorMessage" class="state-card state-card--error">
+      {{ vm.errorMessage }}
+    </div>
+
+    <div *ngIf="!vm.loading && !vm.errorMessage && vm.projects.length === 0" class="state-card">
       Aucun projet pour le moment.
     </div>
 
-    <div *ngIf="!loading && projects.length > 0" class="project-list">
-      <article class="project-item" *ngFor="let project of projects">
+    <div *ngIf="!vm.loading && vm.projects.length > 0" class="project-list">
+      <article class="project-item" *ngFor="let project of vm.projects">
         <div class="project-main">
           <div class="project-title-row">
             <h4>{{ project.name }}</h4>

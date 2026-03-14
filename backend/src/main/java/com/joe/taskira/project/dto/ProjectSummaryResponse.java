@@ -7,6 +7,7 @@ public record ProjectSummaryResponse(
         Long id,
         String code,
         String name,
+        String description,
         ProjectStatus status
 ) {
     public static ProjectSummaryResponse from(Project project) {
@@ -14,6 +15,7 @@ public record ProjectSummaryResponse(
                 project.getId(),
                 project.getCode(),
                 project.getName(),
+                project.getDescription(),
                 project.getStatus()
         );
     }

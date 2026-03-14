@@ -1,4 +1,4 @@
-<div class="dashboard-page">
+<div class="dashboard-page" *ngIf="vm$ | async as vm">
   <div class="page-header">
     <div>
       <h2>Dashboard</h2>
@@ -6,15 +6,15 @@
     </div>
   </div>
 
-  <div *ngIf="loading" class="state-card">
+  <div *ngIf="vm.loading" class="state-card">
     Chargement du dashboard...
   </div>
 
-  <div *ngIf="!loading && errorMessage" class="state-card state-card--error">
-    {{ errorMessage }}
+  <div *ngIf="!vm.loading && vm.errorMessage" class="state-card state-card--error">
+    {{ vm.errorMessage }}
   </div>
 
-  <ng-container *ngIf="!loading && summary as data">
+  <ng-container *ngIf="!vm.loading && vm.summary as data">
     <div class="stats-grid">
       <div class="stat-card">
         <span>Total projets</span>

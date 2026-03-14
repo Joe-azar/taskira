@@ -1,10 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize } from 'rxjs/operators';
+import { BehaviorSubject, catchError, finalize, map, of, startWith, switchMap } from 'rxjs';
 
 import { CreateProjectRequest, ProjectSummary } from '../../models/project.models';
 import { ProjectService } from '../../services/project.service';
+
+type ProjectsVm = {
+  loading: boolean;
+  projects: ProjectSummary[];
+  errorMessage: string;
+};
 
 @Component({
   selector: 'app-project-list-page',
@@ -13,16 +19,14 @@ import { ProjectService } from '../../services/project.service';
   templateUrl: './project-list.page.html',
   styleUrl: './project-list.page.scss',
 })
-export class ProjectListPage implements OnInit {
+export class ProjectListPage {
   private readonly fb = inject(FormBuilder);
   private readonly projectService = inject(ProjectService);
-  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly reloadSubject = new BehaviorSubject<void>(undefined);
 
-  loading = true;
   saving = false;
-  errorMessage = '';
+  createErrorMessage = '';
   successMessage = '';
-  projects: ProjectSummary[] = [];
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -30,42 +34,42 @@ export class ProjectListPage implements OnInit {
     description: [''],
   });
 
-  ngOnInit(): void {
-    this.loadProjects();
-  }
-
-  loadProjects(): void {
-    this.loading = true;
-    this.errorMessage = '';
-
-    this.projectService.getProjects().subscribe({
-      next: (projects) => {
-        this.projects = projects;
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        this.errorMessage =
-          error?.error?.message ||
-          error?.message ||
-          'Impossible de charger les projets.';
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-    });
-  }
+  readonly vm$ = this.reloadSubject.pipe(
+    switchMap(() =>
+      this.projectService.getProjects().pipe(
+        map((projects): ProjectsVm => ({
+          loading: false,
+          projects,
+          errorMessage: '',
+        })),
+        startWith({
+          loading: true,
+          projects: [],
+          errorMessage: '',
+        } as ProjectsVm),
+        catchError((error) =>
+          of({
+            loading: false,
+            projects: [],
+            errorMessage:
+              error?.error?.message ||
+              error?.message ||
+              'Impossible de charger les projets.',
+          } as ProjectsVm)
+        )
+      )
+    )
+  );
 
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.cdr.detectChanges();
       return;
     }
 
     this.saving = true;
-    this.errorMessage = '';
+    this.createErrorMessage = '';
     this.successMessage = '';
-    this.cdr.detectChanges();
 
     const raw = this.form.getRawValue();
 
@@ -77,27 +81,22 @@ export class ProjectListPage implements OnInit {
 
     this.projectService
       .createProject(payload)
-      .pipe(finalize(() => {
-        this.saving = false;
-        this.cdr.detectChanges();
-      }))
+      .pipe(finalize(() => (this.saving = false)))
       .subscribe({
-        next: (project) => {
-          this.projects = [project, ...this.projects];
+        next: () => {
           this.successMessage = 'Projet créé avec succès.';
           this.form.reset({
             name: '',
             code: '',
             description: '',
           });
-          this.cdr.detectChanges();
+          this.reloadSubject.next();
         },
         error: (error) => {
-          this.errorMessage =
+          this.createErrorMessage =
             error?.error?.message ||
             error?.message ||
             'Impossible de créer le projet.';
-          this.cdr.detectChanges();
         },
       });
   }

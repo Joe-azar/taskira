@@ -1,8 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { catchError, map, of, startWith } from 'rxjs';
 
 import { DashboardSummary } from '../../../../core/models/dashboard.models';
 import { DashboardService } from '../../../../core/services/dashboard.service';
+
+type DashboardVm = {
+  loading: boolean;
+  summary: DashboardSummary | null;
+  errorMessage: string;
+};
 
 @Component({
   selector: 'app-dashboard-page',
@@ -11,29 +18,29 @@ import { DashboardService } from '../../../../core/services/dashboard.service';
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.scss',
 })
-export class DashboardPage implements OnInit {
+export class DashboardPage {
   private readonly dashboardService = inject(DashboardService);
-  private readonly cdr = inject(ChangeDetectorRef);
 
-  loading = true;
-  errorMessage = '';
-  summary: DashboardSummary | null = null;
-
-  ngOnInit(): void {
-    this.dashboardService.getSummary().subscribe({
-      next: (summary) => {
-        this.summary = summary;
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        this.errorMessage =
+  readonly vm$ = this.dashboardService.getSummary().pipe(
+    map((summary): DashboardVm => ({
+      loading: false,
+      summary,
+      errorMessage: '',
+    })),
+    startWith({
+      loading: true,
+      summary: null,
+      errorMessage: '',
+    } as DashboardVm),
+    catchError((error) =>
+      of({
+        loading: false,
+        summary: null,
+        errorMessage:
           error?.error?.message ||
           error?.message ||
-          'Impossible de charger le dashboard.';
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-    });
-  }
+          'Impossible de charger le dashboard.',
+      } as DashboardVm)
+    )
+  );
 }
