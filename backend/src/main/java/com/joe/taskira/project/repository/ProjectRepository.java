@@ -23,6 +23,23 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
             """)
     List<Project> findAccessibleProjects(Long userId);
 
+    @Query("""
+            select distinct p.id
+            from Project p
+            left join ProjectMember pm on pm.project = p
+            where p.owner.id = :userId
+               or pm.user.id = :userId
+            order by p.id asc
+            """)
+    List<Long> findAccessibleProjectIds(Long userId);
+
+    @Query("""
+            select p.id
+            from Project p
+            order by p.id asc
+            """)
+    List<Long> findAllProjectIds();
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select p

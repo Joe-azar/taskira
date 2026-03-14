@@ -14,8 +14,13 @@ import com.joe.taskira.ticket.dto.*;
 import com.joe.taskira.ticket.entity.Ticket;
 import com.joe.taskira.ticket.enums.TicketPriority;
 import com.joe.taskira.ticket.enums.TicketStatus;
+import com.joe.taskira.ticket.enums.TicketType;
 import com.joe.taskira.ticket.repository.TicketRepository;
+import com.joe.taskira.ticket.specification.TicketSpecifications;
 import com.joe.taskira.user.entity.User;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import com.joe.taskira.user.enums.GlobalRole;
 import com.joe.taskira.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -98,6 +103,46 @@ public class TicketService {
         assertCanAccessProject(project);
 
         return ticketRepository.findByProjectIdWithRelations(projectId).stream()
+                .map(TicketSummaryResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public List<TicketSummaryResponse> searchTickets(
+            Long projectId,
+            TicketStatus status,
+            TicketPriority priority,
+            TicketType type,
+            Long creatorId,
+            Long assigneeId,
+            Boolean unassigned,
+            String q
+    ) {
+        AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
+
+        List<Long> accessibleProjectIds = currentUser.getUser().getGlobalRole() == GlobalRole.ADMIN
+                ? projectRepository.findAllProjectIds()
+                : projectRepository.findAccessibleProjectIds(currentUser.getId());
+
+        if (accessibleProjectIds.isEmpty()) {
+            return List.of();
+        }
+
+        if (projectId != null && !accessibleProjectIds.contains(projectId)) {
+            throw new ForbiddenException("You are not allowed to access this project");
+        }
+
+        Specification<Ticket> spec = Specification.where(TicketSpecifications.hasProjectIds(accessibleProjectIds))
+                .and(TicketSpecifications.hasProjectId(projectId))
+                .and(TicketSpecifications.hasStatus(status))
+                .and(TicketSpecifications.hasPriority(priority))
+                .and(TicketSpecifications.hasType(type))
+                .and(TicketSpecifications.hasCreatorId(creatorId))
+                .and(TicketSpecifications.hasAssigneeId(assigneeId))
+                .and(TicketSpecifications.isUnassigned(unassigned))
+                .and(TicketSpecifications.matchesKeyword(q));
+
+        return ticketRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt")).stream()
                 .map(TicketSummaryResponse::from)
                 .toList();
     }
