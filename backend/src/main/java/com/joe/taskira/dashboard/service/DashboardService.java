@@ -53,7 +53,7 @@ public class DashboardService {
         List<TicketSummaryResponse> recentTickets = ticketRepository.findAll(
                         accessibleSpec,
                         PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"))
-                ).stream()
+                ).getContent().stream()
                 .map(TicketSummaryResponse::from)
                 .toList();
 

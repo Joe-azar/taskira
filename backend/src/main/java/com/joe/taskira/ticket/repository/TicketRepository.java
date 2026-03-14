@@ -13,7 +13,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.List;
 import java.util.Optional;
 
-public interface TicketRepository extends JpaRepository<Ticket>, JpaSpecificationExecutor<Ticket> {
+public interface TicketRepository extends JpaRepository<Ticket, Long>, JpaSpecificationExecutor<Ticket> {
 
     @Query("""
             select t
