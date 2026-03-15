@@ -43,6 +43,13 @@ export const appRoutes: Routes = [
           ),
       },
       {
+        path: 'tickets',
+        loadComponent: () =>
+          import('./features/tickets/pages/ticket-list/ticket-list.page').then(
+            (m) => m.TicketListPage
+          ),
+      },
+      {
         path: 'tickets/:id',
         loadComponent: () =>
           import('./features/tickets/pages/ticket-detail/ticket-detail.page').then(

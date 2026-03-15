@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
@@ -7,6 +7,7 @@ import {
   CreateTicketRequest,
   TicketDetail,
   TicketHistoryEntry,
+  TicketSearchFilters,
   TicketSummary,
   UpdateTicketAssigneeRequest,
   UpdateTicketStatusRequest,
@@ -17,6 +18,34 @@ import {
 })
 export class TicketService {
   private readonly http = inject(HttpClient);
+
+  searchTickets(filters?: TicketSearchFilters): Observable<TicketSummary[]> {
+    let params = new HttpParams();
+
+    if (filters?.projectId && filters.projectId > 0) {
+      params = params.set('projectId', String(filters.projectId));
+    }
+
+    if (filters?.status) {
+      params = params.set('status', filters.status);
+    }
+
+    if (filters?.type) {
+      params = params.set('type', filters.type);
+    }
+
+    if (filters?.q && filters.q.trim()) {
+      params = params.set('q', filters.q.trim());
+    }
+
+    if (filters?.unassigned) {
+      params = params.set('unassigned', 'true');
+    }
+
+    return this.http
+      .get<any[]>(`${environment.apiUrl}/tickets`, { params })
+      .pipe(map((items) => (items ?? []).map((item) => this.normalizeTicketSummary(item))));
+  }
 
   getProjectTickets(projectId: number): Observable<TicketSummary[]> {
     return this.http

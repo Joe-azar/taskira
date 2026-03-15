@@ -24,6 +24,10 @@
       >
         Projects
       </a>
+
+      <a routerLink="/tickets" routerLinkActive="active">
+        Tickets
+      </a>
     </nav>
 
     <div class="sidebar__footer" *ngIf="authService.currentUser$ | async as user">

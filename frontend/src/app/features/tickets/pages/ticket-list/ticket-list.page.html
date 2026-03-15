@@ -1,0 +1,112 @@
+<div class="ticket-list-page" *ngIf="vm$ | async as vm">
+  <div class="page-header">
+    <div>
+      <h2>Tickets</h2>
+      <p>Recherche et filtrage global des tickets Taskira</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel__header">
+      <h3>Filtres</h3>
+    </div>
+
+    <form class="filter-form" [formGroup]="form" (ngSubmit)="applyFilters()">
+      <div class="form-grid form-grid--search">
+        <div class="form-field form-field--wide">
+          <label for="q">Recherche</label>
+          <input
+            id="q"
+            type="text"
+            formControlName="q"
+            placeholder="Titre, mot-clé, contenu..."
+          />
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="projectId">Projet</label>
+          <select id="projectId" formControlName="projectId">
+            <option [ngValue]="0">Tous les projets</option>
+            <option *ngFor="let project of vm.projects" [ngValue]="project.id">
+              {{ project.name }} — {{ project.code }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="status">Statut</label>
+          <select id="status" formControlName="status">
+            <option value="">Tous</option>
+            <option value="OPEN">OPEN</option>
+            <option value="IN_PROGRESS">IN_PROGRESS</option>
+            <option value="DONE">DONE</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="type">Type</label>
+          <select id="type" formControlName="type">
+            <option value="">Tous</option>
+            <option value="BUG">BUG</option>
+            <option value="TASK">TASK</option>
+            <option value="STORY">STORY</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid form-grid--checkbox">
+        <label class="checkbox-row">
+          <input type="checkbox" formControlName="unassigned" />
+          <span>Afficher seulement les tickets non assignés</span>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="submit">Appliquer les filtres</button>
+        <button type="button" class="btn-light" (click)="resetFilters()">
+          Réinitialiser
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="panel__header">
+      <h3>Liste des tickets</h3>
+    </div>
+
+    <div *ngIf="vm.loading" class="state-card">
+      Chargement des tickets...
+    </div>
+
+    <div *ngIf="!vm.loading && vm.errorMessage" class="state-card state-card--error">
+      {{ vm.errorMessage }}
+    </div>
+
+    <div *ngIf="!vm.loading && !vm.errorMessage && vm.tickets.length === 0" class="state-card">
+      Aucun ticket trouvé.
+    </div>
+
+    <div *ngIf="!vm.loading && vm.tickets.length > 0" class="ticket-list">
+      <a
+        class="ticket-item ticket-item--link"
+        *ngFor="let ticket of vm.tickets"
+        [routerLink]="['/tickets', ticket.id]"
+      >
+        <div class="ticket-main">
+          <div class="ticket-ref">{{ ticket.reference }}</div>
+          <h4>{{ ticket.title }}</h4>
+          <p>{{ ticket.type }}</p>
+        </div>
+
+        <div class="ticket-meta">
+          <span class="badge">{{ ticket.status }}</span>
+          <span class="muted">{{ ticket.priority }}</span>
+          <span class="muted">{{ ticket.assigneeFullName || 'Non assigné' }}</span>
+        </div>
+      </a>
+    </div>
+  </section>
+</div>
