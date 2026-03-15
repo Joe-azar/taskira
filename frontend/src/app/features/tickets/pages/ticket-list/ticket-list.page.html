@@ -56,6 +56,21 @@
         </div>
       </div>
 
+      <div class="form-grid form-grid--search">
+        <div class="form-field form-field--wide">
+          <label for="sortBy">Tri</label>
+          <select id="sortBy" formControlName="sortBy">
+            <option value="updatedDesc">Mise à jour la plus récente</option>
+            <option value="updatedAsc">Mise à jour la plus ancienne</option>
+            <option value="priorityDesc">Priorité la plus élevée</option>
+            <option value="priorityAsc">Priorité la plus faible</option>
+            <option value="statusAsc">Statut</option>
+            <option value="titleAsc">Titre A → Z</option>
+            <option value="referenceAsc">Référence A → Z</option>
+          </select>
+        </div>
+      </div>
+
       <div class="form-grid form-grid--checkbox">
         <label class="checkbox-row">
           <input type="checkbox" formControlName="unassigned" />

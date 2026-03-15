@@ -43,8 +43,13 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    working_dir: /app
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
     environment:
       CHOKIDAR_USEPOLLING: "true"
+    command: npm start -- --host 0.0.0.0 --poll 1000
     ports:
       - "4200:4200"
 
