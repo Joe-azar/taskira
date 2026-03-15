@@ -1,0 +1,105 @@
+<div class="project-board-page" *ngIf="vm$ | async as vm">
+  <div class="page-header">
+    <div>
+      <div class="breadcrumbs">
+        <a routerLink="/projects" class="back-link">Projects</a>
+        <span>/</span>
+        <a *ngIf="vm.project as project" [routerLink]="['/projects', project.id]" class="back-link">
+          {{ project.name }}
+        </a>
+      </div>
+
+      <h2>{{ vm.project?.name || 'Board projet' }}</h2>
+      <p *ngIf="vm.project">Vue Kanban simplifiée des tickets du projet</p>
+    </div>
+
+    <div class="header-actions" *ngIf="vm.project as project">
+      <a class="ghost-btn" [routerLink]="['/projects', project.id]">Voir le détail</a>
+      <span class="header-badge">{{ project.code }}</span>
+    </div>
+  </div>
+
+  <div *ngIf="vm.loading" class="state-card">
+    Chargement du board...
+  </div>
+
+  <div *ngIf="!vm.loading && vm.errorMessage" class="state-card state-card--error">
+    {{ vm.errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!vm.loading && vm.project as project">
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span>Projet</span>
+        <strong>{{ project.name }}</strong>
+      </div>
+
+      <div class="summary-card">
+        <span>Code</span>
+        <strong>{{ project.code }}</strong>
+      </div>
+
+      <div class="summary-card">
+        <span>Statut</span>
+        <strong>{{ project.status }}</strong>
+      </div>
+
+      <div class="summary-card">
+        <span>Total tickets</span>
+        <strong>{{ vm.totalTickets }}</strong>
+      </div>
+    </div>
+
+    <section class="board">
+      <article
+        class="board-column"
+        *ngFor="let column of vm.columns; trackBy: trackByColumn"
+      >
+        <div class="board-column__header">
+          <div>
+            <h3>{{ column.label }}</h3>
+            <p>
+              {{ column.tickets.length }}
+              ticket{{ column.tickets.length > 1 ? 's' : '' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="board-column__body">
+          <div *ngIf="column.tickets.length === 0" class="empty-state">
+            Aucun ticket dans cette colonne.
+          </div>
+
+          <a
+            class="ticket-card"
+            *ngFor="let ticket of column.tickets; trackBy: trackByTicket"
+            [routerLink]="['/tickets', ticket.id]"
+          >
+            <div class="ticket-card__top">
+              <span class="ticket-ref">{{ ticket.reference }}</span>
+              <span class="type-badge">{{ ticket.type }}</span>
+            </div>
+
+            <h4>{{ ticket.title }}</h4>
+
+            <div class="ticket-card__meta">
+              <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
+                {{ ticket.priority }}
+              </span>
+
+              <span class="muted">
+                {{ ticket.assigneeFullName || 'Non assigné' }}
+              </span>
+            </div>
+
+            <div class="ticket-card__footer">
+              <span class="muted">
+                Créé le {{ formatDate(ticket.createdAt) }}
+              </span>
+            </div>
+          </a>
+        </div>
+      </article>
+    </section>
+  </ng-container>
+</div>

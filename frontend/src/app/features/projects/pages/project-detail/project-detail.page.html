@@ -6,16 +6,15 @@
       <p *ngIf="vm.project">Détail du projet, tickets et gestion des membres</p>
     </div>
 
-    <span class="header-badge" *ngIf="vm.project">
-      {{ vm.project.code }}
+  <div class="page-header__actions" *ngIf="vm.project as project">
+    <a class="secondary-btn" [routerLink]="['/projects', project.id, 'board']">
+      Voir le board
+    </a>
+
+    <span class="header-badge">
+      {{ project.code }}
     </span>
   </div>
-
-  <div *ngIf="vm.loading" class="state-card">
-    Chargement du projet...
-  </div>
-
-  <div *ngIf="!vm.loading && vm.errorMessage" class="state-card state-card--error">
     {{ vm.errorMessage }}
   </div>
 

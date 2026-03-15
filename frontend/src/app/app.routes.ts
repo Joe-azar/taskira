@@ -29,6 +29,13 @@ export const appRoutes: Routes = [
           ),
       },
       {
+        path: 'projects/:id/board',
+        loadComponent: () =>
+          import('./features/projects/pages/project-board/project-board.page').then(
+            (m) => m.ProjectBoardPage
+          ),
+      },
+      {
         path: 'projects/:id',
         loadComponent: () =>
           import('./features/projects/pages/project-detail/project-detail.page').then(
