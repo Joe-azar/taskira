@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -12,6 +12,8 @@ import {
   switchMap,
 } from 'rxjs';
 
+import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
+import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
 import { ProjectSummary } from '../../../projects/models/project.models';
 import { ProjectService } from '../../../projects/services/project.service';
 import { TicketSearchFilters, TicketSummary } from '../../models/ticket.models';
@@ -27,7 +29,14 @@ type TicketListVm = {
 @Component({
   selector: 'app-ticket-list-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    DatePipe,
+    StatusBadgeComponent,
+    PriorityBadgeComponent,
+  ],
   templateUrl: './ticket-list.page.html',
   styleUrl: './ticket-list.page.scss',
 })
@@ -102,5 +111,9 @@ export class TicketListPage {
     });
 
     this.reloadSubject.next();
+  }
+
+  trackByTicket(_: number, ticket: TicketSummary): number {
+    return ticket.id;
   }
 }

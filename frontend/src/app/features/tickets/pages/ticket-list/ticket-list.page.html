@@ -92,19 +92,31 @@
     <div *ngIf="!vm.loading && vm.tickets.length > 0" class="ticket-list">
       <a
         class="ticket-item ticket-item--link"
-        *ngFor="let ticket of vm.tickets"
+        *ngFor="let ticket of vm.tickets; trackBy: trackByTicket"
         [routerLink]="['/tickets', ticket.id]"
       >
         <div class="ticket-main">
-          <div class="ticket-ref">{{ ticket.reference }}</div>
+          <div class="ticket-topline">
+            <div class="ticket-ref">{{ ticket.reference }}</div>
+            <div class="ticket-type">{{ ticket.type }}</div>
+          </div>
+
           <h4>{{ ticket.title }}</h4>
-          <p>{{ ticket.type }}</p>
+
+          <div class="ticket-subline">
+            <span class="muted">
+              Assigné à {{ ticket.assigneeFullName || 'Non assigné' }}
+            </span>
+            <span class="dot">•</span>
+            <span class="muted">
+              Mis à jour le {{ ticket.updatedAt | date: 'dd/MM/yyyy à HH:mm' }}
+            </span>
+          </div>
         </div>
 
         <div class="ticket-meta">
-          <span class="badge">{{ ticket.status }}</span>
-          <span class="muted">{{ ticket.priority }}</span>
-          <span class="muted">{{ ticket.assigneeFullName || 'Non assigné' }}</span>
+          <app-status-badge [status]="ticket.status"></app-status-badge>
+          <app-priority-badge [priority]="ticket.priority"></app-priority-badge>
         </div>
       </a>
     </div>
