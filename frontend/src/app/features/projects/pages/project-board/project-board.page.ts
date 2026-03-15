@@ -1,7 +1,18 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { DragDropModule, CdkDragDrop, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { catchError, forkJoin, map, of, startWith, switchMap } from 'rxjs';
+import {
+  BehaviorSubject,
+  catchError,
+  combineLatest,
+  finalize,
+  forkJoin,
+  map,
+  of,
+  startWith,
+  switchMap,
+} from 'rxjs';
 
 import { TicketSummary } from '../../../tickets/models/ticket.models';
 import { TicketService } from '../../../tickets/services/ticket.service';
@@ -27,7 +38,7 @@ type ProjectBoardVm = {
 @Component({
   selector: 'app-project-board-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, DragDropModule],
   templateUrl: './project-board.page.html',
   styleUrl: './project-board.page.scss',
 })
@@ -35,13 +46,19 @@ export class ProjectBoardPage {
   private readonly route = inject(ActivatedRoute);
   private readonly projectService = inject(ProjectService);
   private readonly ticketService = inject(TicketService);
+  private readonly reloadSubject = new BehaviorSubject<void>(undefined);
+
+  movingTicketId: number | null = null;
+  moveErrorMessage = '';
 
   private readonly projectId$ = this.route.paramMap.pipe(
     map((params) => Number(params.get('id') ?? 0))
   );
 
-  readonly vm$ = this.projectId$.pipe(
-    switchMap((projectId) => {
+  readonly vm$ = combineLatest([this.projectId$, this.reloadSubject]).pipe(
+    switchMap(([projectId]) => {
+      this.moveErrorMessage = '';
+
       if (!projectId) {
         return of({
           loading: false,
@@ -85,6 +102,59 @@ export class ProjectBoardPage {
       );
     })
   );
+
+  drop(event: CdkDragDrop<TicketSummary[]>, targetStatus: BoardColumnKey): void {
+    if (this.movingTicketId !== null) {
+      return;
+    }
+
+    if (event.previousContainer === event.container) {
+      return;
+    }
+
+    const ticket = event.item.data as TicketSummary | undefined;
+    if (!ticket) {
+      return;
+    }
+
+    const previousStatus = ticket.status;
+    if (previousStatus === targetStatus) {
+      return;
+    }
+
+    transferArrayItem(
+      event.previousContainer.data,
+      event.container.data,
+      event.previousIndex,
+      event.currentIndex
+    );
+
+    ticket.status = targetStatus;
+    this.moveErrorMessage = '';
+    this.movingTicketId = ticket.id;
+
+    this.ticketService
+      .updateTicketStatus(ticket.id, { status: targetStatus })
+      .pipe(finalize(() => (this.movingTicketId = null)))
+      .subscribe({
+        next: () => {
+          this.reloadSubject.next();
+        },
+        error: (error) => {
+          this.moveErrorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Impossible de déplacer ce ticket.';
+
+          ticket.status = previousStatus;
+          this.reloadSubject.next();
+        },
+      });
+  }
+
+  refreshBoard(): void {
+    this.reloadSubject.next();
+  }
 
   trackByColumn(_: number, column: BoardColumn): string {
     return column.key;

@@ -10,13 +10,18 @@
       </div>
 
       <h2>{{ vm.project?.name || 'Board projet' }}</h2>
-      <p *ngIf="vm.project">Vue Kanban simplifiée des tickets du projet</p>
+      <p *ngIf="vm.project">Vue Kanban des tickets du projet</p>
     </div>
 
     <div class="header-actions" *ngIf="vm.project as project">
       <a class="ghost-btn" [routerLink]="['/projects', project.id]">Voir le détail</a>
+      <button type="button" class="ghost-btn" (click)="refreshBoard()">Rafraîchir</button>
       <span class="header-badge">{{ project.code }}</span>
     </div>
+  </div>
+
+  <div *ngIf="moveErrorMessage" class="alert alert--error">
+    {{ moveErrorMessage }}
   </div>
 
   <div *ngIf="vm.loading" class="state-card">
@@ -50,7 +55,7 @@
       </div>
     </div>
 
-    <section class="board">
+    <section class="board" cdkDropListGroup>
       <article
         class="board-column"
         *ngFor="let column of vm.columns; trackBy: trackByColumn"
@@ -65,22 +70,48 @@
           </div>
         </div>
 
-        <div class="board-column__body">
+        <div
+          class="board-column__body"
+          cdkDropList
+          [cdkDropListData]="column.tickets"
+          (cdkDropListDropped)="drop($event, column.key)"
+        >
           <div *ngIf="column.tickets.length === 0" class="empty-state">
             Aucun ticket dans cette colonne.
           </div>
 
-          <a
+          <article
             class="ticket-card"
             *ngFor="let ticket of column.tickets; trackBy: trackByTicket"
-            [routerLink]="['/tickets', ticket.id]"
+            cdkDrag
+            [cdkDragData]="ticket"
+            [cdkDragDisabled]="movingTicketId !== null"
+            [class.ticket-card--moving]="movingTicketId === ticket.id"
           >
             <div class="ticket-card__top">
-              <span class="ticket-ref">{{ ticket.reference }}</span>
-              <span class="type-badge">{{ ticket.type }}</span>
+              <div class="ticket-card__identity">
+                <a class="ticket-ref-link" [routerLink]="['/tickets', ticket.id]">
+                  {{ ticket.reference }}
+                </a>
+                <span class="type-badge">{{ ticket.type }}</span>
+              </div>
+
+              <button
+                type="button"
+                class="drag-handle"
+                cdkDragHandle
+                [class.drag-handle--disabled]="movingTicketId !== null"
+                title="Déplacer le ticket"
+              >
+                ⋮⋮
+              </button>
             </div>
 
-            <h4>{{ ticket.title }}</h4>
+            <h4>
+              <a class="ticket-title-link" [routerLink]="['/tickets', ticket.id]">
+                {{ ticket.title }}
+              </a>
+            </h4>
 
             <div class="ticket-card__meta">
               <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
@@ -97,7 +128,7 @@
                 Créé le {{ formatDate(ticket.createdAt) }}
               </span>
             </div>
-          </a>
+          </article>
         </div>
       </article>
     </section>
