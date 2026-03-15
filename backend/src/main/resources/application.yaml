@@ -3,9 +3,9 @@ spring:
     name: taskira-api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/taskira
-    username: taskira
-    password: taskira
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/taskira}
+    username: ${SPRING_DATASOURCE_USERNAME:taskira}
+    password: ${SPRING_DATASOURCE_PASSWORD:taskira}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -28,11 +28,11 @@ springdoc:
     path: /swagger-ui.html
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 app:
   jwt:
-    secret: taskira-super-secret-key-change-me-at-least-32-characters
-    expiration-ms: 86400000
+    secret: ${APP_JWT_SECRET:taskira-super-secret-key-change-me-at-least-32-characters}
+    expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
   cors:
-    allowed-origins: http://localhost:4200
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
