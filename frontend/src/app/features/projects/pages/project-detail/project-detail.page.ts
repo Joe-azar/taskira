@@ -14,6 +14,8 @@ import {
   switchMap,
 } from 'rxjs';
 
+import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
+import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
 import { UserOption } from '../../../../core/models/user.models';
 import { UserService } from '../../../../core/services/user.service';
 import { TicketService } from '../../../../features/tickets/services/ticket.service';
@@ -37,7 +39,13 @@ type ProjectDetailVm = {
 @Component({
   selector: 'app-project-detail-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    StatusBadgeComponent,
+    PriorityBadgeComponent,
+  ],
   templateUrl: './project-detail.page.html',
   styleUrl: './project-detail.page.scss',
 })
@@ -224,6 +232,24 @@ export class ProjectDetailPage {
             'Impossible de créer le ticket.';
         },
       });
+  }
+
+  formatDate(value?: string | null): string {
+    if (!value) {
+      return '—';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return '—';
+    }
+
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
   }
 
   get userId() {

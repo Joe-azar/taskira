@@ -14,6 +14,8 @@ import {
   switchMap,
 } from 'rxjs';
 
+import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
+import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
 import { TicketSummary } from '../../../tickets/models/ticket.models';
 import { TicketService } from '../../../tickets/services/ticket.service';
 import { ProjectDetail } from '../../models/project.models';
@@ -38,7 +40,13 @@ type ProjectBoardVm = {
 @Component({
   selector: 'app-project-board-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, DragDropModule],
+  imports: [
+    CommonModule,
+    RouterLink,
+    DragDropModule,
+    StatusBadgeComponent,
+    PriorityBadgeComponent,
+  ],
   templateUrl: './project-board.page.html',
   styleUrl: './project-board.page.scss',
 })
@@ -180,21 +188,6 @@ export class ProjectBoardPage {
       month: 'short',
       year: 'numeric',
     }).format(date);
-  }
-
-  getPriorityClass(priority: string): string {
-    switch (priority) {
-      case 'LOW':
-        return 'badge--priority-low';
-      case 'MEDIUM':
-        return 'badge--priority-medium';
-      case 'HIGH':
-        return 'badge--priority-high';
-      case 'CRITICAL':
-        return 'badge--priority-critical';
-      default:
-        return '';
-    }
   }
 
   private buildColumns(tickets: TicketSummary[]): BoardColumn[] {

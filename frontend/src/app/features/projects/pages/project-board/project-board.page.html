@@ -46,7 +46,9 @@
 
       <div class="summary-card">
         <span>Statut</span>
-        <strong>{{ project.status }}</strong>
+        <div class="summary-card__value">
+          <app-status-badge [value]="project.status"></app-status-badge>
+        </div>
       </div>
 
       <div class="summary-card">
@@ -114,9 +116,7 @@
             </h4>
 
             <div class="ticket-card__meta">
-              <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
-                {{ ticket.priority }}
-              </span>
+              <app-priority-badge [value]="ticket.priority"></app-priority-badge>
 
               <span class="muted">
                 {{ ticket.assigneeFullName || 'Non assigné' }}

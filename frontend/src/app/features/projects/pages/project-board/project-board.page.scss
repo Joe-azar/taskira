@@ -97,6 +97,11 @@
   }
 }
 
+.summary-card__value {
+  display: flex;
+  align-items: center;
+}
+
 .board {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -247,35 +252,6 @@
 .drag-handle--disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0.35rem 0.7rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.badge--priority-low {
-  background: #ecfdf5;
-  color: #047857;
-}
-
-.badge--priority-medium {
-  background: #fffbeb;
-  color: #b45309;
-}
-
-.badge--priority-high {
-  background: #fff7ed;
-  color: #c2410c;
-}
-
-.badge--priority-critical {
-  background: #fef2f2;
-  color: #b91c1c;
 }
 
 .alert {
