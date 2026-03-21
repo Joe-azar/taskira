@@ -88,6 +88,8 @@
 
   &__body {
     padding: 1.25rem;
+    display: grid;
+    gap: 1.25rem;
   }
 
   &__actions {
@@ -104,7 +106,19 @@
 
 .ticket-title-section,
 .ticket-description-section {
-  margin-bottom: 1.5rem;
+  h4 {
+    margin: 0 0 0.5rem 0;
+    color: #111827;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    color: #374151;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
 
   h4 {
     margin: 0 0 0.5rem 0;

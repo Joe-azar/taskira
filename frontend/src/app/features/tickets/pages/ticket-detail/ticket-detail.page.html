@@ -36,45 +36,47 @@
         </div>
       </div>
 
-      <div class="messages" *ngIf="editSuccessMessage">
-        <div class="alert alert--success">
-          {{ editSuccessMessage }}
-        </div>
-      </div>
-
-      <div *ngIf="!isEditMode">
-        <div class="info-grid">
-          <div class="info-card">
-            <span>Projet</span>
-            <strong>{{ ticket.projectCode }}</strong>
-            <small>{{ ticket.projectName }}</small>
-          </div>
-
-          <div class="info-card">
-            <span>Type</span>
-            <strong>{{ ticket.type }}</strong>
-          </div>
-
-          <div class="info-card">
-            <span>Priorité</span>
-            <strong>{{ ticket.priority }}</strong>
-          </div>
-
-          <div class="info-card">
-            <span>Échéance</span>
-            <strong>{{ ticket.dueDate ? (ticket.dueDate | date:'dd/MM/yyyy') : '—' }}</strong>
+      <div class="panel__body">
+        <div class="messages" *ngIf="editSuccessMessage">
+          <div class="alert alert--success">
+            {{ editSuccessMessage }}
           </div>
         </div>
 
-        <div class="ticket-title-section">
-          <h4>Titre</h4>
-          <p>{{ ticket.title }}</p>
-        </div>
+        <div *ngIf="!isEditMode">
+          <div class="info-grid">
+            <div class="info-card">
+              <span>Projet</span>
+              <strong>{{ ticket.projectCode }}</strong>
+              <small>{{ ticket.projectName }}</small>
+            </div>
 
-        <div class="ticket-description-section">
-          <h4>Description</h4>
-          <p *ngIf="ticket.description">{{ ticket.description }}</p>
-          <p *ngIf="!ticket.description" class="muted">Aucune description.</p>
+            <div class="info-card">
+              <span>Type</span>
+              <strong>{{ ticket.type }}</strong>
+            </div>
+
+            <div class="info-card">
+              <span>Priorité</span>
+              <strong>{{ ticket.priority }}</strong>
+            </div>
+
+            <div class="info-card">
+              <span>Échéance</span>
+              <strong>{{ ticket.dueDate ? (ticket.dueDate | date:'dd/MM/yyyy') : '—' }}</strong>
+            </div>
+          </div>
+
+          <div class="ticket-title-section">
+            <h4>Titre</h4>
+            <p>{{ ticket.title }}</p>
+          </div>
+
+          <div class="ticket-description-section">
+            <h4>Description</h4>
+            <p *ngIf="ticket.description">{{ ticket.description }}</p>
+            <p *ngIf="!ticket.description" class="muted">Aucune description.</p>
+          </div>
         </div>
       </div>
 
