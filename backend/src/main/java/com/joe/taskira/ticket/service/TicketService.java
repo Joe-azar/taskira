@@ -18,7 +18,6 @@ import com.joe.taskira.ticket.enums.TicketType;
 import com.joe.taskira.ticket.repository.TicketRepository;
 import com.joe.taskira.ticket.specification.TicketSpecifications;
 import com.joe.taskira.user.entity.User;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import com.joe.taskira.user.enums.GlobalRole;

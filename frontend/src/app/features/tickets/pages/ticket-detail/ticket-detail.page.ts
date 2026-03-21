@@ -58,6 +58,8 @@ export class TicketDetailPage {
   readonly authService = inject(AuthService);
   private readonly reloadSubject = new BehaviorSubject<void>(undefined);
 
+  private currentTicket: TicketDetail | null = null;
+
   savingStatus = false;
   statusErrorMessage = '';
   statusSuccessMessage = '';
@@ -132,6 +134,7 @@ export class TicketDetailPage {
           })
         ),
         tap(({ ticket, projectMembers }) => {
+          this.currentTicket = ticket;
           this.statusForm.patchValue(
             { status: ticket.status || 'OPEN' },
             { emitEvent: false }
@@ -198,8 +201,25 @@ export class TicketDetailPage {
     return this.authService.currentUser?.id ?? null;
   }
 
-  canManageComment(comment: TicketComment): boolean {
-    return this.currentUserId === comment.authorId;
+  canManageComment(comment: TicketComment, projectMembers: ProjectMember[]): boolean {
+    // Author can always manage their own comments
+    if (this.currentUserId === comment.authorId) {
+      return true;
+    }
+
+    // Check if current user is admin
+    const currentUser = this.authService.currentUser;
+    if (currentUser?.role === 'ADMIN') {
+      return true;
+    }
+
+    // Check project membership
+    const membership = projectMembers.find((m: ProjectMember) => m.userId === this.currentUserId);
+    if (membership && (membership.projectRole === 'OWNER' || membership.projectRole === 'MANAGER')) {
+      return true;
+    }
+
+    return false;
   }
 
   submitStatus(): void {
@@ -390,8 +410,19 @@ export class TicketDetailPage {
     this.isEditMode = false;
     this.editErrorMessage = '';
     this.editSuccessMessage = '';
-    // Reset form to current ticket values
-    this.reloadSubject.next();
+    // Reset form to current ticket values without reloading
+    if (this.currentTicket) {
+      this.editForm.patchValue(
+        {
+          title: this.currentTicket.title || '',
+          description: this.currentTicket.description || '',
+          type: this.currentTicket.type || '',
+          priority: this.currentTicket.priority || '',
+          dueDate: this.currentTicket.dueDate ? this.currentTicket.dueDate : null,
+        },
+        { emitEvent: false }
+      );
+    }
   }
 
   submitEdit(): void {
@@ -416,7 +447,7 @@ export class TicketDetailPage {
       description: formValue.description?.trim() || '',
       type: formValue.type,
       priority: formValue.priority,
-      dueDate: formValue.dueDate,
+      dueDate: formValue.dueDate ? formValue.dueDate : null,
     };
 
     this.ticketService
@@ -427,6 +458,10 @@ export class TicketDetailPage {
           this.editSuccessMessage = 'Ticket mis à jour avec succès.';
           this.isEditMode = false;
           this.reloadSubject.next();
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            this.editSuccessMessage = '';
+          }, 3000);
         },
         error: (error) => {
           this.editErrorMessage =

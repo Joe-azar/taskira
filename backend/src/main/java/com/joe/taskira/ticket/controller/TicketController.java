@@ -1,7 +1,6 @@
 package com.joe.taskira.ticket.controller;
 
 import com.joe.taskira.ticket.dto.*;
-import com.joe.taskira.ticket.dto.TicketHistoryResponse;
 import com.joe.taskira.ticket.enums.TicketPriority;
 import com.joe.taskira.ticket.enums.TicketStatus;
 import com.joe.taskira.ticket.enums.TicketType;

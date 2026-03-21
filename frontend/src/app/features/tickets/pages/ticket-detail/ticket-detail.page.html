@@ -36,6 +36,12 @@
         </div>
       </div>
 
+      <div class="messages" *ngIf="editSuccessMessage">
+        <div class="alert alert--success">
+          {{ editSuccessMessage }}
+        </div>
+      </div>
+
       <div *ngIf="!isEditMode">
         <div class="info-grid">
           <div class="info-card">
@@ -327,7 +333,7 @@
             </div>
           </form>
 
-          <div class="comment-actions" *ngIf="editingCommentId !== comment.id && canManageComment(comment)">
+          <div class="comment-actions" *ngIf="editingCommentId !== comment.id && canManageComment(comment, vm.projectMembers)">
             <button type="button" class="btn-light" (click)="startEditComment(comment)">
               Modifier
             </button>
