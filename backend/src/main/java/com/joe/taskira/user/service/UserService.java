@@ -118,6 +118,14 @@ public class UserService {
             throw new ConflictException("Cannot demote the last active admin");
         }
 
+        if (existing.getGlobalRole() == GlobalRole.ADMIN
+                && existing.isActive()
+                && request.active() != null
+                && !request.active()
+                && userRepository.countByGlobalRoleAndActiveTrue(GlobalRole.ADMIN) <= 1) {
+            throw new ConflictException("Cannot deactivate the last active admin");
+        }
+
         existing.setFirstName(request.firstName().trim());
         existing.setLastName(request.lastName().trim());
         existing.setEmail(normalizedEmail);
