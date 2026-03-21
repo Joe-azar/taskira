@@ -15,6 +15,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByActiveTrueOrderByFirstNameAscLastNameAsc();
 
+    List<User> findAllByOrderByFirstNameAscLastNameAsc();
+
+    @Query("""
+            select u
+            from User u
+            where lower(u.firstName) like lower(concat('%', :search, '%'))
+               or lower(u.lastName) like lower(concat('%', :search, '%'))
+               or lower(u.email) like lower(concat('%', :search, '%'))
+            order by u.firstName asc, u.lastName asc
+            """)
+    List<User> searchAllUsers(String search);
+
     @Query("""
             select u
             from User u

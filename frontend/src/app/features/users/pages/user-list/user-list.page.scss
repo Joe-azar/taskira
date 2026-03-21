@@ -1,0 +1,23 @@
+.page-users {padding: 1.5rem;}
+
+.page-users__header {margin-bottom: 1rem;}
+
+.user-search {margin-bottom: 1rem;}
+
+.user-search input {width: 100%; padding: 0.5rem; font-size: 1rem;}
+
+.user-table table {width: 100%; border-collapse: collapse;}
+.user-table th, .user-table td {padding: 0.6rem 0.5rem; border: 1px solid #dee2e6;}
+.user-table th {background: #f8f9fa; text-align: left;}
+.user-table tr:nth-child(even) {background: #f8f9ff;}
+
+.user-form {margin-top: 1.5rem; background: #fff; padding: 1rem; border: 1px solid #ddd; border-radius: 8px;}
+.user-form .form-grid {display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));}
+.user-form label {display: block; font-size: 0.9rem;}
+.user-form input, .user-form select {width: 100%; margin-top: 0.25rem; padding: 0.45rem 0.5rem; border: 1px solid #ccc; border-radius: 4px;}
+.user-form .form-actions {margin-top: 1rem; display: flex; gap: 0.5rem;}
+.user-form button {padding: 0.6rem 1rem; border: none; background: #3b82f6; color: #fff; cursor: pointer; border-radius: 4px;}
+.user-form button[disabled] {opacity: 0.6; cursor: not-allowed;}
+.user-form .success {color: #0f766e; margin-bottom: 0.5rem;}
+.user-form .error {color: #dc2626; margin-bottom: 0.5rem;}
+.user-table .error {color: #dc2626; margin-bottom: 0.6rem;}

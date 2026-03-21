@@ -28,6 +28,12 @@
       <a routerLink="/tickets" routerLinkActive="active">
         Tickets
       </a>
+
+      <ng-container *ngIf="authService.currentUser$ | async as user">
+        <a *ngIf="user.role === 'ADMIN'" routerLink="/users" routerLinkActive="active">
+          Users
+        </a>
+      </ng-container>
     </nav>
 
     <div class="sidebar__footer" *ngIf="authService.currentUser$ | async as user">

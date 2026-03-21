@@ -1,0 +1,103 @@
+<div class="page-users">
+  <header class="page-users__header">
+    <h2>Gestion des utilisateurs</h2>
+  </header>
+
+  <section class="user-search">
+    <input
+      type="text"
+      [formControl]="form.controls.search"
+      placeholder="Rechercher un utilisateur..."
+      (input)="search()"
+    />
+  </section>
+
+  <section class="user-table" *ngIf="vm$ | async as vm">
+    <p class="error" *ngIf="vm.errorMessage">{{ vm.errorMessage }}</p>
+
+    <div *ngIf="vm.loading" class="loading">Chargement...</div>
+
+    <table *ngIf="!vm.loading && vm.users.length > 0">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of vm.users">
+          <td>{{ user.fullName }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.globalRole }}</td>
+          <td>{{ user.active ? 'Actif' : 'Inactif' }}</td>
+          <td>
+            <button type="button" (click)="focusEdit(user)">Modifier</button>
+            <button type="button" (click)="toggleStatus(user)">
+              {{ user.active ? 'Désactiver' : 'Activer' }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="!vm.loading && vm.users.length === 0" class="empty">
+      Aucun utilisateur trouvé.
+    </div>
+  </section>
+
+  <section class="user-form">
+    <h3>{{ selectedUser ? 'Modifier un utilisateur' : 'Créer un utilisateur' }}</h3>
+
+    <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
+    <p class="error" *ngIf="apiErrorMessage">{{ apiErrorMessage }}</p>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-grid">
+        <label>
+          Prénom
+          <input type="text" formControlName="firstName" />
+          <small *ngIf="firstName.invalid && firstName.touched">Prénom requis (min 2 caractères).</small>
+        </label>
+
+        <label>
+          Nom
+          <input type="text" formControlName="lastName" />
+          <small *ngIf="lastName.invalid && lastName.touched">Nom requis (min 2 caractères).</small>
+        </label>
+
+        <label>
+          Email
+          <input type="email" formControlName="email" />
+          <small *ngIf="email.invalid && email.touched">Email valide requis.</small>
+        </label>
+
+        <label>
+          Mot de passe{{ selectedUser ? ' (laisser vide pour ne pas modifier)' : '' }}
+          <input type="password" formControlName="password" [required]="!selectedUser" />
+          <small *ngIf="password.invalid && password.touched">Mot de passe min 8 caractères.</small>
+        </label>
+
+        <label>
+          Rôle global
+          <select formControlName="globalRole">
+            <option value="USER">Utilisateur</option>
+            <option value="ADMIN">Administrateur</option>
+          </select>
+        </label>
+
+        <label>
+          Actif
+          <input type="checkbox" formControlName="active" />
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" [disabled]="saving">{{ selectedUser ? 'Enregistrer' : 'Créer' }}</button>
+        <button type="button" (click)="cancelEdit()" [disabled]="saving">Annuler</button>
+      </div>
+    </form>
+  </section>
+</div>

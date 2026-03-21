@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { adminGuard } from './core/guards/admin.guard';
 import { AppShellComponent } from './layout/app-shell.component';
 
 export const appRoutes: Routes = [
@@ -61,6 +62,14 @@ export const appRoutes: Routes = [
         loadComponent: () =>
           import('./features/tickets/pages/ticket-detail/ticket-detail.page').then(
             (m) => m.TicketDetailPage
+          ),
+      },
+      {
+        path: 'users',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/users/pages/user-list/user-list.page').then(
+            (m) => m.UserListPage
           ),
       },
     ],
