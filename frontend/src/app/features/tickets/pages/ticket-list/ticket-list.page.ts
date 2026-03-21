@@ -2,15 +2,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import {
-  BehaviorSubject,
-  catchError,
-  forkJoin,
-  map,
-  of,
-  startWith,
-  switchMap,
-} from 'rxjs';
+import { BehaviorSubject, combineLatest, forkJoin, map } from 'rxjs';
 
 import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
@@ -53,7 +45,18 @@ export class TicketListPage {
   private readonly fb = inject(FormBuilder);
   private readonly ticketService = inject(TicketService);
   private readonly projectService = inject(ProjectService);
-  private readonly reloadSubject = new BehaviorSubject<void>(undefined);
+
+  private readonly ticketsSubject = new BehaviorSubject<TicketSummary[]>([]);
+  readonly tickets$ = this.ticketsSubject.asObservable();
+
+  private readonly projectsSubject = new BehaviorSubject<ProjectSummary[]>([]);
+  readonly projects$ = this.projectsSubject.asObservable();
+
+  private readonly loadingSubject = new BehaviorSubject<boolean>(true);
+  readonly loading$ = this.loadingSubject.asObservable();
+
+  private readonly errorSubject = new BehaviorSubject<string>('');
+  readonly error$ = this.errorSubject.asObservable();
 
   readonly form = this.fb.nonNullable.group({
     q: [''],
@@ -64,51 +67,58 @@ export class TicketListPage {
     sortBy: ['updatedDesc' as TicketSortOption],
   });
 
-  readonly vm$ = this.reloadSubject.pipe(
-    switchMap(() => {
-      const raw = this.form.getRawValue();
-
-      const filters: TicketSearchFilters = {
-        q: raw.q.trim() || null,
-        projectId: raw.projectId > 0 ? raw.projectId : null,
-        status: raw.status || null,
-        type: raw.type || null,
-        unassigned: raw.unassigned || false,
-      };
-
-      return forkJoin({
-        tickets: this.ticketService.searchTickets(filters),
-        projects: this.projectService.getProjects(),
-      }).pipe(
-        map(({ tickets, projects }) => ({
-          loading: false,
-          tickets: this.sortTickets(tickets, raw.sortBy),
-          projects,
-          errorMessage: '',
-        })),
-        startWith({
-          loading: true,
-          tickets: [],
-          projects: [],
-          errorMessage: '',
-        } as TicketListVm),
-        catchError((error) =>
-          of({
-            loading: false,
-            tickets: [],
-            projects: [],
-            errorMessage:
-              error?.error?.message ||
-              error?.message ||
-              'Impossible de charger les tickets.',
-          } as TicketListVm)
-        )
-      );
-    })
+  readonly vm$ = combineLatest([
+    this.tickets$,
+    this.projects$,
+    this.loading$,
+    this.error$,
+  ]).pipe(
+    map(([tickets, projects, loading, errorMessage]) => ({
+      loading,
+      tickets,
+      projects,
+      errorMessage,
+    } as TicketListVm))
   );
 
+  constructor() {
+    this.loadTickets();
+  }
+
+  private loadTickets(): void {
+    const raw = this.form.getRawValue();
+
+    const filters: TicketSearchFilters = {
+      q: raw.q.trim() || null,
+      projectId: raw.projectId > 0 ? raw.projectId : null,
+      status: raw.status || null,
+      type: raw.type || null,
+      unassigned: raw.unassigned || false,
+    };
+
+    this.loadingSubject.next(true);
+    this.errorSubject.next('');
+
+    forkJoin({
+      tickets: this.ticketService.searchTickets(filters),
+      projects: this.projectService.getProjects(),
+    }).subscribe({
+      next: ({ tickets, projects }) => {
+        this.ticketsSubject.next(this.sortTickets(tickets, raw.sortBy));
+        this.projectsSubject.next(projects);
+        this.loadingSubject.next(false);
+      },
+      error: (error) => {
+        this.errorSubject.next(
+          error?.error?.message || error?.message || 'Impossible de charger les tickets.'
+        );
+        this.loadingSubject.next(false);
+      },
+    });
+  }
+
   applyFilters(): void {
-    this.reloadSubject.next();
+    this.loadTickets();
   }
 
   resetFilters(): void {
@@ -121,7 +131,7 @@ export class TicketListPage {
       sortBy: 'updatedDesc',
     });
 
-    this.reloadSubject.next();
+    this.loadTickets();
   }
 
   trackByTicket(_: number, ticket: TicketSummary): number {

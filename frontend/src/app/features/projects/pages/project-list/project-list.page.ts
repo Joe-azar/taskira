@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { BehaviorSubject, catchError, finalize, map, of, startWith, switchMap } from 'rxjs';
+import { BehaviorSubject, combineLatest, finalize, map } from 'rxjs';
 
 import { CreateProjectRequest, ProjectSummary } from '../../models/project.models';
 import { ProjectService } from '../../services/project.service';
@@ -23,7 +23,15 @@ type ProjectsVm = {
 export class ProjectListPage {
   private readonly fb = inject(FormBuilder);
   private readonly projectService = inject(ProjectService);
-  private readonly reloadSubject = new BehaviorSubject<void>(undefined);
+
+  private readonly projectsSubject = new BehaviorSubject<ProjectSummary[]>([]);
+  readonly projects$ = this.projectsSubject.asObservable();
+
+  private readonly loadingSubject = new BehaviorSubject<boolean>(true);
+  readonly loading$ = this.loadingSubject.asObservable();
+
+  private readonly errorSubject = new BehaviorSubject<string>('');
+  readonly error$ = this.errorSubject.asObservable();
 
   saving = false;
   createErrorMessage = '';
@@ -35,32 +43,35 @@ export class ProjectListPage {
     description: [''],
   });
 
-  readonly vm$ = this.reloadSubject.pipe(
-    switchMap(() =>
-      this.projectService.getProjects().pipe(
-        map((projects): ProjectsVm => ({
-          loading: false,
-          projects,
-          errorMessage: '',
-        })),
-        startWith({
-          loading: true,
-          projects: [],
-          errorMessage: '',
-        } as ProjectsVm),
-        catchError((error) =>
-          of({
-            loading: false,
-            projects: [],
-            errorMessage:
-              error?.error?.message ||
-              error?.message ||
-              'Impossible de charger les projets.',
-          } as ProjectsVm)
-        )
-      )
-    )
+  readonly vm$ = combineLatest([this.projects$, this.loading$, this.error$]).pipe(
+    map(([projects, loading, errorMessage]) => ({
+      loading,
+      projects,
+      errorMessage,
+    } as ProjectsVm))
   );
+
+  constructor() {
+    this.loadProjects();
+  }
+
+  private loadProjects(): void {
+    this.loadingSubject.next(true);
+    this.errorSubject.next('');
+
+    this.projectService.getProjects().subscribe({
+      next: (projects) => {
+        this.projectsSubject.next(projects);
+        this.loadingSubject.next(false);
+      },
+      error: (error) => {
+        this.errorSubject.next(
+          error?.error?.message || error?.message || 'Impossible de charger les projets.'
+        );
+        this.loadingSubject.next(false);
+      },
+    });
+  }
 
   submit(): void {
     if (this.form.invalid) {
@@ -84,14 +95,14 @@ export class ProjectListPage {
       .createProject(payload)
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
-        next: () => {
+        next: (newProject) => {
           this.successMessage = 'Projet créé avec succès.';
+          this.projectsSubject.next([...this.projectsSubject.value, newProject]);
           this.form.reset({
             name: '',
             code: '',
             description: '',
           });
-          this.reloadSubject.next();
         },
         error: (error) => {
           this.createErrorMessage =

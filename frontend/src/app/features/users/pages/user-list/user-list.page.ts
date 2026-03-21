@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { BehaviorSubject, catchError, finalize, map, of, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, combineLatest, finalize, map } from 'rxjs';
 
 import {
   CreateUserRequest,
@@ -26,7 +26,15 @@ type UserListVm = {
 export class UserListPage {
   private readonly userService = inject(UsersService);
   private readonly fb = inject(FormBuilder);
-  private readonly refresh$ = new BehaviorSubject<void>(undefined);
+
+  private readonly usersSubject = new BehaviorSubject<UserSummary[]>([]);
+  readonly users$ = this.usersSubject.asObservable();
+
+  private readonly loadingSubject = new BehaviorSubject<boolean>(true);
+  readonly loading$ = this.loadingSubject.asObservable();
+
+  private readonly errorSubject = new BehaviorSubject<string>('');
+  readonly error$ = this.errorSubject.asObservable();
 
   selectedUser: UserSummary | null = null;
   saving = false;
@@ -43,22 +51,29 @@ export class UserListPage {
     search: [''],
   });
 
-  readonly vm$ = this.refresh$.pipe(
-    switchMap(() =>
-      this.userService.getUsers(this.form.controls.search.value).pipe(
-        map((users) => ({ loading: false, users, errorMessage: '' } as UserListVm)),
-        catchError((error) =>
-          of({
-            loading: false,
-            users: [],
-            errorMessage:
-              error?.error?.message || error?.message || 'Impossible de charger les utilisateurs.',
-          } as UserListVm)
-        ),
-        startWith({ loading: true, users: [], errorMessage: '' } as UserListVm)
-      )
-    )
+  readonly vm$ = combineLatest([this.users$, this.loading$, this.error$]).pipe(
+    map(([users, loading, errorMessage]) => ({ loading, users, errorMessage } as UserListVm))
   );
+
+  constructor() {
+    this.loadUsers();
+  }
+
+  private loadUsers(): void {
+    this.loadingSubject.next(true);
+    this.errorSubject.next('');
+
+    this.userService
+      .getUsers(this.form.controls.search.value)
+      .pipe(finalize(() => this.loadingSubject.next(false)))
+      .subscribe({
+        next: (users) => this.usersSubject.next(users),
+        error: (error) =>
+          this.errorSubject.next(
+            error?.error?.message || error?.message || 'Impossible de charger les utilisateurs.'
+          ),
+      });
+  }
 
   focusEdit(user: UserSummary): void {
     this.selectedUser = user;
@@ -121,12 +136,25 @@ export class UserListPage {
         .updateUser(this.selectedUser.id, payload)
         .pipe(finalize(() => (this.saving = false)))
         .subscribe({
-          next: () => {
+          next: (updatedUser) => {
             this.successMessage = 'Utilisateur mis à jour avec succès.';
-            this.refresh$.next();
+            this.usersSubject.next(
+              this.usersSubject.value.map((u) => (u.id === updatedUser.id ? updatedUser : u))
+            );
+            this.selectedUser = null;
+            this.form.reset({
+              firstName: '',
+              lastName: '',
+              email: '',
+              password: '',
+              globalRole: 'USER',
+              active: true,
+              search: this.form.controls.search.value,
+            });
           },
           error: (error) => {
-            this.apiErrorMessage = error?.error?.message || error?.message || 'Impossible de mettre à jour l’utilisateur.';
+            this.apiErrorMessage =
+              error?.error?.message || error?.message || 'Impossible de mettre à jour l’utilisateur.';
           },
         });
     } else {
@@ -147,13 +175,14 @@ export class UserListPage {
         .createUser(payload)
         .pipe(finalize(() => (this.saving = false)))
         .subscribe({
-          next: () => {
+          next: (createdUser) => {
             this.successMessage = 'Utilisateur créé avec succès.';
+            this.usersSubject.next([...this.usersSubject.value, createdUser]);
             this.resetForm();
-            this.refresh$.next();
           },
           error: (error) => {
-            this.apiErrorMessage = error?.error?.message || error?.message || 'Impossible de créer l’utilisateur.';
+            this.apiErrorMessage =
+              error?.error?.message || error?.message || 'Impossible de créer l’utilisateur.';
           },
         });
     }
@@ -165,22 +194,23 @@ export class UserListPage {
     this.successMessage = '';
     this.userService
       .updateUserStatus(user.id, { active: !user.active })
-      .pipe(
-        finalize(() => (this.saving = false)),
-        tap(() => {
-          this.successMessage = user.active ? 'Utilisateur désactivé.' : 'Utilisateur activé.';
-          this.refresh$.next();
-        })
-      )
+      .pipe(finalize(() => (this.saving = false)))
       .subscribe({
+        next: (updatedUser) => {
+          this.successMessage = updatedUser.active ? 'Utilisateur activé.' : 'Utilisateur désactivé.';
+          this.usersSubject.next(
+            this.usersSubject.value.map((u) => (u.id === updatedUser.id ? updatedUser : u))
+          );
+        },
         error: (error) => {
-          this.apiErrorMessage = error?.error?.message || error?.message || 'Impossible de mettre à jour le statut.';
+          this.apiErrorMessage =
+            error?.error?.message || error?.message || 'Impossible de mettre à jour le statut.';
         },
       });
   }
 
   search(): void {
-    this.refresh$.next();
+    this.loadUsers();
   }
 
   cancelEdit(): void {

@@ -2,17 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import {
-  BehaviorSubject,
-  catchError,
-  combineLatest,
-  finalize,
-  forkJoin,
-  map,
-  of,
-  startWith,
-  switchMap,
-} from 'rxjs';
+import { BehaviorSubject, combineLatest, finalize, forkJoin, map, of } from 'rxjs';
 
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
 import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
@@ -55,7 +45,24 @@ export class ProjectDetailPage {
   private readonly projectService = inject(ProjectService);
   private readonly userService = inject(UserService);
   private readonly ticketService = inject(TicketService);
-  private readonly reloadSubject = new BehaviorSubject<void>(undefined);
+
+  private readonly projectSubject = new BehaviorSubject<ProjectDetail | null>(null);
+  readonly project$ = this.projectSubject.asObservable();
+
+  private readonly membersSubject = new BehaviorSubject<ProjectMember[]>([]);
+  readonly members$ = this.membersSubject.asObservable();
+
+  private readonly availableUsersSubject = new BehaviorSubject<UserOption[]>([]);
+  readonly availableUsers$ = this.availableUsersSubject.asObservable();
+
+  private readonly ticketsSubject = new BehaviorSubject<TicketSummary[]>([]);
+  readonly tickets$ = this.ticketsSubject.asObservable();
+
+  private readonly loadingSubject = new BehaviorSubject<boolean>(true);
+  readonly loading$ = this.loadingSubject.asObservable();
+
+  private readonly errorSubject = new BehaviorSubject<string>('');
+  readonly error$ = this.errorSubject.asObservable();
 
   savingMember = false;
   addMemberErrorMessage = '';
@@ -82,62 +89,63 @@ export class ProjectDetailPage {
     map((params) => Number(params.get('id') ?? 0))
   );
 
-  readonly vm$ = combineLatest([this.projectId$, this.reloadSubject]).pipe(
-    switchMap(([projectId]) => {
-      if (!projectId) {
-        return of({
-          loading: false,
-          project: null,
-          members: [],
-          availableUsers: [],
-          tickets: [],
-          errorMessage: 'Projet invalide.',
-        } as ProjectDetailVm);
-      }
-
-      return forkJoin({
-        project: this.projectService.getProjectById(projectId),
-        members: this.projectService.getProjectMembers(projectId),
-        users: this.userService.getUsers(),
-        tickets: this.ticketService.getProjectTickets(projectId),
-      }).pipe(
-        map(({ project, members, users, tickets }) => {
-          const memberIds = new Set(members.map((m) => m.userId));
-          const availableUsers = users.filter((u) => !memberIds.has(u.id));
-
-          return {
-            loading: false,
-            project,
-            members,
-            availableUsers,
-            tickets,
-            errorMessage: '',
-          } as ProjectDetailVm;
-        }),
-        startWith({
-          loading: true,
-          project: null,
-          members: [],
-          availableUsers: [],
-          tickets: [],
-          errorMessage: '',
-        } as ProjectDetailVm),
-        catchError((error) =>
-          of({
-            loading: false,
-            project: null,
-            members: [],
-            availableUsers: [],
-            tickets: [],
-            errorMessage:
-              error?.error?.message ||
-              error?.message ||
-              'Impossible de charger le projet.',
-          } as ProjectDetailVm)
-        )
-      );
-    })
+  readonly vm$ = combineLatest([
+    this.project$,
+    this.members$,
+    this.availableUsers$,
+    this.tickets$,
+    this.loading$,
+    this.error$,
+  ]).pipe(
+    map(([project, members, availableUsers, tickets, loading, errorMessage]) => ({
+      project,
+      members,
+      availableUsers,
+      tickets,
+      loading,
+      errorMessage,
+    } as ProjectDetailVm))
   );
+
+  constructor() {
+    this.projectId$.subscribe((projectId) => {
+      if (projectId) {
+        this.loadProject(projectId);
+      } else {
+        this.loadingSubject.next(false);
+        this.errorSubject.next('Projet invalide.');
+      }
+    });
+  }
+
+  private loadProject(projectId: number): void {
+    this.loadingSubject.next(true);
+    this.errorSubject.next('');
+
+    forkJoin({
+      project: this.projectService.getProjectById(projectId),
+      members: this.projectService.getProjectMembers(projectId),
+      users: this.userService.getUsers(),
+      tickets: this.ticketService.getProjectTickets(projectId),
+    })
+      .pipe(finalize(() => this.loadingSubject.next(false)))
+      .subscribe({
+        next: ({ project, members, users, tickets }) => {
+          this.projectSubject.next(project);
+          this.membersSubject.next(members);
+          this.ticketsSubject.next(tickets);
+
+          const memberIds = new Set(members.map((m) => m.userId));
+          this.availableUsersSubject.next(users.filter((u) => !memberIds.has(u.id)));
+        },
+        error: (error) => {
+          this.errorSubject.next(
+            error?.error?.message || error?.message || 'Impossible de charger le projet.'
+          );
+        },
+      });
+  }
+
 
   submitMember(): void {
     if (this.memberForm.invalid) {
@@ -166,13 +174,26 @@ export class ProjectDetailPage {
       .addProjectMember(projectId, payload)
       .pipe(finalize(() => (this.savingMember = false)))
       .subscribe({
-        next: () => {
+        next: (newMember) => {
           this.memberSuccessMessage = 'Membre ajouté avec succès.';
+          this.membersSubject.next([...this.membersSubject.value, newMember]);
+
+          const updatedProject = this.projectSubject.value
+            ? { ...this.projectSubject.value, memberCount: this.projectSubject.value.memberCount + 1 }
+            : null;
+
+          if (updatedProject) {
+            this.projectSubject.next(updatedProject);
+          }
+
+          this.availableUsersSubject.next(
+            this.availableUsersSubject.value.filter((user) => user.id !== newMember.userId)
+          );
+
           this.memberForm.reset({
             userId: 0,
             projectRole: 'MEMBER',
           });
-          this.reloadSubject.next();
         },
         error: (error) => {
           this.addMemberErrorMessage =
@@ -214,8 +235,22 @@ export class ProjectDetailPage {
       .createTicket(payload)
       .pipe(finalize(() => (this.savingTicket = false)))
       .subscribe({
-        next: () => {
+        next: (newTicket) => {
           this.ticketSuccessMessage = 'Ticket créé avec succès.';
+
+          const newTicketSummary: TicketSummary = {
+            id: newTicket.id,
+            reference: newTicket.reference,
+            title: newTicket.title,
+            type: newTicket.type,
+            status: newTicket.status,
+            priority: newTicket.priority,
+            assigneeFullName: newTicket.assigneeName ?? null,
+            createdAt: newTicket.createdAt ?? null,
+            updatedAt: newTicket.updatedAt ?? null,
+          };
+
+          this.ticketsSubject.next([...this.ticketsSubject.value, newTicketSummary]);
           this.ticketForm.reset({
             title: '',
             description: '',
@@ -223,7 +258,6 @@ export class ProjectDetailPage {
             priority: 'HIGH',
             dueDate: '',
           });
-          this.reloadSubject.next();
         },
         error: (error) => {
           this.createTicketErrorMessage =

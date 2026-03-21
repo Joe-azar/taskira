@@ -60,6 +60,12 @@ export class TicketDetailPage {
 
   private currentTicket: TicketDetail | null = null;
 
+  private readonly commentsSubject = new BehaviorSubject<TicketComment[]>([]);
+  readonly comments$ = this.commentsSubject.asObservable();
+
+  private readonly historySubject = new BehaviorSubject<TicketHistoryEntry[]>([]);
+  readonly history$ = this.historySubject.asObservable();
+
   savingStatus = false;
   statusErrorMessage = '';
   statusSuccessMessage = '';
@@ -133,8 +139,11 @@ export class TicketDetailPage {
             projectMembers: this.projectService.getProjectMembers(ticket.projectId),
           })
         ),
-        tap(({ ticket, projectMembers }) => {
+        tap(({ ticket, history, comments, projectMembers }) => {
           this.currentTicket = ticket;
+          this.commentsSubject.next(comments);
+          this.historySubject.next(history);
+
           this.statusForm.patchValue(
             { status: ticket.status || 'OPEN' },
             { emitEvent: false }
@@ -317,10 +326,18 @@ export class TicketDetailPage {
       .createComment(ticketId, payload)
       .pipe(finalize(() => (this.savingComment = false)))
       .subscribe({
-        next: () => {
+        next: (createdComment) => {
           this.commentSuccessMessage = 'Commentaire ajouté avec succès.';
           this.commentForm.reset({ content: '' });
-          this.reloadSubject.next();
+          this.commentsSubject.next([
+            ...this.commentsSubject.value,
+            createdComment,
+          ]);
+
+          // Refresh history only, minimal reload
+          this.ticketService.getTicketHistory(ticketId).subscribe({
+            next: (history) => this.historySubject.next(history),
+          });
         },
         error: (error) => {
           this.commentErrorMessage =
@@ -367,10 +384,22 @@ export class TicketDetailPage {
       .updateComment(commentId, payload)
       .pipe(finalize(() => (this.savingEditedComment = false)))
       .subscribe({
-        next: () => {
+        next: (updatedComment) => {
           this.editCommentSuccessMessage = 'Commentaire modifié avec succès.';
           this.editingCommentId = null;
-          this.reloadSubject.next();
+          this.commentsSubject.next(
+            this.commentsSubject.value.map((comment) =>
+              comment.id === commentId ? updatedComment : comment
+            )
+          );
+
+          // Refresh history only
+          const ticketId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
+          if (ticketId) {
+            this.ticketService.getTicketHistory(ticketId).subscribe({
+              next: (history) => this.historySubject.next(history),
+            });
+          }
         },
         error: (error) => {
           this.editCommentErrorMessage =
@@ -389,7 +418,16 @@ export class TicketDetailPage {
 
     this.commentService.deleteComment(commentId).subscribe({
       next: () => {
-        this.reloadSubject.next();
+        this.commentsSubject.next(
+          this.commentsSubject.value.filter((comment) => comment.id !== commentId)
+        );
+
+        const ticketId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
+        if (ticketId) {
+          this.ticketService.getTicketHistory(ticketId).subscribe({
+            next: (history) => this.historySubject.next(history),
+          });
+        }
       },
       error: (error) => {
         this.commentErrorMessage =

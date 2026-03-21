@@ -276,12 +276,13 @@
         <h3>Commentaires</h3>
       </div>
 
-      <div *ngIf="vm.comments.length === 0" class="state-card">
-        Aucun commentaire.
-      </div>
+      <ng-container *ngIf="comments$ | async as comments">
+        <div *ngIf="comments.length === 0" class="state-card">
+          Aucun commentaire.
+        </div>
 
-      <div *ngIf="vm.comments.length > 0" class="comment-list">
-        <article class="comment-item" *ngFor="let comment of vm.comments">
+        <div *ngIf="comments.length > 0" class="comment-list">
+          <article class="comment-item" *ngFor="let comment of comments">
           <div class="comment-top">
             <div>
               <h4>{{ comment.authorName }}</h4>
@@ -345,6 +346,7 @@
           </div>
         </article>
       </div>
+    </ng-container>
     </section>
 
     <section class="panel">
@@ -352,12 +354,13 @@
         <h3>Historique</h3>
       </div>
 
-      <div *ngIf="vm.history.length === 0" class="state-card">
-        Aucun historique.
-      </div>
+      <ng-container *ngIf="history$ | async as history">
+        <div *ngIf="history.length === 0" class="state-card">
+          Aucun historique.
+        </div>
 
-      <div *ngIf="vm.history.length > 0" class="history-list">
-        <article class="history-item" *ngFor="let item of vm.history">
+        <div *ngIf="history.length > 0" class="history-list">
+          <article class="history-item" *ngFor="let item of history">
           <div class="history-main">
             <h4>{{ item.fieldName }}</h4>
             <p>
@@ -379,6 +382,7 @@
           </div>
         </article>
       </div>
+      </ng-container>
     </section>
   </ng-container>
 </div>
