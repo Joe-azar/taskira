@@ -28,6 +28,7 @@ import {
   TicketDetail,
   TicketHistoryEntry,
   UpdateTicketAssigneeRequest,
+  UpdateTicketRequest,
   UpdateTicketStatusRequest,
 } from '../../models/ticket.models';
 import { TicketService } from '../../services/ticket.service';
@@ -75,12 +76,25 @@ export class TicketDetailPage {
 
   editingCommentId: number | null = null;
 
+  isEditMode = false;
+  savingEdit = false;
+  editErrorMessage = '';
+  editSuccessMessage = '';
+
   readonly statusForm = this.fb.nonNullable.group({
     status: ['OPEN', [Validators.required]],
   });
 
   readonly assigneeForm = this.fb.nonNullable.group({
     assigneeId: [0],
+  });
+
+  readonly editForm = this.fb.nonNullable.group({
+    title: ['', [Validators.required, Validators.maxLength(200)]],
+    description: [''],
+    type: ['', [Validators.required]],
+    priority: ['', [Validators.required]],
+    dueDate: [null as string | null],
   });
 
   readonly commentForm = this.fb.nonNullable.group({
@@ -133,6 +147,17 @@ export class TicketDetailPage {
 
           this.assigneeForm.patchValue(
             { assigneeId: currentAssignee?.userId ?? 0 },
+            { emitEvent: false }
+          );
+
+          this.editForm.patchValue(
+            {
+              title: ticket.title || '',
+              description: ticket.description || '',
+              type: ticket.type || '',
+              priority: ticket.priority || '',
+              dueDate: ticket.dueDate ? ticket.dueDate : null,
+            },
             { emitEvent: false }
           );
         }),
@@ -355,6 +380,63 @@ export class TicketDetailPage {
     });
   }
 
+  startEdit(): void {
+    this.isEditMode = true;
+    this.editErrorMessage = '';
+    this.editSuccessMessage = '';
+  }
+
+  cancelEdit(): void {
+    this.isEditMode = false;
+    this.editErrorMessage = '';
+    this.editSuccessMessage = '';
+    // Reset form to current ticket values
+    this.reloadSubject.next();
+  }
+
+  submitEdit(): void {
+    if (this.editForm.invalid) {
+      this.editForm.markAllAsTouched();
+      return;
+    }
+
+    const ticketId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
+    if (!ticketId) {
+      this.editErrorMessage = 'Ticket invalide.';
+      return;
+    }
+
+    this.savingEdit = true;
+    this.editErrorMessage = '';
+    this.editSuccessMessage = '';
+
+    const formValue = this.editForm.getRawValue();
+    const payload: UpdateTicketRequest = {
+      title: formValue.title.trim(),
+      description: formValue.description?.trim() || '',
+      type: formValue.type,
+      priority: formValue.priority,
+      dueDate: formValue.dueDate,
+    };
+
+    this.ticketService
+      .updateTicket(ticketId, payload)
+      .pipe(finalize(() => (this.savingEdit = false)))
+      .subscribe({
+        next: () => {
+          this.editSuccessMessage = 'Ticket mis à jour avec succès.';
+          this.isEditMode = false;
+          this.reloadSubject.next();
+        },
+        error: (error) => {
+          this.editErrorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Impossible de mettre à jour le ticket.';
+        },
+      });
+  }
+
   get status() {
     return this.statusForm.controls.status;
   }
@@ -365,5 +447,25 @@ export class TicketDetailPage {
 
   get editCommentContent() {
     return this.editCommentForm.controls.content;
+  }
+
+  get editTitle() {
+    return this.editForm.controls.title;
+  }
+
+  get editDescription() {
+    return this.editForm.controls.description;
+  }
+
+  get editType() {
+    return this.editForm.controls.type;
+  }
+
+  get editPriority() {
+    return this.editForm.controls.priority;
+  }
+
+  get editDueDate() {
+    return this.editForm.controls.dueDate;
   }
 }

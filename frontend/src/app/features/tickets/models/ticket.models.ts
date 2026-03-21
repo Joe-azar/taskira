@@ -58,6 +58,14 @@ export interface UpdateTicketAssigneeRequest {
   assigneeId: number | null;
 }
 
+export interface UpdateTicketRequest {
+  title: string;
+  description: string;
+  type: string;
+  priority: string;
+  dueDate?: string | null;
+}
+
 export interface TicketSearchFilters {
   projectId?: number | null;
   status?: string | null;

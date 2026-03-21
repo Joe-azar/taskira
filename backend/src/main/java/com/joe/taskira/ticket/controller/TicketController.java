@@ -80,4 +80,12 @@ public class TicketController {
     ) {
         return ticketService.updateAssignee(ticketId, request);
     }
+
+    @PutMapping("/api/tickets/{ticketId}")
+    public TicketResponse updateTicket(
+            @PathVariable Long ticketId,
+            @Valid @RequestBody UpdateTicketRequest request
+    ) {
+        return ticketService.updateTicket(ticketId, request);
+    }
 }

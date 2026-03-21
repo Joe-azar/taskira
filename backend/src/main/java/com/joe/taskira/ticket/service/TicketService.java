@@ -227,6 +227,86 @@ public class TicketService {
         return TicketResponse.from(ticket);
     }
 
+    public TicketResponse updateTicket(Long ticketId, UpdateTicketRequest request) {
+        Ticket ticket = findTicketOrThrow(ticketId);
+        Project project = ticket.getProject();
+
+        assertCanEditTicket(project);
+
+        User currentUser = userRepository.findById(SecurityUtils.getCurrentUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
+
+        // Track changes for history
+        boolean hasChanges = false;
+
+        if (!ticket.getTitle().equals(request.title().trim())) {
+            ticketHistoryService.logChange(
+                    ticket,
+                    currentUser,
+                    "TITLE",
+                    ticket.getTitle(),
+                    request.title().trim()
+            );
+            ticket.setTitle(request.title().trim());
+            hasChanges = true;
+        }
+
+        String normalizedDescription = normalizeDescription(request.description());
+        if (!java.util.Objects.equals(ticket.getDescription(), normalizedDescription)) {
+            ticketHistoryService.logChange(
+                    ticket,
+                    currentUser,
+                    "DESCRIPTION",
+                    ticket.getDescription(),
+                    normalizedDescription
+            );
+            ticket.setDescription(normalizedDescription);
+            hasChanges = true;
+        }
+
+        if (ticket.getType() != request.type()) {
+            ticketHistoryService.logChange(
+                    ticket,
+                    currentUser,
+                    "TYPE",
+                    ticket.getType().name(),
+                    request.type().name()
+            );
+            ticket.setType(request.type());
+            hasChanges = true;
+        }
+
+        if (ticket.getPriority() != request.priority()) {
+            ticketHistoryService.logChange(
+                    ticket,
+                    currentUser,
+                    "PRIORITY",
+                    ticket.getPriority().name(),
+                    request.priority().name()
+            );
+            ticket.setPriority(request.priority());
+            hasChanges = true;
+        }
+
+        if (!java.util.Objects.equals(ticket.getDueDate(), request.dueDate())) {
+            ticketHistoryService.logChange(
+                    ticket,
+                    currentUser,
+                    "DUE_DATE",
+                    ticket.getDueDate() != null ? ticket.getDueDate().toString() : null,
+                    request.dueDate() != null ? request.dueDate().toString() : null
+            );
+            ticket.setDueDate(request.dueDate());
+            hasChanges = true;
+        }
+
+        if (hasChanges) {
+            ticket = ticketRepository.save(ticket);
+        }
+
+        return TicketResponse.from(ticket);
+    }
+
     private Ticket findTicketOrThrow(Long ticketId) {
         return ticketRepository.findByIdWithRelations(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
@@ -266,6 +346,25 @@ public class TicketService {
 
         if (membership.getProjectRole() != ProjectRole.OWNER && membership.getProjectRole() != ProjectRole.MANAGER) {
             throw new ForbiddenException("You are not allowed to manage assignments");
+        }
+    }
+
+    private void assertCanEditTicket(Project project) {
+        AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
+
+        if (currentUser.getUser().getGlobalRole() == GlobalRole.ADMIN) {
+            return;
+        }
+
+        if (project.getOwner().getId().equals(currentUser.getId())) {
+            return;
+        }
+
+        ProjectMember membership = projectMemberRepository.findByProjectIdAndUserId(project.getId(), currentUser.getId())
+                .orElseThrow(() -> new ForbiddenException("You are not allowed to edit tickets"));
+
+        if (membership.getProjectRole() != ProjectRole.OWNER && membership.getProjectRole() != ProjectRole.MANAGER) {
+            throw new ForbiddenException("You are not allowed to edit tickets");
         }
     }
 

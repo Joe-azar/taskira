@@ -10,6 +10,7 @@ import {
   TicketSearchFilters,
   TicketSummary,
   UpdateTicketAssigneeRequest,
+  UpdateTicketRequest,
   UpdateTicketStatusRequest,
 } from '../models/ticket.models';
 
@@ -86,6 +87,15 @@ export class TicketService {
   ): Observable<TicketDetail> {
     return this.http
       .patch<any>(`${environment.apiUrl}/tickets/${ticketId}/assignee`, payload)
+      .pipe(map((item) => this.normalizeTicketDetail(item)));
+  }
+
+  updateTicket(
+    ticketId: number,
+    payload: UpdateTicketRequest
+  ): Observable<TicketDetail> {
+    return this.http
+      .put<any>(`${environment.apiUrl}/tickets/${ticketId}`, payload)
       .pipe(map((item) => this.normalizeTicketDetail(item)));
   }
 

@@ -26,68 +26,136 @@
   </div>
 
   <ng-container *ngIf="!vm.loading && vm.ticket as ticket">
-    <div class="info-grid">
-      <div class="info-card">
-        <span>Projet</span>
-        <strong>{{ ticket.projectCode }}</strong>
-        <small>{{ ticket.projectName }}</small>
-      </div>
-
-      <div class="info-card">
-        <span>Type</span>
-        <strong>{{ ticket.type }}</strong>
-      </div>
-
-      <div class="info-card">
-        <span>Priorité</span>
-        <strong>{{ ticket.priority }}</strong>
-      </div>
-
-      <div class="info-card">
-        <span>Assigné à</span>
-        <strong>{{ ticket.assigneeName || 'Non assigné' }}</strong>
-        <small *ngIf="ticket.assigneeEmail">{{ ticket.assigneeEmail }}</small>
-      </div>
-    </div>
-
     <section class="panel">
       <div class="panel__header">
-        <h3>Description</h3>
-      </div>
-
-      <div class="panel__body">
-        <p *ngIf="ticket.description">{{ ticket.description }}</p>
-        <p *ngIf="!ticket.description" class="muted">Aucune description.</p>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel__header">
-        <h3>Informations</h3>
-      </div>
-
-      <div class="meta-grid">
-        <div class="meta-item">
-          <span>Créateur</span>
-          <strong>{{ ticket.creatorName }}</strong>
-          <small *ngIf="ticket.creatorEmail">{{ ticket.creatorEmail }}</small>
-        </div>
-
-        <div class="meta-item">
-          <span>Rôle créateur</span>
-          <strong>{{ ticket.creatorGlobalRole || '—' }}</strong>
-        </div>
-
-        <div class="meta-item">
-          <span>Échéance</span>
-          <strong>{{ ticket.dueDate ? (ticket.dueDate | date:'dd/MM/yyyy') : '—' }}</strong>
-        </div>
-
-        <div class="meta-item">
-          <span>Créé le</span>
-          <strong>{{ ticket.createdAt ? (ticket.createdAt | date:'dd/MM/yyyy HH:mm') : '—' }}</strong>
+        <h3>Informations ticket</h3>
+        <div class="panel__actions" *ngIf="!isEditMode">
+          <button type="button" class="btn-secondary" (click)="startEdit()">
+            Modifier
+          </button>
         </div>
       </div>
+
+      <div *ngIf="!isEditMode">
+        <div class="info-grid">
+          <div class="info-card">
+            <span>Projet</span>
+            <strong>{{ ticket.projectCode }}</strong>
+            <small>{{ ticket.projectName }}</small>
+          </div>
+
+          <div class="info-card">
+            <span>Type</span>
+            <strong>{{ ticket.type }}</strong>
+          </div>
+
+          <div class="info-card">
+            <span>Priorité</span>
+            <strong>{{ ticket.priority }}</strong>
+          </div>
+
+          <div class="info-card">
+            <span>Échéance</span>
+            <strong>{{ ticket.dueDate ? (ticket.dueDate | date:'dd/MM/yyyy') : '—' }}</strong>
+          </div>
+        </div>
+
+        <div class="ticket-title-section">
+          <h4>Titre</h4>
+          <p>{{ ticket.title }}</p>
+        </div>
+
+        <div class="ticket-description-section">
+          <h4>Description</h4>
+          <p *ngIf="ticket.description">{{ ticket.description }}</p>
+          <p *ngIf="!ticket.description" class="muted">Aucune description.</p>
+        </div>
+      </div>
+
+      <form *ngIf="isEditMode" class="edit-form" [formGroup]="editForm" (ngSubmit)="submitEdit()">
+        <div class="form-row">
+          <div class="form-field">
+            <label for="editTitle">Titre *</label>
+            <input
+              id="editTitle"
+              type="text"
+              formControlName="title"
+              placeholder="Titre du ticket"
+            />
+            <small class="error" *ngIf="editTitle.touched && editTitle.invalid">
+              Le titre est obligatoire et ne doit pas dépasser 200 caractères.
+            </small>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="editDescription">Description</label>
+            <textarea
+              id="editDescription"
+              rows="4"
+              formControlName="description"
+              placeholder="Description du ticket"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="editType">Type *</label>
+            <select id="editType" formControlName="type">
+              <option value="TASK">TASK</option>
+              <option value="BUG">BUG</option>
+              <option value="FEATURE">FEATURE</option>
+              <option value="SUPPORT">SUPPORT</option>
+              <option value="IMPROVEMENT">IMPROVEMENT</option>
+            </select>
+            <small class="error" *ngIf="editType.touched && editType.invalid">
+              Le type est obligatoire.
+            </small>
+          </div>
+
+          <div class="form-field">
+            <label for="editPriority">Priorité *</label>
+            <select id="editPriority" formControlName="priority">
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+              <option value="CRITICAL">CRITICAL</option>
+            </select>
+            <small class="error" *ngIf="editPriority.touched && editPriority.invalid">
+              La priorité est obligatoire.
+            </small>
+          </div>
+
+          <div class="form-field">
+            <label for="editDueDate">Échéance</label>
+            <input
+              id="editDueDate"
+              type="date"
+              formControlName="dueDate"
+            />
+          </div>
+        </div>
+
+        <div class="messages">
+          <div class="alert alert--error" *ngIf="editErrorMessage">
+            {{ editErrorMessage }}
+          </div>
+          <div class="alert alert--success" *ngIf="editSuccessMessage">
+            {{ editSuccessMessage }}
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" [disabled]="savingEdit || editForm.invalid">
+            {{ savingEdit ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+          <button type="button" class="btn-light" (click)="cancelEdit()" [disabled]="savingEdit">
+            Annuler
+          </button>
+        </div>
+      </form>
     </section>
 
     <section class="panel">
