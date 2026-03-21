@@ -37,7 +37,7 @@ export class UserListPage {
     firstName: ['', [Validators.required, Validators.minLength(2)]],
     lastName: ['', [Validators.required, Validators.minLength(2)]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.minLength(8)]],
+    password: [''],
     globalRole: ['USER', [Validators.required]],
     active: [true],
     search: [''],
@@ -59,10 +59,6 @@ export class UserListPage {
       )
     )
   );
-
-  constructor() {
-    this.refresh$.next();
-  }
 
   focusEdit(user: UserSummary): void {
     this.selectedUser = user;
@@ -134,8 +130,8 @@ export class UserListPage {
           },
         });
     } else {
-      if (!raw.password?.trim()) {
-        this.apiErrorMessage = 'Le mot de passe est requis pour créer un utilisateur.';
+      if (!raw.password?.trim() || raw.password.trim().length < 8) {
+        this.apiErrorMessage = 'Le mot de passe est requis et doit contenir au moins 8 caractères.';
         this.saving = false;
         return;
       }

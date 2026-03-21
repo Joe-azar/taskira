@@ -10,9 +10,7 @@ export interface UserSummary {
   updatedAt?: string | null;
 }
 
-export interface UserDetail extends UserSummary {
-  passwordHash?: string;
-}
+export type UserDetail = UserSummary;
 
 export interface CreateUserRequest {
   firstName: string;

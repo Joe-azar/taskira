@@ -91,6 +91,8 @@ public class UserService {
     public UserResponse updateUser(Long id, UpdateUserRequest request) {
         ensureAdmin();
 
+        AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
+
         User existing = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -98,6 +100,22 @@ public class UserService {
         if (!existing.getEmail().equalsIgnoreCase(normalizedEmail)
                 && userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new ConflictException("Email is already in use");
+        }
+
+        if (existing.getId().equals(currentUser.getId())) {
+            if (request.active() != null && !request.active()) {
+                throw new ConflictException("An administrator cannot deactivate themselves");
+            }
+            if (request.globalRole() != null && request.globalRole() != GlobalRole.ADMIN) {
+                throw new ConflictException("An administrator cannot remove their own admin role");
+            }
+        }
+
+        if (existing.getGlobalRole() == GlobalRole.ADMIN
+                && request.globalRole() != null
+                && request.globalRole() != GlobalRole.ADMIN
+                && userRepository.countByGlobalRoleAndActiveTrue(GlobalRole.ADMIN) <= 1) {
+            throw new ConflictException("Cannot demote the last active admin");
         }
 
         existing.setFirstName(request.firstName().trim());
@@ -117,8 +135,20 @@ public class UserService {
     public UserResponse updateUserStatus(Long id, UpdateUserStatusRequest request) {
         ensureAdmin();
 
+        AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
+
         User existing = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (existing.getId().equals(currentUser.getId()) && !request.active()) {
+            throw new ConflictException("An administrator cannot deactivate themselves");
+        }
+
+        if (existing.getGlobalRole() == GlobalRole.ADMIN
+                && !request.active()
+                && userRepository.countByGlobalRoleAndActiveTrue(GlobalRole.ADMIN) <= 1) {
+            throw new ConflictException("Cannot deactivate the last active admin");
+        }
 
         existing.setActive(request.active());
         User saved = userRepository.save(existing);

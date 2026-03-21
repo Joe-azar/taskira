@@ -74,10 +74,10 @@
           <small *ngIf="email.invalid && email.touched">Email valide requis.</small>
         </label>
 
-        <label>
-          Mot de passe{{ selectedUser ? ' (laisser vide pour ne pas modifier)' : '' }}
-          <input type="password" formControlName="password" [required]="!selectedUser" />
-          <small *ngIf="password.invalid && password.touched">Mot de passe min 8 caractères.</small>
+        <label *ngIf="!selectedUser">
+          Mot de passe
+          <input type="password" formControlName="password" />
+          <small *ngIf="password.touched && password.value && password.value.length < 8">Mot de passe min 8 caractères.</small>
         </label>
 
         <label>

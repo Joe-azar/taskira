@@ -1,6 +1,7 @@
 package com.joe.taskira.user.repository;
 
 import com.joe.taskira.user.entity.User;
+import com.joe.taskira.user.enums.GlobalRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -16,6 +17,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByActiveTrueOrderByFirstNameAscLastNameAsc();
 
     List<User> findAllByOrderByFirstNameAscLastNameAsc();
+
+    long countByGlobalRoleAndActiveTrue(GlobalRole globalRole);
 
     @Query("""
             select u
