@@ -26,6 +26,7 @@ export interface TicketDetail {
   creatorGlobalRole?: string;
   assigneeName?: string | null;
   assigneeEmail?: string | null;
+  projectStatus: string;
   dueDate?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;

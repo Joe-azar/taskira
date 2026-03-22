@@ -208,9 +208,6 @@
             formControlName="description"
             placeholder="Décrivez le ticket"
           ></textarea>
-          <small class="error" *ngIf="ticketDescription.touched && ticketDescription.invalid">
-            La description est obligatoire.
-          </small>
         </div>
 
         <div class="messages">
@@ -347,7 +344,7 @@
               {{ member.globalRole }}
             </span>
             <button
-              *ngIf="member.userId !== project.ownerId"
+              *ngIf="member.userId !== project.ownerId && project.status !== 'ARCHIVED'"
               type="button"
               class="btn-small btn-danger"
               (click)="removeMember(member.userId)"

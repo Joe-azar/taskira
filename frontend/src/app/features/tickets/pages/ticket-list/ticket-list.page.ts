@@ -103,6 +103,7 @@ export class TicketListPage {
 
   constructor() {
     this.loadProjects();
+    this.loadTickets();
   }
 
   private loadProjects(): void {

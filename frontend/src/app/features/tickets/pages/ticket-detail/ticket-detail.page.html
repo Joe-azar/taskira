@@ -12,9 +12,7 @@
       <p *ngIf="vm.ticket">{{ vm.ticket.title }}</p>
     </div>
 
-    <span class="header-badge" *ngIf="vm.ticket">
-      {{ vm.ticket.status }}
-    </span>
+    <app-status-badge *ngIf="vm.ticket" [value]="vm.ticket.status"></app-status-badge>
   </div>
 
   <div *ngIf="vm.loading" class="state-card">
@@ -29,7 +27,7 @@
     <section class="panel">
       <div class="panel__header">
         <h3>Informations ticket</h3>
-        <div class="panel__actions" *ngIf="!isEditMode">
+        <div class="panel__actions" *ngIf="!isEditMode && ticket.projectStatus !== 'ARCHIVED'">
           <button type="button" class="btn-secondary" (click)="startEdit()">
             Modifier
           </button>
@@ -159,7 +157,7 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel" *ngIf="ticket.projectStatus !== 'ARCHIVED'">
       <div class="panel__header">
         <h3>Changer le statut</h3>
       </div>
@@ -191,7 +189,7 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel" *ngIf="ticket.projectStatus !== 'ARCHIVED'">
       <div class="panel__header">
         <h3>Assigner le ticket</h3>
       </div>
@@ -226,7 +224,7 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel" *ngIf="ticket.projectStatus !== 'ARCHIVED'">
       <div class="panel__header">
         <h3>Ajouter un commentaire</h3>
       </div>
@@ -327,7 +325,7 @@
             </div>
           </form>
 
-          <div class="comment-actions" *ngIf="editingCommentId !== comment.id && canManageComment(comment, vm.projectMembers)">
+          <div class="comment-actions" *ngIf="editingCommentId !== comment.id && ticket.projectStatus !== 'ARCHIVED' && canManageComment(comment, vm.projectMembers)">
             <button type="button" class="btn-light" (click)="startEditComment(comment)">
               Modifier
             </button>

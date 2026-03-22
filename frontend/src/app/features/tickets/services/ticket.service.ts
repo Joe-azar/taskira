@@ -177,6 +177,7 @@ export class TicketService {
       creatorGlobalRole: creator?.globalRole ?? '',
       assigneeName: assignee?.fullName ?? assignee?.displayName ?? assignee?.email ?? null,
       assigneeEmail: assignee?.email ?? null,
+      projectStatus: raw?.projectStatus ?? '',
       dueDate: raw?.dueDate ?? null,
       createdAt: raw?.createdAt ?? null,
       updatedAt: raw?.updatedAt ?? null,

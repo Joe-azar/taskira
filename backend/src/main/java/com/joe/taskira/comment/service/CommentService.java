@@ -88,14 +88,31 @@ public class CommentService {
     public CommentResponse updateComment(Long commentId, UpdateCommentRequest request) {
         Comment comment = findCommentOrThrow(commentId);
 
+        assertCanAccessProject(comment.getTicket().getProject());
+
         if (comment.getTicket().getProject().getStatus() == ProjectStatus.ARCHIVED) {
             throw new ConflictException("Cannot update comments in archived projects");
         }
 
         AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
-        if (!comment.getUser().getId().equals(currentUser.getId())) {
-            throw new ForbiddenException("You can only edit your own comments");
+        boolean isAuthor = comment.getUser().getId().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getUser().getGlobalRole() == GlobalRole.ADMIN;
+        boolean isProjectOwner = comment.getTicket().getProject().getOwner().getId().equals(currentUser.getId());
+
+        boolean canManage = false;
+
+        if (!isAuthor && !isAdmin && !isProjectOwner) {
+            ProjectMember membership = projectMemberRepository
+                    .findByProjectIdAndUserId(comment.getTicket().getProject().getId(), currentUser.getId())
+                    .orElse(null);
+
+            canManage = membership != null
+                    && (membership.getProjectRole() == ProjectRole.OWNER || membership.getProjectRole() == ProjectRole.MANAGER);
+
+            if (!canManage) {
+                throw new ForbiddenException("You are not allowed to update this comment");
+            }
         }
 
         String oldContent = comment.getContent();
@@ -105,7 +122,7 @@ public class CommentService {
 
         ticketHistoryService.logChange(
                 comment.getTicket(),
-                comment.getUser(),
+                currentUser.getUser(),
                 "COMMENT_UPDATED",
                 oldContent,
                 newContent
@@ -116,6 +133,8 @@ public class CommentService {
 
     public void deleteComment(Long commentId) {
         Comment comment = findCommentOrThrow(commentId);
+
+        assertCanAccessProject(comment.getTicket().getProject());
 
         if (comment.getTicket().getProject().getStatus() == ProjectStatus.ARCHIVED) {
             throw new ConflictException("Cannot delete comments in archived projects");
@@ -132,17 +151,17 @@ public class CommentService {
                     .findByProjectIdAndUserId(comment.getTicket().getProject().getId(), currentUser.getId())
                     .orElse(null);
 
-            boolean canManage = membership != null
+            boolean canManageMember = membership != null
                     && (membership.getProjectRole() == ProjectRole.OWNER || membership.getProjectRole() == ProjectRole.MANAGER);
 
-            if (!canManage) {
+            if (!canManageMember) {
                 throw new ForbiddenException("You are not allowed to delete this comment");
             }
         }
 
         ticketHistoryService.logChange(
                 comment.getTicket(),
-                comment.getUser(),
+                currentUser.getUser(),
                 "COMMENT_DELETED",
                 comment.getContent(),
                 null

@@ -16,6 +16,7 @@ import {
 } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
+import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
 import { ProjectMember } from '../../../projects/models/project.models';
 import { ProjectService } from '../../../projects/services/project.service';
 import {
@@ -46,7 +47,7 @@ type TicketDetailVm = {
 @Component({
   selector: 'app-ticket-detail-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, StatusBadgeComponent],
   templateUrl: './ticket-detail.page.html',
   styleUrl: './ticket-detail.page.scss',
 })

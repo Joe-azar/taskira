@@ -343,7 +343,7 @@ export class ProjectDetailPage {
             title: '',
             description: '',
             type: 'BUG',
-            priority: 'HIGH',
+            priority: 'MEDIUM',
             dueDate: '',
           });
         },
