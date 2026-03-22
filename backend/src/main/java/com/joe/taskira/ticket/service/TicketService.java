@@ -168,7 +168,17 @@ public class TicketService {
         if (sort != null && !sort.isBlank()) {
             String[] sortParts = sort.split(",");
             if (sortParts.length == 2) {
-                sortObj = Sort.by(Sort.Direction.fromString(sortParts[1].trim()), sortParts[0].trim());
+                String property = sortParts[0].trim();
+                String direction = sortParts[1].trim();
+                List<String> allowedProperties = List.of("id", "reference", "title", "status", "priority", "type", "createdAt", "updatedAt", "dueDate");
+                if (allowedProperties.contains(property)) {
+                    try {
+                        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+                        sortObj = Sort.by(sortDirection, property);
+                    } catch (IllegalArgumentException ignored) {
+                        sortObj = Sort.by(Sort.Direction.DESC, "createdAt");
+                    }
+                }
             }
         }
 

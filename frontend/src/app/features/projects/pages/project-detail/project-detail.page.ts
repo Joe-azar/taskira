@@ -77,6 +77,10 @@ export class ProjectDetailPage {
   removeMemberErrorMessage = '';
   removeMemberSuccessMessage = '';
 
+  archivingProject = false;
+  archiveErrorMessage = '';
+  archiveSuccessMessage = '';
+
   isEditMode = false;
   savingEdit = false;
   editErrorMessage = '';
@@ -234,6 +238,17 @@ export class ProjectDetailPage {
       return;
     }
 
+    const project = this.projectSubject.value;
+    if (!project) {
+      this.removeMemberErrorMessage = 'Projet invalide.';
+      return;
+    }
+
+    if (member.userId === project.ownerId) {
+      this.removeMemberErrorMessage = 'Impossible de retirer le propriétaire du projet.';
+      return;
+    }
+
     if (!confirm(`Confirmez-vous la suppression de ${member.displayName} du projet ?`)) {
       return;
     }
@@ -248,6 +263,14 @@ export class ProjectDetailPage {
         next: () => {
           this.removeMemberSuccessMessage = 'Membre retiré avec succès.';
           this.membersSubject.next(this.membersSubject.value.filter((m) => m.userId !== memberId));
+
+          const removedMember = member;
+          const userOption: UserOption = {
+            id: removedMember.userId,
+            displayName: removedMember.displayName,
+            email: removedMember.email,
+          };
+          this.availableUsersSubject.next([...this.availableUsersSubject.value, userOption]);
 
           const updatedProject = this.projectSubject.value
             ? { ...this.projectSubject.value, memberCount: this.projectSubject.value.memberCount - 1 }
@@ -331,7 +354,7 @@ export class ProjectDetailPage {
 
   startEdit(): void {
     const project = this.projectSubject.value;
-    if (!project) {
+    if (!project || project.status === 'ARCHIVED') {
       return;
     }
 
@@ -406,15 +429,24 @@ export class ProjectDetailPage {
       return;
     }
 
-    this.projectService.archiveProject(projectId).subscribe({
-      next: (updatedProject) => {
-        this.projectSubject.next(updatedProject);
-        // Optionally reload tickets or show message
-      },
-      error: (error) => {
-        alert(error?.error?.message || error?.message || 'Impossible d\'archiver le projet.');
-      },
-    });
+    this.archivingProject = true;
+    this.archiveErrorMessage = '';
+    this.archiveSuccessMessage = '';
+
+    this.projectService.archiveProject(projectId)
+      .pipe(finalize(() => (this.archivingProject = false)))
+      .subscribe({
+        next: (updatedProject) => {
+          this.projectSubject.next(updatedProject);
+          this.archiveSuccessMessage = 'Projet archivé avec succès.';
+        },
+        error: (error) => {
+          this.archiveErrorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Impossible d\'archiver le projet.';
+        },
+      });
   }
 
   formatDate(value?: string | null): string {

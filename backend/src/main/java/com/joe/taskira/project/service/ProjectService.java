@@ -131,6 +131,10 @@ public class ProjectService {
         ProjectMember member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
 
+        if (project.getOwner().getId().equals(userId)) {
+            throw new ConflictException("Cannot remove project owner. Transfer ownership first.");
+        }
+
         if (member.getProjectRole() == ProjectRole.OWNER) {
             long ownerCount = projectMemberRepository.countByProjectIdAndProjectRole(projectId, ProjectRole.OWNER);
             if (ownerCount <= 1) {
@@ -160,6 +164,10 @@ public class ProjectService {
     public ProjectResponse updateProject(Long projectId, UpdateProjectRequest request) {
         Project project = findProjectOrThrow(projectId);
         assertCanManageProject(project);
+
+        if (project.getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot update an archived project");
+        }
 
         String normalizedCode = normalizeCode(request.code());
 

@@ -94,6 +94,7 @@ export class ProjectService {
       name: raw?.name ?? '',
       description: raw?.description ?? '',
       status: raw?.status ?? '',
+      ownerId: Number(owner?.id ?? 0),
       ownerName,
       ownerEmail: owner?.email ?? '',
       memberCount: Number(raw?.memberCount ?? 0),

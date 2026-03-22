@@ -55,7 +55,13 @@
       <div class="panel__header">
         <h3>Description</h3>
         <div class="panel__actions" *ngIf="!isEditMode">
-          <button type="button" class="btn-secondary" (click)="startEdit()">
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="startEdit()"
+            [disabled]="project.status !== 'ACTIVE'"
+            *ngIf="project.status === 'ACTIVE'"
+          >
             Modifier le projet
           </button>
           <button
@@ -63,13 +69,24 @@
             class="btn-danger"
             (click)="archiveProject()"
             *ngIf="project.status === 'ACTIVE'"
+            [disabled]="archivingProject"
           >
-            Archiver
+            {{ archivingProject ? 'Archivage...' : 'Archiver' }}
           </button>
         </div>
       </div>
 
       <div class="panel__body">
+        <div class="messages" *ngIf="archiveSuccessMessage">
+          <div class="alert alert--success">
+            {{ archiveSuccessMessage }}
+          </div>
+        </div>
+        <div class="messages" *ngIf="archiveErrorMessage">
+          <div class="alert alert--error">
+            {{ archiveErrorMessage }}
+          </div>
+        </div>
         <div class="messages" *ngIf="editSuccessMessage">
           <div class="alert alert--success">
             {{ editSuccessMessage }}
@@ -175,7 +192,9 @@
             <select id="ticketType" formControlName="type">
               <option value="BUG">BUG</option>
               <option value="TASK">TASK</option>
-              <option value="STORY">STORY</option>
+              <option value="FEATURE">FEATURE</option>
+              <option value="SUPPORT">SUPPORT</option>
+              <option value="IMPROVEMENT">IMPROVEMENT</option>
             </select>
           </div>
 
@@ -337,6 +356,7 @@
               {{ member.globalRole }}
             </span>
             <button
+              *ngIf="member.userId !== project.ownerId"
               type="button"
               class="btn-small btn-danger"
               (click)="removeMember(member.userId)"
@@ -345,6 +365,7 @@
             >
               {{ removingMemberId === member.userId ? 'Suppression...' : 'Retirer' }}
             </button>
+            <span *ngIf="member.userId === project.ownerId" class="muted">Propriétaire</span>
           </div>
         </article>
       </div>

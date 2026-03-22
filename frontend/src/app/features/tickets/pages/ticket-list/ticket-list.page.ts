@@ -146,6 +146,7 @@ export class TicketListPage {
   }
 
   resetFilters(): void {
+    this.page = 0;
     this.form.reset({
       q: '',
       projectId: 0,
@@ -162,71 +163,7 @@ export class TicketListPage {
     return ticket.id;
   }
 
-  private sortTickets(
-    tickets: TicketSummary[],
-    sortBy: TicketSortOption
-  ): TicketSummary[] {
-    const priorityOrder: Record<string, number> = {
-      LOW: 1,
-      MEDIUM: 2,
-      HIGH: 3,
-      CRITICAL: 4,
-    };
 
-    const statusOrder: Record<string, number> = {
-      OPEN: 1,
-      IN_PROGRESS: 2,
-      DONE: 3,
-      REVIEW: 4,
-      BLOCKED: 5,
-      CANCELLED: 6,
-    };
-
-    return [...tickets].sort((a, b) => {
-      switch (sortBy) {
-        case 'updatedAsc':
-          return this.compareDates(a.updatedAt, b.updatedAt);
-
-        case 'priorityDesc':
-          return (priorityOrder[b.priority] ?? 0) - (priorityOrder[a.priority] ?? 0);
-
-        case 'priorityAsc':
-          return (priorityOrder[a.priority] ?? 0) - (priorityOrder[b.priority] ?? 0);
-
-        case 'statusAsc':
-          return (statusOrder[a.status] ?? 999) - (statusOrder[b.status] ?? 999);
-
-        case 'titleAsc':
-          return this.compareText(a.title, b.title);
-
-        case 'referenceAsc':
-          return this.compareText(a.reference, b.reference);
-
-        case 'updatedDesc':
-        default:
-          return this.compareDates(b.updatedAt, a.updatedAt);
-      }
-    });
-  }
-
-  private compareDates(
-    first?: string | null,
-    second?: string | null
-  ): number {
-    const firstTime = first ? new Date(first).getTime() : 0;
-    const secondTime = second ? new Date(second).getTime() : 0;
-    return firstTime - secondTime;
-  }
-
-  private compareText(
-    first?: string | null,
-    second?: string | null
-  ): number {
-    return (first ?? '').localeCompare(second ?? '', 'fr', {
-      sensitivity: 'base',
-      numeric: true,
-    });
-  }
 
   private toBackendSort(sort: TicketSortOption): string {
     switch (sort) {

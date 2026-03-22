@@ -13,6 +13,7 @@ export interface ProjectDetail {
   name: string;
   description?: string;
   status: string;
+  ownerId: number;
   ownerName: string;
   ownerEmail?: string;
   memberCount: number;
