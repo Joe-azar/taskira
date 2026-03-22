@@ -2,13 +2,13 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { BehaviorSubject, combineLatest, forkJoin, map } from 'rxjs';
+import { BehaviorSubject, combineLatest, map } from 'rxjs';
 
 import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
 import { ProjectSummary } from '../../../projects/models/project.models';
 import { ProjectService } from '../../../projects/services/project.service';
-import { TICKET_STATUSES, TICKET_TYPES, TICKET_PRIORITIES } from '../../ticket.constants';
+import { TICKET_STATUSES, TICKET_TYPES } from '../../ticket.constants';
 import { TicketSearchFilters, TicketSummary } from '../../models/ticket.models';
 import { TicketService } from '../../services/ticket.service';
 
@@ -70,7 +70,6 @@ export class TicketListPage {
 
   readonly ticketStatuses = TICKET_STATUSES;
   readonly ticketTypes = TICKET_TYPES;
-  readonly ticketPriorities = TICKET_PRIORITIES;
 
   readonly form = this.fb.nonNullable.group({
     q: [''],

@@ -100,14 +100,12 @@ public class CommentService {
         boolean isAdmin = currentUser.getUser().getGlobalRole() == GlobalRole.ADMIN;
         boolean isProjectOwner = comment.getTicket().getProject().getOwner().getId().equals(currentUser.getId());
 
-        boolean canManage = false;
-
         if (!isAuthor && !isAdmin && !isProjectOwner) {
             ProjectMember membership = projectMemberRepository
                     .findByProjectIdAndUserId(comment.getTicket().getProject().getId(), currentUser.getId())
                     .orElse(null);
 
-            canManage = membership != null
+            boolean canManage = membership != null
                     && (membership.getProjectRole() == ProjectRole.OWNER || membership.getProjectRole() == ProjectRole.MANAGER);
 
             if (!canManage) {
