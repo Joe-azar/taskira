@@ -9,6 +9,7 @@ import {
   ProjectDetail,
   ProjectMember,
   ProjectSummary,
+  UpdateProjectRequest,
 } from '../models/project.models';
 
 @Injectable({
@@ -48,6 +49,22 @@ export class ProjectService {
     return this.http
       .post<any>(`${environment.apiUrl}/projects/${projectId}/members`, payload)
       .pipe(map((item) => this.normalizeProjectMember(item)));
+  }
+
+  updateProject(projectId: number, payload: UpdateProjectRequest): Observable<ProjectDetail> {
+    return this.http.put<any>(`${environment.apiUrl}/projects/${projectId}`, payload).pipe(
+      map((item) => this.normalizeProjectDetail(item))
+    );
+  }
+
+  archiveProject(projectId: number): Observable<ProjectDetail> {
+    return this.http.patch<any>(`${environment.apiUrl}/projects/${projectId}/archive`, {}).pipe(
+      map((item) => this.normalizeProjectDetail(item))
+    );
+  }
+
+  removeProjectMember(projectId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/projects/${projectId}/members/${userId}`);
   }
 
   private normalizeProjectSummary(raw: any): ProjectSummary {

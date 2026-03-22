@@ -43,4 +43,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long>, JpaSpecif
     @Override
     @EntityGraph(attributePaths = {"project", "creator", "assignee"})
     Page<Ticket> findAll(Specification<Ticket> spec, Pageable pageable);
+
+    long countByProjectIdAndAssigneeId(Long projectId, Long assigneeId);
 }

@@ -9,6 +9,7 @@ import com.joe.taskira.project.dto.CreateProjectRequest;
 import com.joe.taskira.project.dto.ProjectMemberResponse;
 import com.joe.taskira.project.dto.ProjectResponse;
 import com.joe.taskira.project.dto.ProjectSummaryResponse;
+import com.joe.taskira.project.dto.UpdateProjectRequest;
 import com.joe.taskira.project.entity.Project;
 import com.joe.taskira.project.entity.ProjectMember;
 import com.joe.taskira.project.enums.ProjectRole;
@@ -16,6 +17,7 @@ import com.joe.taskira.project.enums.ProjectStatus;
 import com.joe.taskira.project.repository.ProjectMemberRepository;
 import com.joe.taskira.project.repository.ProjectRepository;
 import com.joe.taskira.security.model.AuthenticatedUser;
+import com.joe.taskira.ticket.repository.TicketRepository;
 import com.joe.taskira.user.entity.User;
 import com.joe.taskira.user.enums.GlobalRole;
 import com.joe.taskira.user.repository.UserRepository;
@@ -32,6 +34,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
 
     public ProjectResponse createProject(CreateProjectRequest request) {
@@ -90,6 +93,10 @@ public class ProjectService {
         Project project = findProjectOrThrow(projectId);
         assertCanManageProject(project);
 
+        if (project.getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot add members to archived projects");
+        }
+
         User targetUser = userRepository.findById(request.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -113,6 +120,33 @@ public class ProjectService {
     }
 
     @Transactional
+    public void removeMember(Long projectId, Long userId) {
+        Project project = findProjectOrThrow(projectId);
+        assertCanManageProject(project);
+
+        if (project.getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot remove members from archived projects");
+        }
+
+        ProjectMember member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
+
+        if (member.getProjectRole() == ProjectRole.OWNER) {
+            long ownerCount = projectMemberRepository.countByProjectIdAndProjectRole(projectId, ProjectRole.OWNER);
+            if (ownerCount <= 1) {
+                throw new ConflictException("Cannot remove the last owner of the project");
+            }
+        }
+
+        long assignedTickets = ticketRepository.countByProjectIdAndAssigneeId(projectId, userId);
+        if (assignedTickets > 0) {
+            throw new ConflictException("Cannot remove member with assigned tickets. Reassign or unassign first.");
+        }
+
+        projectMemberRepository.delete(member);
+    }
+
+    @Transactional
     public List<ProjectMemberResponse> listMembers(Long projectId) {
         Project project = findProjectOrThrow(projectId);
         assertCanAccessProject(project);
@@ -120,6 +154,44 @@ public class ProjectService {
         return projectMemberRepository.findByProjectIdOrderByJoinedAtAsc(projectId).stream()
                 .map(ProjectMemberResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public ProjectResponse updateProject(Long projectId, UpdateProjectRequest request) {
+        Project project = findProjectOrThrow(projectId);
+        assertCanManageProject(project);
+
+        String normalizedCode = normalizeCode(request.code());
+
+        if (!project.getCode().equalsIgnoreCase(normalizedCode) &&
+            projectRepository.existsByCodeIgnoreCase(normalizedCode)) {
+            throw new ConflictException("Project code is already in use");
+        }
+
+        project.setCode(normalizedCode);
+        project.setName(request.name().trim());
+        project.setDescription(normalizeDescription(request.description()));
+
+        project = projectRepository.save(project);
+
+        long memberCount = projectMemberRepository.countByProjectId(projectId);
+        return ProjectResponse.from(project, memberCount);
+    }
+
+    @Transactional
+    public ProjectResponse archiveProject(Long projectId) {
+        Project project = findProjectOrThrow(projectId);
+        assertCanManageProject(project);
+
+        if (project.getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Project is already archived");
+        }
+
+        project.setStatus(ProjectStatus.ARCHIVED);
+        project = projectRepository.save(project);
+
+        long memberCount = projectMemberRepository.countByProjectId(projectId);
+        return ProjectResponse.from(project, memberCount);
     }
 
     private Project findProjectOrThrow(Long projectId) {

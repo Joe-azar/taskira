@@ -7,6 +7,7 @@ import com.joe.taskira.common.util.SecurityUtils;
 import com.joe.taskira.project.entity.Project;
 import com.joe.taskira.project.entity.ProjectMember;
 import com.joe.taskira.project.enums.ProjectRole;
+import com.joe.taskira.project.enums.ProjectStatus;
 import com.joe.taskira.project.repository.ProjectMemberRepository;
 import com.joe.taskira.project.repository.ProjectRepository;
 import com.joe.taskira.security.model.AuthenticatedUser;
@@ -49,6 +50,10 @@ public class TicketService {
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         assertCanAccessProject(project);
+
+        if (project.getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot create tickets in archived projects");
+        }
 
         User assignee = null;
         if (request.assigneeId() != null) {
@@ -117,6 +122,24 @@ public class TicketService {
             Boolean unassigned,
             String q
     ) {
+        return this.searchTicketsPage(projectId, status, priority, type, creatorId, assigneeId, unassigned, q, 0, 50, "createdAt,desc")
+                .content();
+    }
+
+    @Transactional
+    public TicketPageResponse searchTicketsPage(
+            Long projectId,
+            TicketStatus status,
+            TicketPriority priority,
+            TicketType type,
+            Long creatorId,
+            Long assigneeId,
+            Boolean unassigned,
+            String q,
+            int page,
+            int size,
+            String sort
+    ) {
         AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
         List<Long> accessibleProjectIds = currentUser.getUser().getGlobalRole() == GlobalRole.ADMIN
@@ -124,7 +147,7 @@ public class TicketService {
                 : projectRepository.findAccessibleProjectIds(currentUser.getId());
 
         if (accessibleProjectIds.isEmpty()) {
-            return List.of();
+            return new TicketPageResponse(List.of(), 0, 0, 0, 0);
         }
 
         if (projectId != null && !accessibleProjectIds.contains(projectId)) {
@@ -141,9 +164,28 @@ public class TicketService {
                 .and(TicketSpecifications.isUnassigned(unassigned))
                 .and(TicketSpecifications.matchesKeyword(q));
 
-        return ticketRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt")).stream()
+        Sort sortObj = Sort.by(Sort.Direction.DESC, "createdAt");
+        if (sort != null && !sort.isBlank()) {
+            String[] sortParts = sort.split(",");
+            if (sortParts.length == 2) {
+                sortObj = Sort.by(Sort.Direction.fromString(sortParts[1].trim()), sortParts[0].trim());
+            }
+        }
+
+        var pageRequest = org.springframework.data.domain.PageRequest.of(page, size, sortObj);
+        var pageResult = ticketRepository.findAll(spec, pageRequest);
+
+        List<TicketSummaryResponse> content = pageResult.getContent().stream()
                 .map(TicketSummaryResponse::from)
                 .toList();
+
+        return new TicketPageResponse(
+                content,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages()
+        );
     }
 
     @Transactional

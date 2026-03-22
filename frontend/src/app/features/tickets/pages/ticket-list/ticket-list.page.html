@@ -138,5 +138,15 @@
         </div>
       </a>
     </div>
+
+    <div *ngIf="!vm.loading && vm.totalPages > 1" class="pagination">
+      <button type="button" [disabled]="vm.page === 0" (click)="changePage(vm.page - 1)">
+        Précédent
+      </button>
+      <span>Page {{ vm.page + 1 }} sur {{ vm.totalPages }} ({{ vm.totalElements }} tickets)</span>
+      <button type="button" [disabled]="vm.page + 1 >= vm.totalPages" (click)="changePage(vm.page + 1)">
+        Suivant
+      </button>
+    </div>
   </section>
 </div>

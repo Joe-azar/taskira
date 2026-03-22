@@ -14,6 +14,7 @@ import {
   AddProjectMemberRequest,
   ProjectDetail,
   ProjectMember,
+  UpdateProjectRequest,
 } from '../../models/project.models';
 import { ProjectService } from '../../services/project.service';
 
@@ -72,6 +73,15 @@ export class ProjectDetailPage {
   createTicketErrorMessage = '';
   ticketSuccessMessage = '';
 
+  removingMemberId: number | null = null;
+  removeMemberErrorMessage = '';
+  removeMemberSuccessMessage = '';
+
+  isEditMode = false;
+  savingEdit = false;
+  editErrorMessage = '';
+  editSuccessMessage = '';
+
   readonly memberForm = this.fb.nonNullable.group({
     userId: [0, [Validators.required, Validators.min(1)]],
     projectRole: ['MEMBER', [Validators.required]],
@@ -83,6 +93,12 @@ export class ProjectDetailPage {
     type: ['BUG', [Validators.required]],
     priority: ['HIGH', [Validators.required]],
     dueDate: [''],
+  });
+
+  readonly editForm = this.fb.nonNullable.group({
+    name: ['', [Validators.required, Validators.minLength(2)]],
+    code: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(20)]],
+    description: [''],
   });
 
   private readonly projectId$ = this.route.paramMap.pipe(
@@ -204,6 +220,51 @@ export class ProjectDetailPage {
       });
   }
 
+  removeMember(memberId: number): void {
+    const projectId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
+
+    if (!projectId) {
+      this.removeMemberErrorMessage = 'Projet invalide.';
+      return;
+    }
+
+    const member = this.membersSubject.value.find((m) => m.userId === memberId);
+    if (!member) {
+      this.removeMemberErrorMessage = 'Membre introuvable.';
+      return;
+    }
+
+    if (!confirm(`Confirmez-vous la suppression de ${member.displayName} du projet ?`)) {
+      return;
+    }
+
+    this.removingMemberId = memberId;
+    this.removeMemberErrorMessage = '';
+    this.removeMemberSuccessMessage = '';
+
+    this.projectService.removeProjectMember(projectId, memberId)
+      .pipe(finalize(() => (this.removingMemberId = null)))
+      .subscribe({
+        next: () => {
+          this.removeMemberSuccessMessage = 'Membre retiré avec succès.';
+          this.membersSubject.next(this.membersSubject.value.filter((m) => m.userId !== memberId));
+
+          const updatedProject = this.projectSubject.value
+            ? { ...this.projectSubject.value, memberCount: this.projectSubject.value.memberCount - 1 }
+            : null;
+          if (updatedProject) {
+            this.projectSubject.next(updatedProject);
+          }
+        },
+        error: (error) => {
+          this.removeMemberErrorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Impossible de retirer le membre.';
+        },
+      });
+  }
+
   submitTicket(): void {
     if (this.ticketForm.invalid) {
       this.ticketForm.markAllAsTouched();
@@ -268,6 +329,94 @@ export class ProjectDetailPage {
       });
   }
 
+  startEdit(): void {
+    const project = this.projectSubject.value;
+    if (!project) {
+      return;
+    }
+
+    this.isEditMode = true;
+    this.editForm.patchValue({
+      name: project.name,
+      code: project.code,
+      description: project.description || '',
+    });
+  }
+
+  cancelEdit(): void {
+    this.isEditMode = false;
+    this.editErrorMessage = '';
+    this.editSuccessMessage = '';
+  }
+
+  submitEdit(): void {
+    if (this.editForm.invalid) {
+      this.editForm.markAllAsTouched();
+      return;
+    }
+
+    const projectId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
+    if (!projectId) {
+      this.editErrorMessage = 'Projet invalide.';
+      return;
+    }
+
+    this.savingEdit = true;
+    this.editErrorMessage = '';
+    this.editSuccessMessage = '';
+
+    const raw = this.editForm.getRawValue();
+
+    const payload: UpdateProjectRequest = {
+      name: raw.name.trim(),
+      code: raw.code.trim().toUpperCase(),
+      description: raw.description.trim() || null,
+    };
+
+    this.projectService
+      .updateProject(projectId, payload)
+      .pipe(finalize(() => (this.savingEdit = false)))
+      .subscribe({
+        next: (updatedProject) => {
+          this.editSuccessMessage = 'Projet modifié avec succès.';
+          this.projectSubject.next(updatedProject);
+          this.isEditMode = false;
+        },
+        error: (error) => {
+          this.editErrorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Impossible de modifier le projet.';
+        },
+      });
+  }
+
+  archiveProject(): void {
+    const project = this.projectSubject.value;
+    if (!project) {
+      return;
+    }
+
+    if (!confirm(`Êtes-vous sûr de vouloir archiver le projet "${project.name}" ? Cette action est irréversible.`)) {
+      return;
+    }
+
+    const projectId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
+    if (!projectId) {
+      return;
+    }
+
+    this.projectService.archiveProject(projectId).subscribe({
+      next: (updatedProject) => {
+        this.projectSubject.next(updatedProject);
+        // Optionally reload tickets or show message
+      },
+      error: (error) => {
+        alert(error?.error?.message || error?.message || 'Impossible d\'archiver le projet.');
+      },
+    });
+  }
+
   formatDate(value?: string | null): string {
     if (!value) {
       return '—';
@@ -300,5 +449,17 @@ export class ProjectDetailPage {
 
   get ticketDescription() {
     return this.ticketForm.controls.description;
+  }
+
+  get editName() {
+    return this.editForm.controls.name;
+  }
+
+  get editCode() {
+    return this.editForm.controls.code;
+  }
+
+  get editDescription() {
+    return this.editForm.controls.description;
   }
 }

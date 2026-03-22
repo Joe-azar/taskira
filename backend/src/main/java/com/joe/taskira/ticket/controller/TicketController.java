@@ -54,6 +54,35 @@ public class TicketController {
         );
     }
 
+    @GetMapping("/api/tickets/paged")
+    public TicketPageResponse searchTicketsPaged(
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) TicketStatus status,
+            @RequestParam(required = false) TicketPriority priority,
+            @RequestParam(required = false) TicketType type,
+            @RequestParam(required = false) Long creatorId,
+            @RequestParam(required = false) Long assigneeId,
+            @RequestParam(required = false) Boolean unassigned,
+            @RequestParam(required = false, name = "q") String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort
+    ) {
+        return ticketService.searchTicketsPage(
+                projectId,
+                status,
+                priority,
+                type,
+                creatorId,
+                assigneeId,
+                unassigned,
+                keyword,
+                page,
+                size,
+                sort
+        );
+    }
+
     @GetMapping("/api/tickets/{ticketId}")
     public TicketResponse getTicketById(@PathVariable Long ticketId) {
         return ticketService.getTicketById(ticketId);

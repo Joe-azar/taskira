@@ -1,6 +1,7 @@
 package com.joe.taskira.project.repository;
 
 import com.joe.taskira.project.entity.ProjectMember;
+import com.joe.taskira.project.enums.ProjectRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -15,4 +16,6 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
     List<ProjectMember> findByProjectIdOrderByJoinedAtAsc(Long projectId);
 
     long countByProjectId(Long projectId);
+
+    long countByProjectIdAndProjectRole(Long projectId, ProjectRole projectRole);
 }

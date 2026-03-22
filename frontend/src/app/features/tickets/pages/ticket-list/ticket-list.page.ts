@@ -25,6 +25,10 @@ type TicketListVm = {
   tickets: TicketSummary[];
   projects: ProjectSummary[];
   errorMessage: string;
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
 };
 
 @Component({
@@ -58,6 +62,11 @@ export class TicketListPage {
   private readonly errorSubject = new BehaviorSubject<string>('');
   readonly error$ = this.errorSubject.asObservable();
 
+  page = 0;
+  size = 20;
+  totalPages = 0;
+  totalElements = 0;
+
   readonly form = this.fb.nonNullable.group({
     q: [''],
     projectId: [0],
@@ -78,6 +87,10 @@ export class TicketListPage {
       tickets,
       projects,
       errorMessage,
+      page: this.page,
+      size: this.size,
+      totalPages: this.totalPages,
+      totalElements: this.totalElements,
     } as TicketListVm))
   );
 
@@ -100,11 +113,13 @@ export class TicketListPage {
     this.errorSubject.next('');
 
     forkJoin({
-      tickets: this.ticketService.searchTickets(filters),
+      ticketsPage: this.ticketService.searchTicketsPage(filters, this.page, this.size, this.toBackendSort(raw.sortBy)),
       projects: this.projectService.getProjects(),
     }).subscribe({
-      next: ({ tickets, projects }) => {
-        this.ticketsSubject.next(this.sortTickets(tickets, raw.sortBy));
+      next: ({ ticketsPage, projects }) => {
+        this.ticketsSubject.next(ticketsPage.content);
+        this.totalPages = ticketsPage.totalPages;
+        this.totalElements = ticketsPage.totalElements;
         this.projectsSubject.next(projects);
         this.loadingSubject.next(false);
       },
@@ -118,6 +133,15 @@ export class TicketListPage {
   }
 
   applyFilters(): void {
+    this.page = 0;
+    this.loadTickets();
+  }
+
+  changePage(page: number): void {
+    if (page < 0 || page >= this.totalPages) {
+      return;
+    }
+    this.page = page;
     this.loadTickets();
   }
 
@@ -202,5 +226,26 @@ export class TicketListPage {
       sensitivity: 'base',
       numeric: true,
     });
+  }
+
+  private toBackendSort(sort: TicketSortOption): string {
+    switch (sort) {
+      case 'updatedAsc':
+        return 'updatedAt,asc';
+      case 'updatedDesc':
+        return 'updatedAt,desc';
+      case 'priorityAsc':
+        return 'priority,asc';
+      case 'priorityDesc':
+        return 'priority,desc';
+      case 'statusAsc':
+        return 'status,asc';
+      case 'titleAsc':
+        return 'title,asc';
+      case 'referenceAsc':
+        return 'reference,asc';
+      default:
+        return 'updatedAt,desc';
+    }
   }
 }

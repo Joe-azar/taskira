@@ -54,15 +54,96 @@
     <section class="panel">
       <div class="panel__header">
         <h3>Description</h3>
+        <div class="panel__actions" *ngIf="!isEditMode">
+          <button type="button" class="btn-secondary" (click)="startEdit()">
+            Modifier le projet
+          </button>
+          <button
+            type="button"
+            class="btn-danger"
+            (click)="archiveProject()"
+            *ngIf="project.status === 'ACTIVE'"
+          >
+            Archiver
+          </button>
+        </div>
       </div>
 
       <div class="panel__body">
-        <p *ngIf="project.description">{{ project.description }}</p>
-        <p *ngIf="!project.description" class="muted">Aucune description.</p>
+        <div class="messages" *ngIf="editSuccessMessage">
+          <div class="alert alert--success">
+            {{ editSuccessMessage }}
+          </div>
+        </div>
+
+        <div *ngIf="!isEditMode">
+          <p *ngIf="project.description">{{ project.description }}</p>
+          <p *ngIf="!project.description" class="muted">Aucune description.</p>
+        </div>
+
+        <form *ngIf="isEditMode" class="edit-form" [formGroup]="editForm" (ngSubmit)="submitEdit()">
+          <div class="form-row">
+            <div class="form-field">
+              <label for="editName">Nom *</label>
+              <input
+                id="editName"
+                type="text"
+                formControlName="name"
+                placeholder="Nom du projet"
+              />
+              <small class="error" *ngIf="editName.touched && editName.invalid">
+                Le nom est obligatoire et doit contenir au moins 2 caractères.
+              </small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="editCode">Code *</label>
+              <input
+                id="editCode"
+                type="text"
+                formControlName="code"
+                placeholder="CODE"
+                style="text-transform: uppercase;"
+              />
+              <small class="error" *ngIf="editCode.touched && editCode.invalid">
+                Le code est obligatoire (2-20 caractères).
+              </small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="editDescription">Description</label>
+              <textarea
+                id="editDescription"
+                formControlName="description"
+                placeholder="Description du projet"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="messages">
+            <div class="alert alert--error" *ngIf="editErrorMessage">
+              {{ editErrorMessage }}
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="submit" [disabled]="savingEdit || editForm.invalid">
+              {{ savingEdit ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+            <button type="button" class="btn-light" (click)="cancelEdit()" [disabled]="savingEdit">
+              Annuler
+            </button>
+          </div>
+        </form>
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" *ngIf="project.status !== 'ARCHIVED'">
       <div class="panel__header">
         <h3>Créer un ticket</h3>
       </div>
@@ -175,7 +256,7 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" *ngIf="project.status !== 'ARCHIVED'">
       <div class="panel__header">
         <h3>Ajouter un membre</h3>
       </div>
@@ -238,6 +319,12 @@
       </div>
 
       <div *ngIf="vm.members.length > 0" class="member-list">
+        <div class="messages" *ngIf="removeMemberErrorMessage">
+          <div class="alert alert--error">{{ removeMemberErrorMessage }}</div>
+        </div>
+        <div class="messages" *ngIf="removeMemberSuccessMessage">
+          <div class="alert alert--success">{{ removeMemberSuccessMessage }}</div>
+        </div>
         <article class="member-item" *ngFor="let member of vm.members">
           <div class="member-main">
             <h4>{{ member.displayName }}</h4>
@@ -249,6 +336,15 @@
             <span class="muted" *ngIf="member.globalRole">
               {{ member.globalRole }}
             </span>
+            <button
+              type="button"
+              class="btn-small btn-danger"
+              (click)="removeMember(member.userId)"
+              [disabled]="removingMemberId === member.userId"
+              title="Retirer ce membre"
+            >
+              {{ removingMemberId === member.userId ? 'Suppression...' : 'Retirer' }}
+            </button>
           </div>
         </article>
       </div>

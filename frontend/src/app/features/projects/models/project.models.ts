@@ -35,6 +35,12 @@ export interface CreateProjectRequest {
   description: string;
 }
 
+export interface UpdateProjectRequest {
+  name: string;
+  code: string;
+  description: string | null;
+}
+
 export interface AddProjectMemberRequest {
   userId: number;
   projectRole: string;

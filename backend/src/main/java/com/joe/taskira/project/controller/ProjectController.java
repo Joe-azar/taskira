@@ -5,6 +5,7 @@ import com.joe.taskira.project.dto.CreateProjectRequest;
 import com.joe.taskira.project.dto.ProjectMemberResponse;
 import com.joe.taskira.project.dto.ProjectResponse;
 import com.joe.taskira.project.dto.ProjectSummaryResponse;
+import com.joe.taskira.project.dto.UpdateProjectRequest;
 import com.joe.taskira.project.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,5 +49,27 @@ public class ProjectController {
             @Valid @RequestBody AddProjectMemberRequest request
     ) {
         return projectService.addMember(id, request);
+    }
+
+    @DeleteMapping("/{id}/members/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeMember(
+            @PathVariable Long id,
+            @PathVariable Long userId
+    ) {
+        projectService.removeMember(id, userId);
+    }
+
+    @PutMapping("/{id}")
+    public ProjectResponse updateProject(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProjectRequest request
+    ) {
+        return projectService.updateProject(id, request);
+    }
+
+    @PatchMapping("/{id}/archive")
+    public ProjectResponse archiveProject(@PathVariable Long id) {
+        return projectService.archiveProject(id);
     }
 }

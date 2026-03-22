@@ -48,6 +48,50 @@ export class TicketService {
       .pipe(map((items) => (items ?? []).map((item) => this.normalizeTicketSummary(item))));
   }
 
+  searchTicketsPage(
+    filters: TicketSearchFilters,
+    page: number,
+    size: number,
+    sort: string
+  ): Observable<{ content: TicketSummary[]; page: number; size: number; totalElements: number; totalPages: number }> {
+    let params = new HttpParams()
+      .set('page', String(page))
+      .set('size', String(size))
+      .set('sort', sort);
+
+    if (filters?.projectId && filters.projectId > 0) {
+      params = params.set('projectId', String(filters.projectId));
+    }
+
+    if (filters?.status) {
+      params = params.set('status', filters.status);
+    }
+
+    if (filters?.type) {
+      params = params.set('type', filters.type);
+    }
+
+    if (filters?.q && filters.q.trim()) {
+      params = params.set('q', filters.q.trim());
+    }
+
+    if (filters?.unassigned) {
+      params = params.set('unassigned', 'true');
+    }
+
+    return this.http
+      .get<any>(`${environment.apiUrl}/tickets/paged`, { params })
+      .pipe(
+        map((result) => ({
+          content: (result?.content ?? []).map((item: any) => this.normalizeTicketSummary(item)),
+          page: Number(result?.page ?? 0),
+          size: Number(result?.size ?? 0),
+          totalElements: Number(result?.totalElements ?? 0),
+          totalPages: Number(result?.totalPages ?? 0),
+        }))
+      );
+  }
+
   getProjectTickets(projectId: number): Observable<TicketSummary[]> {
     return this.http
       .get<any[]>(`${environment.apiUrl}/projects/${projectId}/tickets`)
