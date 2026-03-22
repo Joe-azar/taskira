@@ -21,7 +21,7 @@ import { TicketService } from '../../../tickets/services/ticket.service';
 import { ProjectDetail } from '../../models/project.models';
 import { ProjectService } from '../../services/project.service';
 
-type BoardColumnKey = 'OPEN' | 'IN_PROGRESS' | 'DONE';
+type BoardColumnKey = 'OPEN' | 'IN_PROGRESS' | 'REVIEW' | 'DONE' | 'BLOCKED' | 'CANCELLED';
 
 type BoardColumn = {
   key: BoardColumnKey;
@@ -203,9 +203,24 @@ export class ProjectBoardPage {
         tickets: tickets.filter((ticket) => ticket.status === 'IN_PROGRESS'),
       },
       {
+        key: 'REVIEW',
+        label: 'Review',
+        tickets: tickets.filter((ticket) => ticket.status === 'REVIEW'),
+      },
+      {
         key: 'DONE',
         label: 'Done',
         tickets: tickets.filter((ticket) => ticket.status === 'DONE'),
+      },
+      {
+        key: 'BLOCKED',
+        label: 'Blocked',
+        tickets: tickets.filter((ticket) => ticket.status === 'BLOCKED'),
+      },
+      {
+        key: 'CANCELLED',
+        label: 'Cancelled',
+        tickets: tickets.filter((ticket) => ticket.status === 'CANCELLED'),
       },
     ];
   }

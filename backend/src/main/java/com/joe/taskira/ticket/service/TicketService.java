@@ -161,6 +161,8 @@ public class TicketService {
         User currentUser = userRepository.findById(SecurityUtils.getCurrentUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
 
+        validateStatusTransition(ticket.getStatus(), request.status());
+
         String oldStatus = ticket.getStatus().name();
         String newStatus = request.status().name();
 
@@ -374,5 +376,43 @@ public class TicketService {
 
     private String normalizeDescription(String description) {
         return description == null || description.isBlank() ? null : description.trim();
+    }
+
+    private void validateStatusTransition(TicketStatus currentStatus, TicketStatus newStatus) {
+        if (currentStatus == newStatus) {
+            throw new ConflictException("Ticket is already in status " + newStatus);
+        }
+
+        switch (currentStatus) {
+            case OPEN:
+                if (newStatus != TicketStatus.IN_PROGRESS && newStatus != TicketStatus.CANCELLED) {
+                    throw new ConflictException("Cannot change status from OPEN to " + newStatus);
+                }
+                break;
+            case IN_PROGRESS:
+                if (newStatus != TicketStatus.OPEN && newStatus != TicketStatus.REVIEW && newStatus != TicketStatus.DONE && newStatus != TicketStatus.CANCELLED && newStatus != TicketStatus.BLOCKED) {
+                    throw new ConflictException("Cannot change status from IN_PROGRESS to " + newStatus);
+                }
+                break;
+            case REVIEW:
+                if (newStatus != TicketStatus.IN_PROGRESS && newStatus != TicketStatus.DONE && newStatus != TicketStatus.CANCELLED) {
+                    throw new ConflictException("Cannot change status from REVIEW to " + newStatus);
+                }
+                break;
+            case DONE:
+                // DONE is terminal, no transitions allowed except possibly reopening, but for now, none
+                throw new ConflictException("Cannot change status from DONE");
+            case BLOCKED:
+                if (newStatus != TicketStatus.OPEN && newStatus != TicketStatus.IN_PROGRESS && newStatus != TicketStatus.CANCELLED) {
+                    throw new ConflictException("Cannot change status from BLOCKED to " + newStatus);
+                }
+                break;
+            case CANCELLED:
+                // CANCELLED is terminal, but allow reopening to OPEN
+                if (newStatus != TicketStatus.OPEN) {
+                    throw new ConflictException("Cannot change status from CANCELLED to " + newStatus + ". Only reopening to OPEN is allowed.");
+                }
+                break;
+        }
     }
 }

@@ -39,6 +39,16 @@ import { Component, Input } from '@angular/core';
         color: #047857;
       }
 
+      .status-badge--blocked {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .status-badge--cancelled {
+        background: #f3f4f6;
+        color: #6b7280;
+      }
+
       .status-badge--active {
         background: #ecfeff;
         color: #0f766e;
@@ -67,6 +77,10 @@ export class StatusBadgeComponent {
         return 'In progress';
       case 'DONE':
         return 'Done';
+      case 'BLOCKED':
+        return 'Blocked';
+      case 'CANCELLED':
+        return 'Cancelled';
       case 'ACTIVE':
         return 'Active';
       case 'ARCHIVED':
@@ -84,6 +98,10 @@ export class StatusBadgeComponent {
         return 'status-badge--in-progress';
       case 'DONE':
         return 'status-badge--done';
+      case 'BLOCKED':
+        return 'status-badge--blocked';
+      case 'CANCELLED':
+        return 'status-badge--cancelled';
       case 'ACTIVE':
         return 'status-badge--active';
       case 'ARCHIVED':
