@@ -24,6 +24,7 @@ import {
   UpdateCommentRequest,
 } from '../../../comments/models/comment.models';
 import { CommentService } from '../../../comments/services/comment.service';
+import { TICKET_STATUSES, TICKET_TYPES, TICKET_PRIORITIES } from '../../ticket.constants';
 import {
   TicketDetail,
   TicketHistoryEntry,
@@ -88,6 +89,10 @@ export class TicketDetailPage {
   savingEdit = false;
   editErrorMessage = '';
   editSuccessMessage = '';
+
+  readonly ticketStatuses = TICKET_STATUSES;
+  readonly ticketTypes = TICKET_TYPES;
+  readonly ticketPriorities = TICKET_PRIORITIES;
 
   readonly statusForm = this.fb.nonNullable.group({
     status: ['OPEN', [Validators.required]],

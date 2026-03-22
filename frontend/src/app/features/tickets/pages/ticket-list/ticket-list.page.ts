@@ -8,6 +8,7 @@ import { PriorityBadgeComponent } from '../../../../core/components/priority-bad
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
 import { ProjectSummary } from '../../../projects/models/project.models';
 import { ProjectService } from '../../../projects/services/project.service';
+import { TICKET_STATUSES, TICKET_TYPES, TICKET_PRIORITIES } from '../../ticket.constants';
 import { TicketSearchFilters, TicketSummary } from '../../models/ticket.models';
 import { TicketService } from '../../services/ticket.service';
 
@@ -67,6 +68,10 @@ export class TicketListPage {
   totalPages = 0;
   totalElements = 0;
 
+  readonly ticketStatuses = TICKET_STATUSES;
+  readonly ticketTypes = TICKET_TYPES;
+  readonly ticketPriorities = TICKET_PRIORITIES;
+
   readonly form = this.fb.nonNullable.group({
     q: [''],
     projectId: [0],
@@ -94,8 +99,25 @@ export class TicketListPage {
     } as TicketListVm))
   );
 
+  private projectsLoaded = false;
+
   constructor() {
-    this.loadTickets();
+    this.loadProjects();
+  }
+
+  private loadProjects(): void {
+    if (this.projectsLoaded) {
+      return;
+    }
+    this.projectService.getProjects().subscribe({
+      next: (projects) => {
+        this.projectsSubject.next(projects);
+        this.projectsLoaded = true;
+      },
+      error: (error) => {
+        // Handle error if needed
+      },
+    });
   }
 
   private loadTickets(): void {
@@ -112,15 +134,11 @@ export class TicketListPage {
     this.loadingSubject.next(true);
     this.errorSubject.next('');
 
-    forkJoin({
-      ticketsPage: this.ticketService.searchTicketsPage(filters, this.page, this.size, this.toBackendSort(raw.sortBy)),
-      projects: this.projectService.getProjects(),
-    }).subscribe({
-      next: ({ ticketsPage, projects }) => {
+    this.ticketService.searchTicketsPage(filters, this.page, this.size, this.toBackendSort(raw.sortBy)).subscribe({
+      next: (ticketsPage) => {
         this.ticketsSubject.next(ticketsPage.content);
         this.totalPages = ticketsPage.totalPages;
         this.totalElements = ticketsPage.totalElements;
-        this.projectsSubject.next(projects);
         this.loadingSubject.next(false);
       },
       error: (error) => {

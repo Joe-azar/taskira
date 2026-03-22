@@ -112,11 +112,7 @@
           <div class="form-field">
             <label for="editType">Type *</label>
             <select id="editType" formControlName="type">
-              <option value="TASK">TASK</option>
-              <option value="BUG">BUG</option>
-              <option value="FEATURE">FEATURE</option>
-              <option value="SUPPORT">SUPPORT</option>
-              <option value="IMPROVEMENT">IMPROVEMENT</option>
+              <option *ngFor="let type of ticketTypes" [value]="type">{{ type }}</option>
             </select>
             <small class="error" *ngIf="editType.touched && editType.invalid">
               Le type est obligatoire.
@@ -126,10 +122,7 @@
           <div class="form-field">
             <label for="editPriority">Priorité *</label>
             <select id="editPriority" formControlName="priority">
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-              <option value="CRITICAL">CRITICAL</option>
+              <option *ngFor="let priority of ticketPriorities" [value]="priority">{{ priority }}</option>
             </select>
             <small class="error" *ngIf="editPriority.touched && editPriority.invalid">
               La priorité est obligatoire.
@@ -176,12 +169,7 @@
           <div class="form-field">
             <label for="status">Statut</label>
             <select id="status" formControlName="status">
-              <option value="OPEN">OPEN</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="REVIEW">REVIEW</option>
-              <option value="DONE">DONE</option>
-              <option value="BLOCKED">BLOCKED</option>
-              <option value="CANCELLED">CANCELLED</option>
+              <option *ngFor="let status of ticketStatuses" [value]="status">{{ status }}</option>
             </select>
           </div>
         </div>

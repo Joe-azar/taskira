@@ -59,7 +59,6 @@
             type="button"
             class="btn-secondary"
             (click)="startEdit()"
-            [disabled]="project.status !== 'ACTIVE'"
             *ngIf="project.status === 'ACTIVE'"
           >
             Modifier le projet
@@ -122,7 +121,6 @@
                 type="text"
                 formControlName="code"
                 placeholder="CODE"
-                style="text-transform: uppercase;"
               />
               <small class="error" *ngIf="editCode.touched && editCode.invalid">
                 Le code est obligatoire (2-20 caractères).
@@ -190,21 +188,14 @@
           <div class="form-field">
             <label for="ticketType">Type</label>
             <select id="ticketType" formControlName="type">
-              <option value="BUG">BUG</option>
-              <option value="TASK">TASK</option>
-              <option value="FEATURE">FEATURE</option>
-              <option value="SUPPORT">SUPPORT</option>
-              <option value="IMPROVEMENT">IMPROVEMENT</option>
+              <option *ngFor="let type of ticketTypes" [value]="type">{{ type }}</option>
             </select>
           </div>
 
           <div class="form-field">
             <label for="ticketPriority">Priorité</label>
             <select id="ticketPriority" formControlName="priority">
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-              <option value="CRITICAL">CRITICAL</option>
+              <option *ngFor="let priority of ticketPriorities" [value]="priority">{{ priority }}</option>
             </select>
           </div>
         </div>

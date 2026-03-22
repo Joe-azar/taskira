@@ -140,6 +140,9 @@ public class TicketService {
             int size,
             String sort
     ) {
+        // Secure pagination bounds
+        page = Math.max(0, page);
+        size = Math.min(Math.max(1, size), 100);
         AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
         List<Long> accessibleProjectIds = currentUser.getUser().getGlobalRole() == GlobalRole.ADMIN
@@ -208,7 +211,7 @@ public class TicketService {
 
     public TicketResponse updateStatus(Long ticketId, UpdateTicketStatusRequest request) {
         Ticket ticket = findTicketOrThrow(ticketId);
-        assertCanAccessProject(ticket.getProject());
+        assertCanEditTicket(ticket.getProject());
 
         User currentUser = userRepository.findById(SecurityUtils.getCurrentUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
@@ -384,6 +387,10 @@ public class TicketService {
     }
 
     private void assertCanManageAssignments(Project project) {
+        if (project.getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot modify tickets in archived projects");
+        }
+
         AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
         if (currentUser.getUser().getGlobalRole() == GlobalRole.ADMIN) {
@@ -403,6 +410,10 @@ public class TicketService {
     }
 
     private void assertCanEditTicket(Project project) {
+        if (project.getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot modify tickets in archived projects");
+        }
+
         AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
         if (currentUser.getUser().getGlobalRole() == GlobalRole.ADMIN) {

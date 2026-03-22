@@ -2,13 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { BehaviorSubject, combineLatest, finalize, forkJoin, map, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, finalize, forkJoin, map } from 'rxjs';
 
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
 import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
 import { UserOption } from '../../../../core/models/user.models';
 import { UserService } from '../../../../core/services/user.service';
-import { TicketService } from '../../../../features/tickets/services/ticket.service';
+import { TicketService } from '../../../tickets/services/ticket.service';
+import { TICKET_TYPES, TICKET_PRIORITIES } from '../../../tickets/ticket.constants';
 import { TicketSummary, CreateTicketRequest } from '../../../../features/tickets/models/ticket.models';
 import {
   AddProjectMemberRequest,
@@ -93,9 +94,9 @@ export class ProjectDetailPage {
 
   readonly ticketForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(3)]],
-    description: ['', [Validators.required, Validators.minLength(5)]],
+    description: [''],
     type: ['BUG', [Validators.required]],
-    priority: ['HIGH', [Validators.required]],
+    priority: ['MEDIUM', [Validators.required]],
     dueDate: [''],
   });
 
@@ -104,6 +105,9 @@ export class ProjectDetailPage {
     code: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(20)]],
     description: [''],
   });
+
+  readonly ticketTypes = TICKET_TYPES;
+  readonly ticketPriorities = TICKET_PRIORITIES;
 
   private readonly projectId$ = this.route.paramMap.pipe(
     map((params) => Number(params.get('id') ?? 0))

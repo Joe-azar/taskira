@@ -5,12 +5,14 @@ import com.joe.taskira.comment.dto.CreateCommentRequest;
 import com.joe.taskira.comment.dto.UpdateCommentRequest;
 import com.joe.taskira.comment.entity.Comment;
 import com.joe.taskira.comment.repository.CommentRepository;
+import com.joe.taskira.common.exception.ConflictException;
 import com.joe.taskira.common.exception.ForbiddenException;
 import com.joe.taskira.common.exception.ResourceNotFoundException;
 import com.joe.taskira.common.util.SecurityUtils;
 import com.joe.taskira.project.entity.Project;
 import com.joe.taskira.project.entity.ProjectMember;
 import com.joe.taskira.project.enums.ProjectRole;
+import com.joe.taskira.project.enums.ProjectStatus;
 import com.joe.taskira.project.repository.ProjectMemberRepository;
 import com.joe.taskira.security.model.AuthenticatedUser;
 import com.joe.taskira.ticket.entity.Ticket;
@@ -47,6 +49,10 @@ public class CommentService {
 
         assertCanAccessProject(ticket.getProject());
 
+        if (ticket.getProject().getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot create comments in archived projects");
+        }
+
         Comment comment = Comment.builder()
                 .ticket(ticket)
                 .user(currentUser)
@@ -82,6 +88,10 @@ public class CommentService {
     public CommentResponse updateComment(Long commentId, UpdateCommentRequest request) {
         Comment comment = findCommentOrThrow(commentId);
 
+        if (comment.getTicket().getProject().getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot update comments in archived projects");
+        }
+
         AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
         if (!comment.getUser().getId().equals(currentUser.getId())) {
@@ -106,6 +116,10 @@ public class CommentService {
 
     public void deleteComment(Long commentId) {
         Comment comment = findCommentOrThrow(commentId);
+
+        if (comment.getTicket().getProject().getStatus() == ProjectStatus.ARCHIVED) {
+            throw new ConflictException("Cannot delete comments in archived projects");
+        }
 
         AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
