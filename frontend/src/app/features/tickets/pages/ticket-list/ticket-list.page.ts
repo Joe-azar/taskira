@@ -109,13 +109,14 @@ export class TicketListPage {
     if (this.projectsLoaded) {
       return;
     }
+
     this.projectService.getProjects().subscribe({
       next: (projects) => {
         this.projectsSubject.next(projects);
         this.projectsLoaded = true;
       },
-      error: (error) => {
-        // Handle error if needed
+      error: () => {
+        // possibilité d'ajouter un message non bloquant plus tard
       },
     });
   }
@@ -134,20 +135,22 @@ export class TicketListPage {
     this.loadingSubject.next(true);
     this.errorSubject.next('');
 
-    this.ticketService.searchTicketsPage(filters, this.page, this.size, this.toBackendSort(raw.sortBy)).subscribe({
-      next: (ticketsPage) => {
-        this.ticketsSubject.next(ticketsPage.content);
-        this.totalPages = ticketsPage.totalPages;
-        this.totalElements = ticketsPage.totalElements;
-        this.loadingSubject.next(false);
-      },
-      error: (error) => {
-        this.errorSubject.next(
-          error?.error?.message || error?.message || 'Impossible de charger les tickets.'
-        );
-        this.loadingSubject.next(false);
-      },
-    });
+    this.ticketService
+      .searchTicketsPage(filters, this.page, this.size, this.toBackendSort(raw.sortBy))
+      .subscribe({
+        next: (ticketsPage) => {
+          this.ticketsSubject.next(ticketsPage.content);
+          this.totalPages = ticketsPage.totalPages;
+          this.totalElements = ticketsPage.totalElements;
+          this.loadingSubject.next(false);
+        },
+        error: (error) => {
+          this.errorSubject.next(
+            error?.error?.message || error?.message || 'Impossible de charger les tickets.'
+          );
+          this.loadingSubject.next(false);
+        },
+      });
   }
 
   applyFilters(): void {
@@ -159,6 +162,7 @@ export class TicketListPage {
     if (page < 0 || page >= this.totalPages) {
       return;
     }
+
     this.page = page;
     this.loadTickets();
   }
@@ -180,8 +184,6 @@ export class TicketListPage {
   trackByTicket(_: number, ticket: TicketSummary): number {
     return ticket.id;
   }
-
-
 
   private toBackendSort(sort: TicketSortOption): string {
     switch (sort) {
