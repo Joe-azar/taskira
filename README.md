@@ -9,6 +9,16 @@ Taskira est une plateforme web de gestion de tickets, tâches et anomalies, con�
 - `infra/` : environnement Docker Compose local
 - `docs/` : documentation complémentaire
 
+## Documentation
+
+- [Règles de travail et de contribution](AGENTS.md)
+- [Rapport cumulatif de migration](ENTERPRISE_MIGRATION_REPORT.md)
+- [Matrice de migration par module](MIGRATION_MATRIX.md)
+- [Architecture actuelle et cible progressive](docs/architecture.md)
+- [Stratégie de tests](docs/testing-strategy.md)
+- [Feuille de route des phases 0 à 20](docs/migration-matrix.md)
+- [Index des décisions d'architecture](docs/adr/README.md)
+
 ## Développement local avec Docker
 
 ### Prérequis
