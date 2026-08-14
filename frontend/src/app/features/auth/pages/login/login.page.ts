@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
@@ -19,8 +19,8 @@ export class LoginPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  loading = false;
-  errorMessage = '';
+  readonly loading = signal(false);
+  readonly errorMessage = signal('');
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -33,12 +33,12 @@ export class LoginPage {
       return;
     }
 
-    this.loading = true;
-    this.errorMessage = '';
+    this.loading.set(true);
+    this.errorMessage.set('');
 
     this.authService
       .login(this.form.getRawValue())
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => {
           const redirectTo =
@@ -47,10 +47,11 @@ export class LoginPage {
           this.router.navigateByUrl(redirectTo);
         },
         error: (error) => {
-          this.errorMessage =
+          this.errorMessage.set(
             error?.error?.message ||
             error?.message ||
-            'Connexion impossible.';
+            'Connexion impossible.'
+          );
         },
       });
   }

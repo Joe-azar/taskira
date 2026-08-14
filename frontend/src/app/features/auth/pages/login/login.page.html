@@ -22,12 +22,12 @@
         </small>
       </div>
 
-      <div class="alert" *ngIf="errorMessage">
-        {{ errorMessage }}
+      <div class="alert" *ngIf="errorMessage()">
+        {{ errorMessage() }}
       </div>
 
-      <button type="submit" [disabled]="loading">
-        {{ loading ? 'Connexion...' : 'Se connecter' }}
+      <button type="submit" [disabled]="loading()">
+        {{ loading() ? 'Connexion...' : 'Se connecter' }}
       </button>
     </form>
   </div>
