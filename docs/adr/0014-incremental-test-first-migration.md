@@ -21,4 +21,4 @@ Les migrations de schéma restent additives et testées sur PostgreSQL réel.
 
 ## État d'implémentation
 
-Décision appliquée; la phase 2 reste partielle au lieu d'être surévaluée.
+Décision appliquée; la phase 2 a été déclarée terminée localement seulement après validation des tests rapides, intégration, couverture et 9 parcours E2E isolés. La phase 3 reste partielle tant que ses critères distants ne sont pas atteints.

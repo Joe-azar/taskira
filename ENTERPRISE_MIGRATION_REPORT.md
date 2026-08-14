@@ -8,15 +8,15 @@ Ce fichier est le journal central de la migration. Il doit être enrichi après 
 
 `TASKIRA ENTERPRISE MIGRATION PARTIALLY COMPLETE`
 
-Les phases 0 et 1 sont terminées localement. Les phases 2 et 3 possèdent des livrables validés localement mais restent partielles. Les phases 4 à 20 ne sont pas déclarées terminées.
+Les phases 0, 1 et 2 sont terminées localement. La phase 3 possède des livrables validés localement mais reste partielle. Les phases 4 à 20 ne sont pas déclarées terminées.
 
 ## Journal des phases
 
 | Date | Phase | Statut | Résultat vérifié | Reste à faire |
 | --- | ---: | --- | --- | --- |
 | 2026-08-14 | 0 — Baseline Git | Terminée | Commit `fd84c54`, tag `pre-enterprise-migration`, branche `feat/enterprise-platform-migration`; stack Docker restaurée et validée avant migration. | Aucun pour le critère de baseline; conserver le point de retour. |
-| 2026-08-15 | 1 — Documentation | Terminée localement | `AGENTS.md`, matrices, rapport, documentation d'architecture et ADR créés; liens et cohérence vérifiés. | Revue/commit/push par le workflow Git autorisé. |
-| 2026-08-14–15 | 2 — Filet de sécurité | Partielle | 14 tests backend, 20 Vitest, couvertures/seuils backend et frontend, 3 Playwright obligatoires, 1 connexion réelle optionnelle et build Angular validés dans Docker. | Étendre les tests métier et couvrir les workflows E2E minimum du référentiel. |
+| 2026-08-15 | 1 — Documentation | Terminée localement | `AGENTS.md`, matrices, rapport, documentation d'architecture et ADR créés; liens et cohérence vérifiés; commit local `cccf2ee`. | Publier la branche avec les autres lots validés. |
+| 2026-08-14–15 | 2 — Filet de sécurité | Terminée localement | 14 tests backend, 20 Vitest, couvertures/seuils backend et frontend, build Angular et 9/9 Playwright validés dans Docker; stack E2E isolée détruite après le run. | Maintenir ce filet. Ajouter désarchivage projet et suppression ticket en P7, après création de leurs endpoints. |
 | 2026-08-15 | 3 — GitHub Actions CI | Partielle | `ci.yml` local : jobs backend, frontend coverage/build et stack Compose+E2E; actions pinées par SHA, permissions `contents: read`, cleanup volumes; `actionlint` 1.7.12 réussi. | Obtenir un run GitHub distant vert, ajouter le lint frontend et configurer les checks/protection de `main` si permis. |
 | — | 4–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
 
@@ -49,13 +49,13 @@ Voir [l'architecture générale](docs/architecture/overview.md) et [ADR-0001](do
 | --- | --- | --- |
 | Java | 21 | 21 LTS conservé |
 | Spring Boot | 3.5.11 | 4.x en P6 |
-| Maven | Wrapper 3.9.x | 3.9.x |
-| PostgreSQL | 16; Testcontainers 16.15 | 17/18 en P6 après compatibilité |
+| Maven | Wrapper 3.9.12 | 3.9.x |
+| PostgreSQL | 16; Testcontainers et E2E 16.15 | 17/18 en P6 après compatibilité |
 | Angular | 21.2.x | 22.x en P6 |
 | TypeScript | 5.9.x | Version compatible Angular 22 en P6 |
 | Node/npm | Node 22; npm 11.9.0 | Node 24 LTS en P6 |
 | Vitest | 4.x | Branche compatible Angular cible |
-| Playwright | 1.62.1 dans le socle P2 | Maintenu et exécuté en CI P3 |
+| Playwright | 1.62.1; Node 22.23.2/npm 11.9.0 dans le runner P2 | Réutilisé par le workflow local P3; run distant à valider |
 
 ## Outils ajoutés ou renforcés
 
@@ -63,9 +63,10 @@ Voir [l'architecture générale](docs/architecture/overview.md) et [ADR-0001](do
 - Séparation Maven Surefire (`*Test`) et Failsafe (`*IT`).
 - Tests JUnit 5, Mockito, AssertJ, MockMvc et Flyway réels.
 - Tests Angular/Vitest ciblés sur auth, guards et intercepteur.
-- Image Playwright Docker avec trois scénarios obligatoires et un scénario réel optionnel.
+- Runner Playwright Docker racine avec 9 scénarios et stack Compose E2E isolée.
 - JaCoCo 0.8.13 fusionne les résultats Surefire/Failsafe, produit XML/HTML et applique un seuil ligne global; `coverage-v8` 4.1.0 produit LCOV/HTML et applique quatre seuils frontend.
 - Workflow GitHub Actions `ci.yml` créé et validé statiquement avec `actionlint` 1.7.12.
+- Maven Wrapper 3.9.12 et images Java, Node et PostgreSQL critiques épinglés; les images E2E Node/PostgreSQL sont référencées par digest.
 
 Aucun run GitHub distant n'est encore disponible. SonarQube, scans, Nginx production, observabilité et labs ne sont pas encore ajoutés.
 
@@ -77,15 +78,19 @@ Résultat validé de phase 2 :
 - backend intégration/Testcontainers : 3 tests;
 - backend total : 14 tests;
 - frontend Vitest : 20 tests;
-- navigateur : 3 tests obligatoires, plus 1 connexion réelle optionnelle validée avec variables d'environnement;
+- navigateur : Playwright 1.62.1, 9/9 tests en 1,3 minute;
 - build Angular de production : réussi.
+
+Les parcours navigateur couvrent login/logout, login invalide, redirection du guard anonyme, refus de l'administration à un `USER`, projet create/update/archive, membre add/remove, ticket create/update/status/assign et commentaire create/update/delete.
 
 Couverture validée le 15 août 2026 :
 
 - backend JaCoCo : lignes 20,17 %, branches 3,75 %, instructions 18,11 %, méthodes 23,01 %, classes 42,25 %; seuil ligne 19 % atteint, `./mvnw verify` exit 0;
 - frontend V8 : statements 12,44 %, branches 11,27 %, fonctions 11,78 %, lignes 11,84 %; seuils respectifs 12/11/11/11 % atteints, 20/20 tests et commande exit 0.
 
-La commande E2E manuelle cible la stack Compose locale. Le workflow CI local définit désormais une stack isolée et éphémère, sans run GitHub distant validé. Les workflows complets projets/tickets/membres/commentaires restent absents. Voir [la stratégie de tests](docs/testing-strategy.md).
+La commande racine `& .\e2e\playwright\run.ps1` construit et exécute `e2e/playwright/compose.e2e.yml`. PostgreSQL 16.15 utilise un `tmpfs`; aucun service n'expose de port hôte et la stack ne définit ni `container_name` ni volume persistant pour la base. Les données générées emploient le domaine réservé `.test`. Le `finally` exécute `down --volumes --remove-orphans`; le contrôle final a confirmé zéro conteneur, réseau ou volume restant. Les rapports Playwright et résultats sont écrits dans des répertoires ignorés par Git et restent disponibles après la destruction. Voir [la stratégie de tests](docs/testing-strategy.md).
+
+Le désarchivage projet et la suppression ticket ne sont pas simulés : les endpoints correspondants sont absents. Leur ajout et leurs E2E constituent un gap explicite de P7, pas un échec du critère P2.
 
 ## CI/CD
 
@@ -93,7 +98,7 @@ Un workflow local `.github/workflows/ci.yml` définit :
 
 - backend Java 21 avec `./mvnw verify` et rapports tests/JaCoCo;
 - frontend Node 22.23.2/npm 11.9.0 avec couverture et build;
-- stack Compose éphémère, attente de disponibilité, Playwright, logs/artifacts et `down --volumes` systématique.
+- même fichier Compose E2E éphémère, attente de disponibilité, Playwright, logs/artifacts et job de destruction systématique.
 
 Les actions tierces sont pinées par SHA, les permissions globales sont `contents: read` et `persist-credentials` est désactivé. `actionlint` 1.7.12 passe localement. Aucun run GitHub distant, lint frontend, check requis ou protection de `main` n'est encore validé; P3 reste partielle. GHCR, release, staging et production manuelle relèvent de P15.
 
@@ -107,7 +112,7 @@ Les actions tierces sont pinées par SHA, les permissions globales sont `content
 
 ## Docker et déploiement
 
-Le développement utilise `postgres`, `backend` et `frontend` via Compose, avec hot reload Angular. Les tests backend et Playwright disposent de runners Docker dédiés.
+Le développement utilise `postgres`, `backend` et `frontend` via Compose, avec hot reload Angular. Les tests backend et Playwright disposent de runners Docker dédiés. La stack Playwright est distincte du développement et ne conserve aucune base après exécution.
 
 Nginx, frontend statique de production, utilisateur non-root, profils production-like, GHCR, staging et rollback ne sont pas encore validés.
 
@@ -124,7 +129,7 @@ Actuator, Micrometer, Prometheus et Grafana sont planifiés en P10. Les request 
 
 ## Problèmes et dettes ouverts
 
-1. Phase 2 incomplète : large couverture E2E métier absente malgré tests et seuils de couverture verts.
+1. Désarchivage projet et suppression ticket impossibles à couvrir tant que leurs endpoints ne sont pas ajoutés en P7; ne pas simuler ces workflows.
 2. Vulnérabilités npm connues à réévaluer et traiter pendant P4/P6.
 3. Auth actuelle fondée sur JWT/localStorage, sans session cookie ni CSRF.
 4. CI seulement locale : run GitHub distant, lint et protection de branche manquants; Quality Gate et scans absents.

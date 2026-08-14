@@ -30,7 +30,7 @@ Le backend et le frontend sont déjà organisés par fonctionnalités. Les front
 
 - Phase 0 : baseline Git terminée.
 - Phase 1 : documentation terminée localement.
-- Phase 2 : tests et seuils de couverture validés; phase partielle car la couverture E2E métier complète manque encore.
+- Phase 2 : tests, seuils de couverture et 9/9 parcours E2E isolés validés; phase terminée localement.
 - Phase 3 : workflow CI présent et validé statiquement; exécution GitHub distante encore non validée.
 - Phases 4 à 20 : planifiées.
 

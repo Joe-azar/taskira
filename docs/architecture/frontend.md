@@ -27,7 +27,7 @@ Le JWT est actuellement stocké dans `localStorage`; ce comportement doit rester
 
 ## Tests actuels
 
-Vingt tests Vitest couvrent l'authentification, les guards, l'intercepteur et le rendu asynchrone du login. Playwright couvre trois scénarios obligatoires d'entrée/auth et un login réel optionnel. La couverture des autres features reste à construire.
+Vingt tests Vitest couvrent l'authentification, les guards, l'intercepteur et le rendu asynchrone du login. Les 9 tests Playwright couvrent login/logout, login invalide, guard anonyme, refus admin pour `USER`, projet create/update/archive, membre add/remove, ticket create/update/status/assign et commentaire create/update/delete. La couverture unitaire des autres features reste à renforcer.
 
 ## Évolutions planifiées
 

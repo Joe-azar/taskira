@@ -8,16 +8,15 @@ Le filet de tests permet de faire évoluer l'architecture et les versions sans r
 
 La baseline ne contenait qu'un test de contexte, trois tests des réponses de sécurité et deux tests Angular élémentaires. La phase 2 a ajouté une séparation Maven Surefire/Failsafe, des tests métier et MockMvc, PostgreSQL Testcontainers, une suite Vitest ciblée et Playwright.
 
-La chaîne validée le 14 août 2026 comprend :
+La chaîne validée les 14 et 15 août 2026 comprend :
 
 - 11 tests backend rapides;
 - 3 tests d'intégration backend sur PostgreSQL 16.15 avec Flyway, soit 14 tests backend au total;
 - 20 tests Vitest portant sur l'authentification, l'intercepteur, les guards et le rendu asynchrone de la connexion;
-- 3 parcours Playwright obligatoires sans compte;
-- 1 parcours de connexion réelle optionnel, validé séparément avec des variables d'environnement;
+- 9/9 parcours Playwright en 1,3 minute sur une stack Docker isolée;
 - le build Angular de production.
 
-Cette livraison est validée mais la phase 2 reste partielle : les rapports et seuils JaCoCo/V8 sont verts, mais Playwright ne couvre pas encore les workflows projets, tickets, membres et commentaires exigés par le référentiel.
+Playwright couvre la page de connexion, login/logout, login invalide, guard anonyme, refus de l'administration à un `USER`, projet create/update/archive, membre add/remove, ticket create/update/status/assign et commentaire create/update/delete. Les rapports et seuils JaCoCo/V8 sont également verts : la phase 2 est terminée localement.
 
 ## Pyramide retenue
 
@@ -27,8 +26,8 @@ Cette livraison est validée mais la phase 2 reste partielle : les rapports et s
 | Web/API | MockMvc, Spring Security Test | Routes, validation, sérialisation, statuts et droits | Contexte web ciblé |
 | Persistance/intégration | Spring Boot Test, Testcontainers PostgreSQL | Requêtes JPA, contraintes, transactions et migrations Flyway | PostgreSQL éphémère réel |
 | Frontend unitaire/composant | Vitest, Angular TestBed | Services, guards, intercepteurs, formulaires et rendu | Doubles HTTP ciblés |
-| Parcours navigateur, phase 2 | Playwright | Connexion et protections de route | Image Playwright vers stack Compose locale |
-| Parcours navigateur, phase 3 | Playwright dans GitHub Actions | Parcours critiques reproductibles | Stack Compose dédiée, isolée et éphémère |
+| Parcours navigateur, phase 2 | Playwright | Authentification, autorisation et workflows métier | Runner racine et stack Compose dédiée, isolée et éphémère |
+| Parcours navigateur, phase 3 | Playwright dans GitHub Actions | Rejouer le même filet sur chaque changement | Même stack isolée; run GitHub distant à valider |
 
 H2 n'est pas utilisé pour simuler PostgreSQL. Les tests d'intégration démarrent la base, appliquent Flyway de `V1` à la dernière migration, exécutent les scénarios puis détruisent le conteneur.
 
@@ -39,7 +38,7 @@ H2 n'est pas utilisé pour simuler PostgreSQL. Les tests d'intégration démarre
 - Une autorisation : au moins un cas autorisé et un cas interdit côté backend; un guard Angular n'est jamais la seule preuve.
 - Une requête ou migration : test d'intégration PostgreSQL Testcontainers, y compris contraintes et index importants.
 - Un service ou état Angular : test Vitest; ajouter un test de composant si le rendu ou l'interaction change.
-- Un parcours critique : test Playwright stable avec données contrôlées dans la stack isolée définie par le workflow de phase 3; son exécution GitHub distante reste à valider.
+- Un parcours critique : test Playwright stable avec données `.test` contrôlées dans la stack isolée du runner racine. Ne pas simuler un endpoint absent.
 - Un défaut corrigé : test de régression reproductible avant le correctif.
 
 ## Isolation et données
@@ -48,7 +47,8 @@ H2 n'est pas utilisé pour simuler PostgreSQL. Les tests d'intégration démarre
 - Utiliser des builders/fixtures minimaux. Ne jamais copier de données personnelles ni de secrets de production.
 - Contrôler explicitement le temps, les identifiants et l'aléatoire lorsque le résultat en dépend.
 - Nettoyer les données par transaction ou recréation contrôlée du conteneur; ne pas dépendre de l'ordre d'exécution.
-- Les futurs scénarios métier E2E créeront leurs données dans la stack dédiée déjà définie par le workflow et ne publieront traces, captures ou vidéos qu'en cas utile au diagnostic.
+- Les scénarios E2E créent des identités uniques sous le domaine réservé `.test`; ils ne copient ni compte ni donnée personnelle réelle.
+- Les rapports HTML, traces et captures utiles sont écrits dans `e2e/playwright/playwright-report/` et `e2e/playwright/test-results/`. Ces répertoires sont ignorés par Git.
 
 ## Portes de qualité
 
@@ -101,19 +101,19 @@ Le frontend produit LCOV/HTML avec statements 12,44 %, branches 11,27 %, fonctio
 
 ### Playwright de phase 2
 
-La stack locale doit être démarrée avant l'image E2E :
+Depuis la racine du dépôt, une seule commande construit la stack dédiée, attend les services, exécute les tests puis détruit les ressources :
 
 ```powershell
-docker compose -f infra/docker-compose.yml up -d --build
-docker build -f frontend/Dockerfile.e2e -t taskira-frontend-e2e frontend
-docker run --rm --add-host=host.docker.internal:host-gateway taskira-frontend-e2e
+& .\e2e\playwright\run.ps1
 ```
 
-L'image utilise des proxies TCP locaux pour conserver les origines `http://localhost:4200` et `http://localhost:8080` dans le navigateur tout en atteignant la stack Compose sur l'hôte Docker.
+Le runner utilise `e2e/playwright/compose.e2e.yml`, distinct de `infra/docker-compose.yml`. Il démarre backend, frontend, PostgreSQL 16.15 et Playwright 1.62.1 sous Node 22.23.2/npm 11.9.0. Les images Node et PostgreSQL sont épinglées par digest.
 
-Le scénario de connexion réelle s'active uniquement avec `TASKIRA_E2E_EMAIL` et `TASKIRA_E2E_PASSWORD` fournis à l'exécution. Aucune valeur n'est stockée dans le dépôt. Sans ces variables, les trois scénarios obligatoires passent et le quatrième est explicitement ignoré.
+La base utilise un `tmpfs` et la stack n'expose aucun port hôte, ne fixe aucun `container_name` et ne crée aucun volume de données persistant. Les proxies internes conservent les origines applicatives `http://localhost:4200` et `http://localhost:8080` sans dépendre de la stack locale.
 
-Ce flux manuel ne provisionne pas lui-même une stack E2E isolée. Le workflow local de phase 3 définit un projet Compose dédié avec base et volume éphémères, attend la disponibilité, exécute Playwright puis détruit la stack avec ses volumes; son exécution GitHub distante reste à valider.
+Le bloc `finally` exécute toujours `docker compose down --volumes --remove-orphans`. Le run validé laisse zéro conteneur, réseau ou volume. Les deux répertoires de sortie ignorés restent disponibles sur l'hôte grâce à leurs bind mounts.
+
+Le désarchivage projet et la suppression ticket ne disposent pas d'endpoints. Ils constituent un gap de P7 et seront testés lorsque l'API existera; aucun faux parcours n'est ajouté pour gonfler le résultat P2.
 
 ## Dette npm connue
 
@@ -123,6 +123,6 @@ Ne pas lancer `npm audit fix` automatiquement : cela modifierait les versions sa
 
 ## CI de phase 3
 
-Le workflow local `.github/workflows/ci.yml` exécute les tests backend et frontend, les rapports de couverture, le build Angular, puis Playwright sur une stack Compose dédiée et supprimée avec ses volumes. `actionlint` 1.7.12 passe.
+Le workflow local `.github/workflows/ci.yml` exécute les tests backend et frontend, les rapports de couverture, le build Angular, puis le même fichier Compose et la même image Playwright sur une stack dédiée. Un job `always()` la supprime avec ses volumes. `actionlint` 1.7.12 passe.
 
 La phase reste partielle tant qu'un run GitHub distant n'est pas vert, que le lint frontend n'est pas intégré et que les checks requis ne protègent pas `main` lorsque les permissions le permettent. SonarQube et les scans bloquants appartiennent à la phase 4.

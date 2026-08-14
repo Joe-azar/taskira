@@ -5,8 +5,8 @@ Ce fichier s'applique à l'ensemble du dépôt. Des consignes placées dans un s
 ## État de référence et ordre des phases
 
 - La phase 0 est terminée : baseline récupérable au commit `fd84c54`, tag `pre-enterprise-migration` et branche `feat/enterprise-platform-migration`.
-- La phase 1 documentaire est terminée dans le worktree : règles, matrices, rapport cumulatif, documentation d'architecture et ADR sont présents et validés. Ils ne sont pas commités par défaut.
-- La phase 2 est partielle : 14 tests backend, 20 tests Vitest, leurs rapports/seuils de couverture, 3 parcours Playwright obligatoires et 1 connexion réelle optionnelle sont validés avec Docker. Les parcours métier E2E complets restent à réaliser.
+- La phase 1 documentaire est terminée au commit local `cccf2ee` : règles, matrices, rapport cumulatif, documentation d'architecture et ADR sont présents et validés.
+- La phase 2 est terminée localement : 14 tests backend, 20 tests Vitest, leurs rapports/seuils de couverture et 9 parcours Playwright sont validés avec Docker. Le runner E2E utilise une stack dédiée et éphémère, puis la détruit intégralement.
 - La phase 3 est partielle : `.github/workflows/ci.yml` est présent et passe `actionlint`, mais aucun run GitHub distant ni protection de branche n'est validé. Les phases 4 à 20 sont planifiées; ne présenter aucune technologie future comme installée.
 - Conserver Java 21, Spring Boot 3.5.x, Angular 21, Node 22 et PostgreSQL 16 jusqu'à la phase de montée de version prévue. Ne pas effectuer de mise à niveau opportuniste.
 - Préférer des lots petits, réversibles et compatibles avec le comportement existant.
@@ -51,7 +51,8 @@ Ce fichier s'applique à l'ensemble du dépôt. Des consignes placées dans un s
 - Tout changement de comportement inclut les tests pertinents dans le même lot. Toute correction de bug commence par un test de régression qui échoue sans le correctif.
 - Tester les règles métier avec JUnit 5, Mockito et AssertJ; les contrats HTTP et autorisations avec MockMvc; la persistance et Flyway avec PostgreSQL Testcontainers.
 - Tester les services, guards, intercepteurs et composants Angular avec Vitest. Maintenir les parcours critiques avec Playwright.
-- Le scénario Playwright de connexion réelle reste optionnel et reçoit ses identifiants uniquement par variables d'environnement; les trois scénarios publics doivent toujours passer sans compte.
+- Exécuter la suite Playwright depuis la racine avec `& .\e2e\playwright\run.ps1`. Elle crée uniquement des identités `.test`, écrit ses rapports dans des répertoires ignorés et détruit conteneurs, réseau et stockage temporaire en fin de run.
+- Ne pas simuler un parcours dont l'API n'existe pas. Le désarchivage projet et la suppression ticket attendent leurs endpoints de phase 7 avant ajout à la suite E2E.
 - Un lot applicatif n'est terminé que si les tests concernés, le build backend, le build frontend et les contrôles de configuration applicables sont verts.
 - Pour une modification purement documentaire, vérifier les liens relatifs et `git diff --check`; un build applicatif n'est pas requis.
 - Suivre les commandes et niveaux détaillés dans `docs/testing-strategy.md`.

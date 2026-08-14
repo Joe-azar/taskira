@@ -7,6 +7,7 @@ Cette matrice suit l'avancement par capacité métier. Elle complète la [feuill
 ## Légende
 
 - `Présent` : comportement applicatif disponible dans la baseline.
+- `Couvert` : comportement exercé par le niveau de test indiqué.
 - `Partiel` : couverture ou architecture amorcée, mais critère enterprise incomplet.
 - `Absent` : aucun livrable correspondant dans le dépôt.
 - `Planifié Pn` : attendu pendant la phase `n`, sans prétendre qu'il existe déjà.
@@ -15,12 +16,12 @@ Cette matrice suit l'avancement par capacité métier. Elle complète la [feuill
 
 | Module | Backend | Frontend | Tests rapides | Intégration PostgreSQL | E2E | Sonar | Staging | État et prochain critère |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Auth | Présent : JWT stateless | Présent : login, guards, intercepteur | Partiel : sécurité backend et 20 Vitest partagés | Partiel : démarrage Spring/Flyway, pas de scénario auth dédié | Partiel : 3 scénarios obligatoires + 1 login réel optionnel | Planifié P4 | Planifié P15 | Caractériser logout/rôles, puis migrer session/CSRF en P8. |
-| Users | Présent | Présent : administration | Absent dédié | Absent dédié | Absent | Planifié P4 | Planifié P15 | Couvrir rôles, activation/désactivation et autorisations. |
-| Projects | Présent | Présent : liste, détail, board | Présent : service et MockMvc ciblés | Présent : repository/Flyway via Testcontainers | Absent | Planifié P4 | Planifié P15 | Ajouter les workflows CRUD, archivage/désarchivage et permissions E2E. |
-| Project Members | Présent | Présent dans les vues projet | Partiel via tests projet | Partiel via requêtes d'accès projet | Absent | Planifié P4 | Planifié P15 | Ajouter cas owner/manager/member/non-member et ajout/retrait E2E. |
-| Tickets | Présent | Présent : liste et détail | Absent dédié | Absent dédié | Absent | Planifié P4 | Planifié P15 | Caractériser transitions, assignation, suppression, pagination et concurrence. |
-| Comments | Présent | Présent dans le détail ticket | Absent dédié | Absent dédié | Absent | Planifié P4 | Planifié P15 | Couvrir création, modification, suppression et permissions. |
+| Auth | Présent : JWT stateless | Présent : login, guards, intercepteur | Partiel : sécurité backend et 20 Vitest partagés | Partiel : démarrage Spring/Flyway, pas de scénario auth dédié | Couvert : page publique, login/logout, login invalide et guard anonyme | Planifié P4 | Planifié P15 | Caractériser les rôles, puis migrer session/CSRF en P8. |
+| Users | Présent | Présent : administration | Absent dédié | Absent dédié | Partiel : un `USER` est refusé sur l'API et la route admin | Planifié P4 | Planifié P15 | Couvrir activation/désactivation et matrice complète des rôles. |
+| Projects | Présent | Présent : liste, détail, board | Présent : service et MockMvc ciblés | Présent : repository/Flyway via Testcontainers | Couvert : create/update/archive | Planifié P4 | Planifié P15 | Ajouter l'endpoint de désarchivage et son E2E en P7; ne pas le simuler. |
+| Project Members | Présent | Présent dans les vues projet | Partiel via tests projet | Partiel via requêtes d'accès projet | Couvert : add/remove | Planifié P4 | Planifié P15 | Étendre aux cas owner/manager/member/non-member. |
+| Tickets | Présent | Présent : liste et détail | Absent dédié | Absent dédié | Couvert : create/update/status/assign | Planifié P4 | Planifié P15 | Ajouter l'endpoint de suppression et son E2E en P7; couvrir aussi pagination et concurrence. |
+| Comments | Présent | Présent dans le détail ticket | Absent dédié | Absent dédié | Couvert : create/update/delete | Planifié P4 | Planifié P15 | Étendre les tests de permissions. |
 | Dashboard | Présent | Présent | Absent dédié | Absent dédié | Absent | Planifié P4 | Planifié P15 | Tester agrégats, requêtes et performance. |
 | Audit | Partiel : audit JPA et historique ticket | Absent dédié | Absent dédié | Partiel : schéma historique existant | Absent | Planifié P4 | Planifié P15 | Créer le module et `audit_events` en P9. |
 | Notifications | Absent | Absent | Absent | Absent | Absent | Planifié P4 après création | Planifié P15 | Ajouter notifications/Mailpit en P12 si cas métier validé. |
@@ -35,7 +36,7 @@ Cette matrice suit l'avancement par capacité métier. Elle complète la [feuill
 | Base de données | PostgreSQL 16, Flyway `V1`–`V6`, `ddl-auto=validate` | Upgrade PostgreSQL en P6; toute évolution par `V7+`. |
 | Tests backend | 11 rapides + 3 intégration Testcontainers/Flyway; JaCoCo lignes 20,17 %, seuil 19 % vert | Étendre la couverture métier pour accompagner les prochaines phases. |
 | Tests frontend | 20 Vitest; couverture lignes 11,84 %, branches 11,27 %, fonctions 11,78 %, seuils verts | Étendre aux features au-delà de l'authentification. |
-| Tests navigateur | 3 obligatoires + 1 optionnel; stack Compose locale | Workflow de stack CI isolée présent localement; run GitHub distant et workflows métier manquent. |
+| Tests navigateur | Playwright 1.62.1 : 9/9 en 1,3 min sur la stack isolée `e2e/playwright/compose.e2e.yml` | Désarchivage projet et suppression ticket après création des endpoints P7; maintenir le nettoyage intégral. |
 | CI/CD | Partiel : `ci.yml` local et `actionlint` vert | Run distant, lint frontend et protection de branche requis pour clore P3; GHCR/staging/release en P15. |
 | Qualité et scans | Audit npm manuel uniquement | SonarQube, CodeQL, Dependabot et Trivy en P4. |
 | Sécurité | Backend autoritaire; JWT/localStorage actuel | Session HttpOnly, CSRF, CORS credentials et bootstrap dev en P8. |

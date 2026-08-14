@@ -9,8 +9,8 @@ Statuts : `Terminée`, `Terminée localement`, `Partielle`, `Planifiée`. Une ph
 | Phase | Portée | Priorité | Statut | Critère de sortie |
 | ---: | --- | --- | --- | --- |
 | 0 | Baseline Git | Critique | Terminée | État fonctionnel validé, commit `fd84c54`, tag `pre-enterprise-migration` et branche de migration présents. |
-| 1 | Documentation | Critique | Terminée localement | `AGENTS.md`, matrices, rapport, architecture et ADR complets; liens, cohérence et diff vérifiés. Commit/push hors de ce lot. |
-| 2 | Filet de sécurité | Critique | Partielle | 14 backend, 20 Vitest et seuils JaCoCo/V8 sont verts; 3+1 Playwright auth sont validés. Plusieurs workflows E2E métier manquent encore. |
+| 1 | Documentation | Critique | Terminée localement | `AGENTS.md`, matrices, rapport, architecture et ADR complets; liens, cohérence et diff vérifiés; commit local `cccf2ee`. |
+| 2 | Filet de sécurité | Critique | Terminée localement | 14 backend, 20 Vitest et seuils JaCoCo/V8 sont verts; 9/9 Playwright couvrent auth, autorisation et workflows métier sur une stack isolée détruite après le run. |
 | 3 | GitHub Actions CI | Critique | Partielle | `ci.yml` et `actionlint` sont validés localement; jobs tests/coverage/build et E2E isolé sont définis. Run distant, lint et checks requis manquent. |
 | 4 | SonarQube et scans | Haute | Planifiée | Quality Gate, couverture, CodeQL, dépendances, secrets et images sont analysés automatiquement et les résultats triés. |
 | 5 | Architecture modulaire | Haute | Planifiée | Frontières feature-first publiques, architecture hexagonale légère et tests Spring Modulith sans cycles. |
