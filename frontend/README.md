@@ -1,58 +1,67 @@
 # TaskiraWeb
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.2.
+This project uses Angular CLI 21.2.2. The repository is Docker-first: run every command below from the repository root; no host installation of Node, npm, Angular CLI, or a browser is required.
 
 ## Development server
 
-To start a local development server, run:
+Start the complete development stack with hot reload:
 
-```bash
-ng serve
+```powershell
+docker compose -f infra/docker-compose.yml up -d --build
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Open `http://localhost:4200/`. Angular reloads when a source file changes.
 
 ## Code scaffolding
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+With the development stack running, execute the repository-local Angular CLI inside the frontend container:
 
-```bash
-ng generate component component-name
+```powershell
+docker compose -f infra/docker-compose.yml exec frontend npm exec ng -- generate component component-name
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+List the available schematics with:
 
-```bash
-ng generate --help
+```powershell
+docker compose -f infra/docker-compose.yml exec frontend npm exec ng -- generate --help
 ```
 
-## Building
+## Build and unit tests
 
-To build the project run:
+Build the frontend test image once, then run the production build and Vitest suite in isolated containers:
 
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
+```powershell
+docker build -f frontend/Dockerfile -t taskira-frontend-tests frontend
+docker run --rm taskira-frontend-tests npm run build
+docker run --rm taskira-frontend-tests npm run test:unit
 ```
 
 ## Running end-to-end tests
 
-For end-to-end (e2e) testing, run:
+The Playwright suite expects Taskira to be available on `http://localhost:4200` by default. Run it without installing Node or a browser on the host:
 
-```bash
-ng e2e
+```powershell
+docker build -f frontend/Dockerfile.e2e -t taskira-frontend-e2e frontend
+docker run --rm `
+  --add-host=host.docker.internal:host-gateway `
+  -v "${PWD}\frontend\playwright-report:/app/playwright-report" `
+  -v "${PWD}\frontend\test-results:/app/test-results" `
+  taskira-frontend-e2e
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+`Dockerfile.e2e` pins Node 22.23.2, installs npm 11.9.0, and installs the Chromium version required by the pinned Playwright package. Its local TCP proxies preserve the browser origin `http://localhost:4200` and forward ports 4200 and 8080 to the Docker host, so Angular and the API keep the same URLs and CORS behavior as normal development. Override `TASKIRA_E2E_HOST` if the Docker host has another name. HTML reports and failure screenshots are written to the two ignored host directories mounted above.
+
+The public login and route-guard scenarios need no account. To enable the optional real-login scenario, pass disposable development credentials as environment variables; they are never stored in the repository:
+
+```powershell
+docker run --rm `
+  --add-host=host.docker.internal:host-gateway `
+  -v "${PWD}\frontend\playwright-report:/app/playwright-report" `
+  -v "${PWD}\frontend\test-results:/app/test-results" `
+  -e TASKIRA_E2E_EMAIL="user@example.test" `
+  -e TASKIRA_E2E_PASSWORD="replace-me" `
+  taskira-frontend-e2e
+```
 
 ## Additional Resources
 
