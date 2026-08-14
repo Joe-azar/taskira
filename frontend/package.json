@@ -8,8 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:unit": "ng test --watch=false",
-    "test:coverage": "ng test --watch=false --coverage",
-    "test:e2e": "playwright test"
+    "test:coverage": "ng test --watch=false --coverage"
   },
   "private": true,
   "packageManager": "npm@11.9.0",

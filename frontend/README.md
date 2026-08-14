@@ -38,30 +38,17 @@ docker run --rm taskira-frontend-tests npm run test:unit
 
 ## Running end-to-end tests
 
-The Playwright suite expects Taskira to be available on `http://localhost:4200` by default. Run it without installing Node or a browser on the host:
+Run the isolated Playwright stack from the repository root without installing Node or a browser on the host:
 
 ```powershell
-docker build -f frontend/Dockerfile.e2e -t taskira-frontend-e2e frontend
-docker run --rm `
-  --add-host=host.docker.internal:host-gateway `
-  -v "${PWD}\frontend\playwright-report:/app/playwright-report" `
-  -v "${PWD}\frontend\test-results:/app/test-results" `
-  taskira-frontend-e2e
+& .\e2e\playwright\run.ps1
 ```
 
-`Dockerfile.e2e` pins Node 22.23.2, installs npm 11.9.0, and installs the Chromium version required by the pinned Playwright package. Its local TCP proxies preserve the browser origin `http://localhost:4200` and forward ports 4200 and 8080 to the Docker host, so Angular and the API keep the same URLs and CORS behavior as normal development. Override `TASKIRA_E2E_HOST` if the Docker host has another name. HTML reports and failure screenshots are written to the two ignored host directories mounted above.
+The command builds a dedicated Angular, Spring Boot, PostgreSQL, and Playwright stack. It publishes no host port, stores PostgreSQL data only in a container `tmpfs`, and always runs `docker compose down --volumes --remove-orphans` in a `finally` block. The Playwright runner exposes separate local TCP proxies on ports 4200 and 8080 inside its own container, preserving the application origins `http://localhost:4200` and `http://localhost:8080` without weakening CORS.
 
-The public login and route-guard scenarios need no account. To enable the optional real-login scenario, pass disposable development credentials as environment variables; they are never stored in the repository:
+The suite creates disposable users with reserved `.test` email addresses through the public API. It does not use development accounts or personal credentials. Reports, traces, and failure screenshots are written to the ignored directories `e2e/playwright/playwright-report/` and `e2e/playwright/test-results/`.
 
-```powershell
-docker run --rm `
-  --add-host=host.docker.internal:host-gateway `
-  -v "${PWD}\frontend\playwright-report:/app/playwright-report" `
-  -v "${PWD}\frontend\test-results:/app/test-results" `
-  -e TASKIRA_E2E_EMAIL="user@example.test" `
-  -e TASKIRA_E2E_PASSWORD="replace-me" `
-  taskira-frontend-e2e
-```
+To inspect or control the Compose invocation directly, use `e2e/playwright/compose.e2e.yml` with an explicit project name and finish with `down --volumes --remove-orphans` for that same project.
 
 ## Additional Resources
 

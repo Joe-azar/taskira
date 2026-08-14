@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16.15-alpine3.23@sha256:5e6e44180efd2d95cffabc2a0e3e9bc246ee052c9bc08a95f67dbb0cc860654f
+    environment:
+      POSTGRES_DB: taskira_e2e
+      POSTGRES_USER: taskira_e2e
+      POSTGRES_PASSWORD: taskira_e2e_only
+    tmpfs:
+      - /var/lib/postgresql/data:rw,noexec,nosuid,size=512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskira_e2e -d taskira_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taskira_e2e
+      SPRING_DATASOURCE_USERNAME: taskira_e2e
+      SPRING_DATASOURCE_PASSWORD: taskira_e2e_only
+      SERVER_PORT: 8080
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:4200
+      APP_JWT_SECRET: taskira-e2e-only-jwt-key-with-at-least-32-characters
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend
+
+  e2e:
+    build:
+      context: ../..
+      dockerfile: e2e/playwright/Dockerfile
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      CI: ${CI:-false}
+      PLAYWRIGHT_BASE_URL: http://localhost:4200
+      TASKIRA_API_BASE_URL: http://localhost:8080/api
+      TASKIRA_E2E_FRONTEND_HOST: frontend
+      TASKIRA_E2E_BACKEND_HOST: backend
+    init: true
+    volumes:
+      - ./playwright-report:/workspace/e2e/playwright/playwright-report
+      - ./test-results:/workspace/e2e/playwright/test-results

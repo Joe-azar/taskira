@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+  merge_group:
   push:
     branches:
       - main
@@ -20,7 +21,7 @@ env:
 jobs:
   backend:
     name: Backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
@@ -33,7 +34,7 @@ jobs:
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "21.0.11+10"
           cache: maven
           cache-dependency-path: backend/pom.xml
 
@@ -57,7 +58,7 @@ jobs:
 
   frontend:
     name: Frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
@@ -104,7 +105,7 @@ jobs:
     needs:
       - backend
       - frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
@@ -113,44 +114,23 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build and start an ephemeral application stack
-        run: docker compose -p taskira-ci -f infra/docker-compose.yml up --detach --build
-
-      - name: Wait for frontend and backend readiness
+      - name: Prepare E2E artifact directories
         run: |
-          wait_for_url() {
-            name="$1"
-            url="$2"
-            for _ in $(seq 1 60); do
-              if curl --fail --silent --show-error "$url" >/dev/null; then
-                echo "$name is ready"
-                return 0
-              fi
-              sleep 2
-            done
-            echo "Timed out waiting for $name at $url" >&2
-            docker compose -p taskira-ci -f infra/docker-compose.yml ps
-            return 1
-          }
+          mkdir -p e2e/playwright/playwright-report
+          mkdir -p e2e/playwright/test-results
 
-          wait_for_url frontend http://localhost:4200/
-          wait_for_url backend http://localhost:8080/v3/api-docs
-
-      - name: Build the pinned Playwright image
-        run: docker build -f frontend/Dockerfile.e2e -t taskira-frontend-e2e:ci frontend
-
-      - name: Run Playwright
-        run: |
-          mkdir -p frontend/playwright-report frontend/test-results
-          docker run --rm \
-            --add-host=host.docker.internal:host-gateway \
-            --volume "${PWD}/frontend/playwright-report:/app/playwright-report" \
-            --volume "${PWD}/frontend/test-results:/app/test-results" \
-            taskira-frontend-e2e:ci
+      - name: Build and run the isolated E2E stack
+        run: >-
+          docker compose -p taskira-ci-e2e
+          -f e2e/playwright/compose.e2e.yml
+          up --build --abort-on-container-exit --exit-code-from e2e
 
       - name: Capture Compose logs
         if: always()
-        run: docker compose -p taskira-ci -f infra/docker-compose.yml logs --no-color > taskira-compose.log 2>&1 || true
+        run: >-
+          docker compose -p taskira-ci-e2e
+          -f e2e/playwright/compose.e2e.yml
+          logs --no-color > e2e/playwright/compose.log 2>&1 || true
 
       - name: Upload E2E diagnostics
         if: always()
@@ -158,12 +138,42 @@ jobs:
         with:
           name: e2e-diagnostics
           path: |
-            frontend/playwright-report/
-            frontend/test-results/
-            taskira-compose.log
+            e2e/playwright/playwright-report/
+            e2e/playwright/test-results/
+            e2e/playwright/compose.log
           if-no-files-found: warn
           retention-days: 7
 
       - name: Remove the ephemeral application stack
         if: always()
-        run: docker compose -p taskira-ci -f infra/docker-compose.yml down --volumes --remove-orphans
+        run: >-
+          docker compose -p taskira-ci-e2e
+          -f e2e/playwright/compose.e2e.yml
+          down --volumes --remove-orphans
+
+  ci-gate:
+    name: CI Gate
+    if: always()
+    needs:
+      - backend
+      - frontend
+      - containers-e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every CI job to succeed
+        env:
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          E2E_RESULT: ${{ needs.containers-e2e.result }}
+        run: |
+          printf 'backend=%s\nfrontend=%s\ncontainers-e2e=%s\n' \
+            "$BACKEND_RESULT" "$FRONTEND_RESULT" "$E2E_RESULT"
+
+          if [[ "$BACKEND_RESULT" != "success" \
+            || "$FRONTEND_RESULT" != "success" \
+            || "$E2E_RESULT" != "success" ]]; then
+            echo "At least one required CI job did not succeed." >&2
+            exit 1
+          fi
