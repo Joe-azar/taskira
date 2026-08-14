@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine3.23@sha256:5e6e44180efd2d95cffabc2a0e3e9bc246ee052c9bc08a95f67dbb0cc860654f
     container_name: taskira-postgres
     restart: unless-stopped
     environment:

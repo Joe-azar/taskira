@@ -79,20 +79,21 @@ docker run --rm taskira-frontend-tests npm run build
 
 ### Backend autonome avec Testcontainers
 
-Cette commande validée sous Docker Desktop monte uniquement le socket Docker, le dépôt backend et un cache Maven nommé. Elle ne dépend ni de la base de développement ni du réseau Compose.
+Construire d'abord le stage backend reproductible. Il fournit Java 21.0.11 et `unzip`, requis pour vérifier le SHA-256 de la distribution Maven Wrapper. Le runner monte uniquement le socket Docker, le dépôt backend et un cache Maven nommé; il ne dépend ni de la base de développement ni du réseau Compose.
 
 ```powershell
+docker build --target build -t taskira-backend-build backend
 docker run --rm `
   -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal `
   -v /var/run/docker.sock:/var/run/docker.sock `
   -v taskira_maven_cache:/root/.m2 `
   -v "${PWD}\backend:/workspace" `
   -w /workspace `
-  eclipse-temurin:21-jdk@sha256:57865c22b954cf920cb05a610af81d577e89783282514ba071e99c7357f6c769 `
+  taskira-backend-build `
   ./mvnw verify
 ```
 
-`verify` exécute les tests rapides via Surefire, puis les tests `*IT` via Failsafe. Les tests d'intégration démarrent `postgres:16.15-alpine`, appliquent Flyway `V1` à `V6`, valident Hibernate et détruisent leur conteneur temporaire.
+`verify` exécute les tests rapides via Surefire, puis les tests `*IT` via Failsafe. Les tests d'intégration démarrent l'image épinglée `postgres:16.15-alpine3.23`, appliquent Flyway `V1` à `V6`, valident Hibernate et détruisent leur conteneur temporaire.
 
 Le run validé du 15 août 2026 produit les rapports JaCoCo XML/HTML après fusion UT/IT : lignes 20,17 %, branches 3,75 %, instructions 18,11 %, méthodes 23,01 % et classes 42,25 %. Le seuil ligne 19 % passe avec `BUILD SUCCESS`.
 
