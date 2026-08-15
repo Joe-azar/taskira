@@ -22,7 +22,7 @@ Ce fichier s'applique à l'ensemble du dépôt. Des consignes placées dans un s
 - Chaque module backend expose une API publique interne étroite. Un module ne doit pas accéder directement aux repositories, entités internes ou détails d'infrastructure d'un autre module; il passe par l'API du module propriétaire.
 - Garder `common`/`shared` strictement transversal. Une fonctionnalité ne doit pas devenir un dossier générique de classes réutilisables.
 - Introduire les couches `api`, `application`, `domain` et `infrastructure` uniquement lorsqu'elles clarifient une fonctionnalité suffisamment complexe.
-- Spring Modulith est introduit depuis la phase 5 (`ModularityTests`, `docs/architecture/modules.md`, [ADR-0016](docs/adr/0016-spring-modulith-boundaries.md)); toute nouvelle dépendance entre modules doit rester vérifiée par ce test, sans cycle. Ne pas modifier le préfixe `/api` ni renommer massivement les packages avant la phase 7 (API `/api/v1`).
+- Spring Modulith est introduit depuis la phase 5 (`ModularityTests`, `docs/architecture/modules.md`, [ADR-0016](docs/adr/0016-spring-modulith-boundaries.md)); toute nouvelle dépendance entre modules doit rester vérifiée par ce test, sans cycle. Toutes les routes sont versionnées sous `/api/v1` depuis la phase 7 (`common.web.ApiVersion`); ne pas introduire de route non versionnée ni renommer massivement les packages sans mettre à jour ce préfixe partout où il est utilisé (contrôleurs, `SecurityConfig`, frontend, E2E).
 - Ne pas extraire de microservice ni ajouter de broker, cache, moteur de recherche ou orchestrateur sans besoin mesuré et ADR accepté.
 - Documenter toute décision structurante ou difficilement réversible dans `docs/adr/`.
 
@@ -57,7 +57,7 @@ Ce fichier s'applique à l'ensemble du dépôt. Des consignes placées dans un s
 - Tester les services, guards, intercepteurs et composants Angular avec Vitest. Maintenir les parcours critiques avec Playwright.
 - Exécuter le lint Angular dans Docker. Les avertissements existants restent visibles et doivent diminuer; toute nouvelle erreur est bloquante.
 - Exécuter la suite Playwright depuis la racine avec `& .\e2e\playwright\run.ps1`. Elle crée uniquement des identités `.test`, écrit ses rapports dans des répertoires ignorés et détruit conteneurs, réseau et stockage temporaire en fin de run.
-- Ne pas simuler un parcours dont l'API n'existe pas. Le désarchivage projet et la suppression ticket attendent leurs endpoints de phase 7 avant ajout à la suite E2E.
+- Ne pas simuler un parcours dont l'API n'existe pas. Le désarchivage projet et la suppression ticket attendent leurs endpoints (gap sans phase assignée, hors du périmètre réel de la phase 7) avant ajout à la suite E2E.
 - Un lot applicatif n'est terminé que si les tests concernés, le build backend, le build frontend et les contrôles de configuration applicables sont verts.
 - Pour une modification purement documentaire, vérifier les liens relatifs et `git diff --check`; un build applicatif n'est pas requis.
 - Suivre les commandes et niveaux détaillés dans `docs/testing-strategy.md`.
