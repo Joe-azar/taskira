@@ -1,14 +1,11 @@
 package com.joe.taskira.auth.service;
 
-import com.joe.taskira.auth.dto.AuthResponse;
 import com.joe.taskira.auth.dto.LoginRequest;
 import com.joe.taskira.auth.dto.MeResponse;
 import com.joe.taskira.auth.dto.RegisterRequest;
 import com.joe.taskira.common.exception.ConflictException;
 import com.joe.taskira.common.exception.UnauthorizedException;
 import com.joe.taskira.common.util.SecurityUtils;
-import com.joe.taskira.security.jwt.JwtProperties;
-import com.joe.taskira.security.jwt.JwtService;
 import com.joe.taskira.security.model.AuthenticatedUser;
 import com.joe.taskira.user.entity.User;
 import com.joe.taskira.user.enums.GlobalRole;
@@ -30,10 +27,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
-    private final JwtProperties jwtProperties;
 
-    public AuthResponse register(RegisterRequest request) {
+    public MeResponse register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
 
         if (!request.password().equals(request.confirmPassword())) {
@@ -62,12 +57,10 @@ public class AuthService {
                 )
         );
 
-        String token = jwtService.generateToken(authenticatedUser);
-
-        return AuthResponse.of(token, jwtProperties.getExpirationMs(), user);
+        return MeResponse.from(user);
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public MeResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         normalizeEmail(request.email()),
@@ -83,8 +76,7 @@ public class AuthService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String token = jwtService.generateToken(authenticatedUser);
-        return AuthResponse.of(token, jwtProperties.getExpirationMs(), authenticatedUser.getUser());
+        return MeResponse.from(authenticatedUser.getUser());
     }
 
     public MeResponse me() {

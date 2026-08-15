@@ -41,8 +41,5 @@ server:
         secure: false
 
 app:
-  jwt:
-    secret: ${APP_JWT_SECRET:taskira-super-secret-key-change-me-at-least-32-characters}
-    expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}

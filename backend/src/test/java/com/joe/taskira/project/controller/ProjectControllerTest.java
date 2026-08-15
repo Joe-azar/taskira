@@ -8,8 +8,6 @@ import com.joe.taskira.project.service.ProjectService;
 import com.joe.taskira.security.config.RestAccessDeniedHandler;
 import com.joe.taskira.security.config.RestAuthenticationEntryPoint;
 import com.joe.taskira.security.config.SecurityConfig;
-import com.joe.taskira.security.jwt.JwtAuthenticationFilter;
-import com.joe.taskira.security.jwt.JwtService;
 import com.joe.taskira.security.service.CustomUserDetailsService;
 import com.joe.taskira.user.dto.UserSummaryResponse;
 import com.joe.taskira.user.enums.GlobalRole;
@@ -39,7 +37,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ProjectController.class)
 @Import({
         SecurityConfig.class,
-        JwtAuthenticationFilter.class,
         RestAuthenticationEntryPoint.class,
         RestAccessDeniedHandler.class,
         GlobalExceptionHandler.class
@@ -53,9 +50,6 @@ class ProjectControllerTest {
 
     @MockitoBean
     private ProjectService projectService;
-
-    @MockitoBean
-    private JwtService jwtService;
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;

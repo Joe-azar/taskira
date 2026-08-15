@@ -1,6 +1,5 @@
 package com.joe.taskira.auth.controller;
 
-import com.joe.taskira.auth.dto.AuthResponse;
 import com.joe.taskira.auth.dto.LoginRequest;
 import com.joe.taskira.auth.dto.MeResponse;
 import com.joe.taskira.auth.dto.RegisterRequest;
@@ -30,23 +29,23 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(
+    public MeResponse register(
             @Valid @RequestBody RegisterRequest request,
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse
     ) {
-        AuthResponse response = authService.register(request);
+        MeResponse response = authService.register(request);
         persistSession(httpRequest, httpResponse);
         return response;
     }
 
     @PostMapping("/login")
-    public AuthResponse login(
+    public MeResponse login(
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse
     ) {
-        AuthResponse response = authService.login(request);
+        MeResponse response = authService.login(request);
         persistSession(httpRequest, httpResponse);
         return response;
     }

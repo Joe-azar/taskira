@@ -3,7 +3,6 @@ import { expect, test } from '@playwright/test';
 import {
   authHeaders,
   expectStatus,
-  getCsrfToken,
   registerUser,
   testKey,
   testPassword,
@@ -67,9 +66,8 @@ test.describe('authentication and authorization', () => {
 
   test('refuses a USER on the administration API and route', async ({ page, request }, testInfo) => {
     const user = await registerUser(request, testInfo, 'ordinary-user');
-    const csrfToken = await getCsrfToken(request);
     const forbiddenResponse = await request.post(`${apiBaseUrl}/users`, {
-      headers: { ...authHeaders(user), 'X-XSRF-TOKEN': csrfToken },
+      headers: await authHeaders(request, user),
       data: {
         firstName: 'E2E',
         lastName: 'Forbidden',
