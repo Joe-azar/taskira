@@ -1,6 +1,7 @@
 package com.joe.taskira.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +54,18 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildResponse(HttpStatus.FORBIDDEN, "Access denied", request.getRequestURI());
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handleOptimisticLockingFailureException(
+            OptimisticLockingFailureException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "This resource was modified by another request. Reload it and try again.",
+                request.getRequestURI()
+        );
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
