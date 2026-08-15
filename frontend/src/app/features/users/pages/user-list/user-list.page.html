@@ -4,7 +4,9 @@
   </header>
 
   <section class="user-search">
+    <label class="sr-only" for="user-search-input">Rechercher un utilisateur</label>
     <input
+      id="user-search-input"
       type="text"
       [formControl]="form.controls.search"
       placeholder="Rechercher un utilisateur..."

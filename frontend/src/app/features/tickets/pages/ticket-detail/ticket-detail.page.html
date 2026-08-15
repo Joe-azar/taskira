@@ -296,7 +296,8 @@
             (ngSubmit)="submitEditComment(comment.id)"
           >
             <div class="form-field">
-              <textarea rows="4" formControlName="content"></textarea>
+              <label class="sr-only" [attr.for]="'comment-edit-' + comment.id">Modifier le commentaire</label>
+              <textarea [id]="'comment-edit-' + comment.id" rows="4" formControlName="content"></textarea>
               <small class="error" *ngIf="editCommentContent.touched && editCommentContent.invalid">
                 Le commentaire est obligatoire.
               </small>
