@@ -68,17 +68,44 @@ jobs:
         run: ./scripts/sonarqube/bootstrap.ps1 -SonarUrl http://localhost:9000
 
       - name: Run SonarQube analysis
+        id: sonar_scan
         run: |
           set -a
           . infra/sonarqube/.env.local
           set +a
+          set -o pipefail
           docker run --rm \
             --network host \
             -v "$PWD:/usr/src" \
             -w /usr/src \
             -e SONAR_HOST_URL="http://localhost:9000" \
             -e SONAR_TOKEN="$SONAR_TOKEN" \
-            sonarsource/sonar-scanner-cli@sha256:23ca0f137965d9dff2198074043fd48d386280bc5d0ccac8c8349cea4cf096a9
+            sonarsource/sonar-scanner-cli@sha256:23ca0f137965d9dff2198074043fd48d386280bc5d0ccac8c8349cea4cf096a9 \
+            | tee sonar-scan.log
+          task_id=$(grep -oE 'api/ce/task\?id=[A-Za-z0-9_-]+' sonar-scan.log | tail -1 | sed 's/.*id=//')
+          if [ -z "$task_id" ]; then
+            echo "Could not find the SonarQube background task id in the scanner output." >&2
+            exit 1
+          fi
+          echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for SonarQube to finish processing the analysis report
+        run: |
+          set -a
+          . infra/sonarqube/.env.local
+          set +a
+          task_id="${{ steps.sonar_scan.outputs.task_id }}"
+          for _ in $(seq 1 30); do
+            status=$(curl -sf -u "$SONAR_TOKEN:" "http://localhost:9000/api/ce/task?id=$task_id" | jq -r '.task.status')
+            echo "Compute Engine task status: $status"
+            case "$status" in
+              SUCCESS) exit 0 ;;
+              FAILED|CANCELED) echo "SonarQube background task did not succeed: $status" >&2; exit 1 ;;
+            esac
+            sleep 5
+          done
+          echo "Timed out waiting for the SonarQube background task to finish." >&2
+          exit 1
 
       - name: Enforce the Quality Gate
         run: |
