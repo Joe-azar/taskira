@@ -32,7 +32,6 @@ describe('authentication guards', () => {
   };
 
   const authService = {
-    hasToken: vi.fn(),
     currentUser: null as AuthUser | null,
     fetchMe: vi.fn(),
   };
@@ -40,7 +39,6 @@ describe('authentication guards', () => {
   const route = {} as ActivatedRouteSnapshot;
 
   beforeEach(() => {
-    authService.hasToken.mockReset();
     authService.fetchMe.mockReset();
     authService.currentUser = null;
 
@@ -54,41 +52,51 @@ describe('authentication guards', () => {
     router = TestBed.inject(Router);
   });
 
-  it('allows an authenticated user through authGuard', () => {
-    authService.hasToken.mockReturnValue(true);
+  it('allows a cached user through authGuard without calling the server', () => {
+    authService.currentUser = user;
 
     const result = TestBed.runInInjectionContext(() =>
       authGuard(route, { url: '/projects' } as RouterStateSnapshot)
     );
 
     expect(result).toBe(true);
+    expect(authService.fetchMe).not.toHaveBeenCalled();
   });
 
-  it('redirects an anonymous user to login and preserves the requested URL', () => {
-    authService.hasToken.mockReturnValue(false);
+  it('allows authGuard through when the server confirms a valid session', async () => {
+    authService.fetchMe.mockReturnValue(of(user));
 
     const result = TestBed.runInInjectionContext(() =>
-      authGuard(route, {
-        url: '/tickets?mine=true',
-      } as RouterStateSnapshot)
-    ) as UrlTree;
+      authGuard(route, { url: '/projects' } as RouterStateSnapshot)
+    ) as Observable<boolean | UrlTree>;
 
-    expect(result.queryParams['redirectTo']).toBe('/tickets?mine=true');
-    expect(router.serializeUrl(result)).toContain('/login');
+    await expect(firstValueFrom(result)).resolves.toBe(true);
   });
 
-  it('keeps an anonymous visitor on the login page', () => {
-    authService.hasToken.mockReturnValue(false);
+  it('redirects an anonymous user to login and preserves the requested URL', async () => {
+    authService.fetchMe.mockReturnValue(throwError(() => new Error('No session')));
+
+    const result = TestBed.runInInjectionContext(() =>
+      authGuard(route, { url: '/tickets?mine=true' } as RouterStateSnapshot)
+    ) as Observable<boolean | UrlTree>;
+
+    const resolved = (await firstValueFrom(result)) as UrlTree;
+    expect(resolved.queryParams['redirectTo']).toBe('/tickets?mine=true');
+    expect(router.serializeUrl(resolved)).toContain('/login');
+  });
+
+  it('keeps an anonymous visitor on the login page', async () => {
+    authService.fetchMe.mockReturnValue(throwError(() => new Error('No session')));
 
     const result = TestBed.runInInjectionContext(() =>
       guestGuard(route, { url: '/login' } as RouterStateSnapshot)
-    );
+    ) as Observable<boolean | UrlTree>;
 
-    expect(result).toBe(true);
+    await expect(firstValueFrom(result)).resolves.toBe(true);
   });
 
-  it('redirects an authenticated visitor away from the login page', () => {
-    authService.hasToken.mockReturnValue(true);
+  it('redirects a cached authenticated visitor away from the login page', () => {
+    authService.currentUser = user;
 
     const result = TestBed.runInInjectionContext(() =>
       guestGuard(route, { url: '/login' } as RouterStateSnapshot)
@@ -97,8 +105,18 @@ describe('authentication guards', () => {
     expect(router.serializeUrl(result)).toBe('/dashboard');
   });
 
+  it('redirects an authenticated visitor away from the login page once the server confirms it', async () => {
+    authService.fetchMe.mockReturnValue(of(user));
+
+    const result = TestBed.runInInjectionContext(() =>
+      guestGuard(route, { url: '/login' } as RouterStateSnapshot)
+    ) as Observable<boolean | UrlTree>;
+
+    const resolved = (await firstValueFrom(result)) as UrlTree;
+    expect(router.serializeUrl(resolved)).toBe('/dashboard');
+  });
+
   it('allows a cached admin through adminGuard', () => {
-    authService.hasToken.mockReturnValue(true);
     authService.currentUser = admin;
 
     const result = TestBed.runInInjectionContext(() =>
@@ -110,7 +128,6 @@ describe('authentication guards', () => {
   });
 
   it('redirects a cached non-admin away from administration', () => {
-    authService.hasToken.mockReturnValue(true);
     authService.currentUser = user;
 
     const result = TestBed.runInInjectionContext(() =>
@@ -121,7 +138,6 @@ describe('authentication guards', () => {
   });
 
   it('loads the session before allowing an admin with no cached user', async () => {
-    authService.hasToken.mockReturnValue(true);
     authService.fetchMe.mockReturnValue(of(admin));
 
     const result = TestBed.runInInjectionContext(() =>
@@ -132,7 +148,6 @@ describe('authentication guards', () => {
   });
 
   it('redirects to login when loading the session fails', async () => {
-    authService.hasToken.mockReturnValue(true);
     authService.fetchMe.mockReturnValue(
       throwError(() => new Error('Session unavailable'))
     );

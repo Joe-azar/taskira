@@ -12,6 +12,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.util.MultiValueMap;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.UUID;
 
@@ -37,7 +38,9 @@ class SessionAuthenticationIT extends PostgreSqlIntegrationTest {
         return RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
     }
 
-    private record Registered(String email, String sessionCookie, String csrfCookie) {
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
+    private record Registered(String email, String sessionCookie, String csrfCookie, String accessToken) {
     }
 
     /**
@@ -76,10 +79,12 @@ class SessionAuthenticationIT extends PostgreSqlIntegrationTest {
                 .as("register status; body=%s", new String(result.getResponseBodyContent()))
                 .isEqualTo(201);
 
+        String accessToken = JSON.readTree(new String(result.getResponseBodyContent())).path("accessToken").asText();
+
         // The register response only re-issues a Set-Cookie for XSRF-TOKEN if the value
         // actually changes; since we echoed back the exact value seedCsrfToken() already
         // captured, it stays unchanged and the cookie header is legitimately omitted here.
-        return new Registered(email, cookieValue(result, SESSION_COOKIE), csrfToken);
+        return new Registered(email, cookieValue(result, SESSION_COOKIE), csrfToken, accessToken);
     }
 
     private String cookieValue(ExchangeResult result, String name) {
@@ -309,5 +314,31 @@ class SessionAuthenticationIT extends PostgreSqlIntegrationTest {
         ResponseCookie csrfCookie = result.getResponseCookies().getFirst(CSRF_COOKIE);
         assertThat(csrfCookie).isNotNull();
         assertThat(csrfCookie.isHttpOnly()).isFalse();
+    }
+
+    @Test
+    void explicitBearerTokenTakesPrecedenceOverAnAmbientSessionCookie() {
+        // Both users are registered through the same shared HTTP client here, exactly like
+        // Playwright's E2E API helpers registering "owner" then "member" in the same request
+        // context: each registration also sets a session cookie (dual-mode), so by the time
+        // the second user is registered, the client is carrying THEIR session - even though a
+        // caller might still explicitly present the FIRST user's bearer token. This is a real
+        // bug that was found this way: SecurityContextHolderFilter loads the session before
+        // JwtAuthenticationFilter runs, and the filter used to only apply the JWT identity if
+        // no authentication was already set, so the ambient session silently won over an
+        // explicit, valid bearer token for a completely different user.
+        Registered userA = register("precedence-user-a");
+        Registered userB = register("precedence-user-b");
+
+        ExchangeResult result = client().get().uri(AUTH_ME_URL)
+                .cookie(SESSION_COOKIE, userB.sessionCookie())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + userA.accessToken())
+                .exchange()
+                .returnResult();
+
+        assertThat(result.getStatus().value()).isEqualTo(200);
+        String body = new String(result.getResponseBodyContent());
+        assertThat(body).contains(userA.email());
+        assertThat(body).doesNotContain(userB.email());
     }
 }

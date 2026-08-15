@@ -43,7 +43,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             final String username = jwtService.extractUsername(jwt);
 
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // An explicit Authorization: Bearer header is an unambiguous statement of intent
+            // and always wins over whatever an ambient session cookie on the same request
+            // resolved to - it must not be silently ignored just because
+            // SecurityContextHolderFilter (which runs earlier and loads the session, if any)
+            // already populated an authentication for a different user.
+            if (username != null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {

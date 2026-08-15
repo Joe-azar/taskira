@@ -35,6 +35,22 @@ export function testKey(testInfo: TestInfo, label: string): string {
     .slice(0, 10);
 }
 
+/**
+ * CSRF is enforced on every mutating request regardless of how the caller authenticates.
+ * Playwright's request fixture keeps a cookie jar automatically (like a browser), but it
+ * won't echo a cookie back as a header on its own the way Angular's XSRF interceptor does
+ * in the real app - callers have to read the seeded cookie and attach it themselves.
+ */
+export async function getCsrfToken(request: APIRequestContext): Promise<string> {
+  await request.get(`${apiBaseUrl}/auth/me`);
+  const state = await request.storageState();
+  const cookie = state.cookies.find((c) => c.name === 'XSRF-TOKEN');
+  if (!cookie) {
+    throw new Error('XSRF-TOKEN cookie was not set after GET /auth/me');
+  }
+  return cookie.value;
+}
+
 export async function registerUser(
   request: APIRequestContext,
   testInfo: TestInfo,
@@ -45,8 +61,10 @@ export async function registerUser(
   const firstName = 'E2E';
   const lastName = `${label}-${key}`;
   const email = `${normalizedLabel}.${key}.r${testInfo.retry}@taskira.test`;
+  const csrfToken = await getCsrfToken(request);
 
   const response = await request.post(`${apiBaseUrl}/auth/register`, {
+    headers: { 'X-XSRF-TOKEN': csrfToken },
     data: {
       firstName,
       lastName,
@@ -79,8 +97,9 @@ export async function createProject(
     name: `E2E project ${key}`,
     description: `Isolated E2E project ${key}`,
   };
+  const csrfToken = await getCsrfToken(request);
   const response = await request.post(`${apiBaseUrl}/projects`, {
-    headers: authHeaders(owner),
+    headers: { ...authHeaders(owner), 'X-XSRF-TOKEN': csrfToken },
     data: project,
   });
   const body = await jsonBody(response, 201, `create project ${label}`);
@@ -95,8 +114,9 @@ export async function addProjectMember(
   member: TestUser,
   projectRole = 'MEMBER'
 ): Promise<void> {
+  const csrfToken = await getCsrfToken(request);
   const response = await request.post(`${apiBaseUrl}/projects/${project.id}/members`, {
-    headers: authHeaders(owner),
+    headers: { ...authHeaders(owner), 'X-XSRF-TOKEN': csrfToken },
     data: { userId: member.id, projectRole },
   });
   await jsonBody(response, 201, `add ${member.email} to project ${project.id}`);
@@ -111,8 +131,9 @@ export async function createTicket(
 ): Promise<TestTicket> {
   const key = testKey(testInfo, label);
   const title = `E2E ticket ${key}`;
+  const csrfToken = await getCsrfToken(request);
   const response = await request.post(`${apiBaseUrl}/tickets`, {
-    headers: authHeaders(owner),
+    headers: { ...authHeaders(owner), 'X-XSRF-TOKEN': csrfToken },
     data: {
       projectId: project.id,
       title,

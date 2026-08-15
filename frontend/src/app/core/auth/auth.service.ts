@@ -6,7 +6,16 @@ import { catchError, finalize, map, switchMap, tap } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { AuthUser, LoginRequest } from '../models/auth.models';
-import { TokenService } from './token.service';
+
+interface MeResponse {
+  id: number;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  email: string;
+  globalRole: string;
+  active: boolean;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -14,7 +23,6 @@ import { TokenService } from './token.service';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly tokenService = inject(TokenService);
 
   private readonly currentUserSubject = new BehaviorSubject<AuthUser | null>(null);
   private readonly initializedSubject = new BehaviorSubject<boolean>(false);
@@ -26,105 +34,60 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
-  hasToken(): boolean {
-    return this.tokenService.hasToken();
-  }
-
   login(payload: LoginRequest): Observable<AuthUser> {
-    return this.http.post<any>(`${environment.apiUrl}/auth/login`, payload).pipe(
-      map((response) => {
-        const token = this.extractToken(response);
-        if (!token) {
-          throw new Error('Token JWT absent de la réponse de login');
-        }
-        this.tokenService.setToken(token);
-        return response;
-      }),
-      switchMap((response) => {
-        const embeddedUser = this.extractEmbeddedUser(response);
-        if (embeddedUser) {
-          this.currentUserSubject.next(embeddedUser);
-          return of(embeddedUser);
-        }
-        return this.fetchMe();
-      })
-    );
+    return this.http
+      .post(`${environment.apiUrl}/auth/login`, payload)
+      .pipe(switchMap(() => this.fetchMe()));
   }
 
   fetchMe(): Observable<AuthUser> {
-    return this.http.get<any>(`${environment.apiUrl}/auth/me`).pipe(
+    return this.http.get<MeResponse>(`${environment.apiUrl}/auth/me`).pipe(
       map((raw) => this.normalizeUser(raw)),
       tap((user) => this.currentUserSubject.next(user))
     );
   }
 
-  bootstrapSession(): void {
-    if (!this.hasToken()) {
-      this.initializedSubject.next(true);
-      return;
-    }
+  /**
+   * There is no client-readable signal for an HttpOnly session cookie, so the only way to
+   * know whether one exists is to ask the server. Wired into an APP_INITIALIZER so it
+   * completes (and, as a side effect, seeds the XSRF-TOKEN cookie) before any route -
+   * including /login - ever renders. Without that, a fast form submission could race the
+   * cookie and get rejected as a missing CSRF token. Guards still fall back to their own
+   * fetchMe() call for defense in depth, but shouldn't normally need to.
+   */
+  bootstrapSession(): Observable<AuthUser | null> {
+    return this.fetchMe().pipe(
+      catchError(() => {
+        this.currentUserSubject.next(null);
+        return of(null);
+      }),
+      finalize(() => this.initializedSubject.next(true))
+    );
+  }
 
-    this.fetchMe()
+  logout(redirectToLogin: boolean = true): void {
+    this.http
+      .post(`${environment.apiUrl}/auth/logout`, {})
       .pipe(
-        catchError(() => {
-          this.clearSession();
-          return of(null);
-        }),
-        finalize(() => this.initializedSubject.next(true))
+        catchError(() => of(null)),
+        finalize(() => {
+          this.currentUserSubject.next(null);
+          if (redirectToLogin) {
+            this.router.navigate(['/login']);
+          }
+        })
       )
       .subscribe();
   }
 
-  logout(redirectToLogin: boolean = true): void {
-    this.clearSession();
-    this.initializedSubject.next(true);
-
-    if (redirectToLogin) {
-      this.router.navigate(['/login']);
-    }
-  }
-
-  private clearSession(): void {
-    this.tokenService.clearToken();
-    this.currentUserSubject.next(null);
-  }
-
-  private extractToken(response: any): string | null {
-    return (
-      response?.token ??
-      response?.accessToken ??
-      response?.jwt ??
-      response?.data?.token ??
-      null
-    );
-  }
-
-  private extractEmbeddedUser(response: any): AuthUser | null {
-    const candidate = response?.user ?? response?.me ?? null;
-    return candidate ? this.normalizeUser(candidate) : null;
-  }
-
-  private normalizeUser(raw: any): AuthUser {
-    const source = raw?.user ?? raw;
-
-    const firstName = source?.firstName ?? source?.firstname ?? '';
-    const lastName = source?.lastName ?? source?.lastname ?? '';
-    const email = source?.email ?? '';
-    const role = String(source?.role ?? source?.globalRole ?? 'USER');
-
-    const displayName =
-      source?.displayName ??
-      source?.fullName ??
-      [firstName, lastName].filter(Boolean).join(' ') ??
-      email;
-
+  private normalizeUser(raw: MeResponse): AuthUser {
     return {
-      id: Number(source?.id ?? 0),
-      email,
-      role,
-      firstName,
-      lastName,
-      displayName: displayName || email || 'Utilisateur',
+      id: raw.id,
+      email: raw.email,
+      role: raw.globalRole,
+      firstName: raw.firstName,
+      lastName: raw.lastName,
+      displayName: raw.fullName || raw.email,
     };
   }
 }
