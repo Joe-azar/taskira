@@ -1,6 +1,6 @@
 # ADR-0003 — Migrer vers Angular 22
 
-- Statut : Proposed
+- Statut : Accepted
 - Date : 2026-08-15
 
 ## Contexte
@@ -19,4 +19,4 @@ En P6, migrer par les outils Angular officiels vers les derniers patchs compatib
 
 ## État d'implémentation
 
-Non implémenté; Angular 21 reste la version active.
+Terminé en P6 : Angular/CLI/CDK 22.1.2+, TypeScript 6.0.3 (plage exacte requise par `@angular/compiler-cli`), Node 24.19.0 LTS, Angular Material 22.1.2 en socle (aucun composant existant réécrit). Aucune migration de code applicatif n'a été nécessaire pour Angular lui-même; lint, 20/20 Vitest et build production verts sur chaque sous-étape.
