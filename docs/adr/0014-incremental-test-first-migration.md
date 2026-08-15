@@ -21,4 +21,4 @@ Les migrations de schéma restent additives et testées sur PostgreSQL réel.
 
 ## État d'implémentation
 
-Décision appliquée; la phase 2 a été déclarée terminée localement seulement après validation des tests rapides, intégration, couverture et 9 parcours E2E isolés. Le run distant de phase 3 est vert; la phase reste partielle jusqu'à la protection de `main`.
+Décision appliquée; la phase 2 a été déclarée terminée localement seulement après validation des tests rapides, intégration, couverture et 9 parcours E2E isolés. Les phases 3 et 6 ont suivi la même discipline jusqu'à leur critère de sortie complet : `main` est protégée et vérifiée via l'API GitHub (P3), et la phase 6 n'a été fusionnée qu'après un run GitHub distant réellement vert sur `ci.yml`, `quality.yml`, `security.yml` et `codeql.yml` (PR #28), pas sur la seule base de tests locaux.

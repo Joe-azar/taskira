@@ -118,7 +118,7 @@ Le désarchivage projet et la suppression ticket ne disposent pas d'endpoints. I
 
 ## Dette npm connue
 
-Le scan du lockfile effectué le 14 août 2026 signalait 6 vulnérabilités de sévérité élevée dans l'arbre de production et 35 vulnérabilités au total, dont 1 critique dans l'outillage de développement. Cette dette est connue et doit être traitée explicitement pendant les phases 4 et 6.
+Le scan du lockfile effectué le 14 août 2026 signalait 6 vulnérabilités de sévérité élevée dans l'arbre de production et 35 vulnérabilités au total, dont 1 critique dans l'outillage de développement. Cette dette a été traitée par la montée de version de la phase 6 (Angular 22.1.2, Node 24.19.0) : le rescanning Trivy post-phase 6 confirme 0 CVE applicative frontend restante (détail dans la section « Rescanning sécurité post-phase 6 » du [rapport cumulatif](../ENTERPRISE_MIGRATION_REPORT.md)).
 
 Ne pas lancer `npm audit fix` automatiquement : cela modifierait les versions sans la non-régression ni la revue prévues pour les montées de version. Refaire l'audit au moment du traitement, car les avis de sécurité évoluent.
 
@@ -128,4 +128,4 @@ Le workflow `.github/workflows/ci.yml` exécute les tests backend, puis le lint,
 
 Le run GitHub #3 (`31851279947`) est vert sur la PR draft #1 au commit `6db6115` : Backend, Frontend, Containers and E2E et CI Gate réussissent. Le lint utilise `angular-eslint` 21.4.0, ESLint 10.3.0 et `typescript-eslint` 8.59.2; il produit 0 erreur et 41 avertissements `any`, laissés visibles comme dette de typage.
 
-La phase reste partielle uniquement parce que les checks ne protègent pas encore `main` : l'API signale `protected=false` et aucun ruleset. Le connecteur reçoit `403` pour les réglages administratifs; l'activation, disponible sans offre payante, nécessite l'interface GitHub ou un jeton administrateur interactif. SonarQube et les scans bloquants appartiennent à la phase 4.
+`main` est protégée depuis le 15 août 2026 (`protected: true`, vérifié via l'API GitHub) : PR et `CI Gate` obligatoires, force-push et suppression interdits. La phase 3 est donc terminée. SonarQube et les scans bloquants relèvent de la phase 4, également terminée (voir [docs/architecture/ci-cd.md](architecture/ci-cd.md)).
