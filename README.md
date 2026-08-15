@@ -66,7 +66,7 @@ docker compose -f infra/docker-compose.yml logs -f
 
 ### Premier compte
 
-Une base neuve ne contient aucun utilisateur. Le premier compte peut être créé avec `POST /api/auth/register` depuis Swagger. L'inscription crée un utilisateur actif avec le rôle `USER`; aucun administrateur n'est initialisé automatiquement.
+Une base neuve ne contient aucun utilisateur. Le premier compte peut être créé avec `POST /api/v1/auth/register` depuis Swagger. L'inscription crée un utilisateur actif avec le rôle `USER`; aucun administrateur n'est initialisé automatiquement.
 
 ### Arrêter
 

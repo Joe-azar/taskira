@@ -45,7 +45,7 @@ services:
     environment:
       CI: ${CI:-false}
       PLAYWRIGHT_BASE_URL: http://localhost:4200
-      TASKIRA_API_BASE_URL: http://localhost:8080/api
+      TASKIRA_API_BASE_URL: http://localhost:8080/api/v1
       TASKIRA_E2E_FRONTEND_HOST: frontend
       TASKIRA_E2E_BACKEND_HOST: backend
     init: true

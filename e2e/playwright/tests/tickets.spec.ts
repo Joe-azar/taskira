@@ -33,7 +33,7 @@ test.describe('tickets and comments', () => {
     const createResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'POST' &&
-        new URL(response.url()).pathname === '/api/tickets'
+        new URL(response.url()).pathname === '/api/v1/tickets'
     );
     await page.getByRole('button', { name: 'Créer le ticket' }).click();
     expect((await createResponsePromise).status()).toBe(201);
@@ -52,7 +52,7 @@ test.describe('tickets and comments', () => {
     const updateResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'PUT' &&
-        /^\/api\/tickets\/\d+$/.test(new URL(response.url()).pathname)
+        /^\/api\/v1\/tickets\/\d+$/.test(new URL(response.url()).pathname)
     );
     await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
     expect((await updateResponsePromise).status()).toBe(200);
@@ -65,7 +65,7 @@ test.describe('tickets and comments', () => {
     const statusResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'PATCH' &&
-        /\/api\/tickets\/\d+\/status$/.test(new URL(response.url()).pathname)
+        /\/api\/v1\/tickets\/\d+\/status$/.test(new URL(response.url()).pathname)
     );
     await page.getByRole('button', { name: 'Mettre à jour le statut' }).click();
     const statusResponse = await statusResponsePromise;
@@ -85,7 +85,7 @@ test.describe('tickets and comments', () => {
     const assigneeResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'PATCH' &&
-        /\/api\/tickets\/\d+\/assignee$/.test(new URL(response.url()).pathname)
+        /\/api\/v1\/tickets\/\d+\/assignee$/.test(new URL(response.url()).pathname)
     );
     await page.getByRole('button', { name: /Mettre à jour l.assignation/ }).click();
     const assigneeResponse = await assigneeResponsePromise;
@@ -116,7 +116,7 @@ test.describe('tickets and comments', () => {
     const createResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'POST' &&
-        new URL(response.url()).pathname === `/api/tickets/${ticket.id}/comments`
+        new URL(response.url()).pathname === `/api/v1/tickets/${ticket.id}/comments`
     );
     await page.getByRole('button', { name: 'Ajouter le commentaire' }).click();
     expect((await createResponsePromise).status()).toBe(201);
@@ -130,7 +130,7 @@ test.describe('tickets and comments', () => {
     const updateResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'PUT' &&
-        /^\/api\/comments\/\d+$/.test(new URL(response.url()).pathname)
+        /^\/api\/v1\/comments\/\d+$/.test(new URL(response.url()).pathname)
     );
     await commentArticle.getByRole('button', { name: 'Enregistrer' }).click();
     expect((await updateResponsePromise).status()).toBe(200);
@@ -142,7 +142,7 @@ test.describe('tickets and comments', () => {
     const deleteResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'DELETE' &&
-        /^\/api\/comments\/\d+$/.test(new URL(response.url()).pathname)
+        /^\/api\/v1\/comments\/\d+$/.test(new URL(response.url()).pathname)
     );
     await commentArticle.getByRole('button', { name: 'Supprimer' }).click();
     expect((await deleteResponsePromise).status()).toBe(204);

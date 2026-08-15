@@ -22,7 +22,7 @@ test.describe('projects and members', () => {
     const createResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'POST' &&
-        new URL(response.url()).pathname === '/api/projects'
+        new URL(response.url()).pathname === '/api/v1/projects'
     );
     await page.getByRole('button', { name: 'Créer le projet' }).click();
     expect((await createResponsePromise).status()).toBe(201);
@@ -39,7 +39,7 @@ test.describe('projects and members', () => {
     const updateResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'PUT' &&
-        /^\/api\/projects\/\d+$/.test(new URL(response.url()).pathname)
+        /^\/api\/v1\/projects\/\d+$/.test(new URL(response.url()).pathname)
     );
     await editForm.getByRole('button', { name: 'Enregistrer', exact: true }).click();
     expect((await updateResponsePromise).status()).toBe(200);
@@ -50,7 +50,7 @@ test.describe('projects and members', () => {
     const archiveResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'PATCH' &&
-        /\/api\/projects\/\d+\/archive$/.test(new URL(response.url()).pathname)
+        /\/api\/v1\/projects\/\d+\/archive$/.test(new URL(response.url()).pathname)
     );
     await page.getByRole('button', { name: 'Archiver' }).click();
     expect((await archiveResponsePromise).status()).toBe(200);
@@ -73,7 +73,7 @@ test.describe('projects and members', () => {
     const addResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'POST' &&
-        new URL(response.url()).pathname === `/api/projects/${project.id}/members`
+        new URL(response.url()).pathname === `/api/v1/projects/${project.id}/members`
     );
     await page.getByRole('button', { name: 'Ajouter le membre' }).click();
     expect((await addResponsePromise).status()).toBe(201);
@@ -86,7 +86,7 @@ test.describe('projects and members', () => {
       (response) =>
         response.request().method() === 'DELETE' &&
         new URL(response.url()).pathname ===
-          `/api/projects/${project.id}/members/${member.id}`
+          `/api/v1/projects/${project.id}/members/${member.id}`
     );
     await memberArticle.getByRole('button', { name: 'Retirer' }).click();
     expect((await removeResponsePromise).status()).toBe(204);
