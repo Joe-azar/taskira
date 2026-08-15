@@ -1,0 +1,12 @@
+# Shell scripts are executed inside Linux containers; CRLF breaks their shebang line
+# ("exec ... failed: No such file or directory"). Force LF regardless of how core.autocrlf
+# is configured on a given Windows checkout.
+*.sh text eol=lf
+
+# PowerShell scripts only ever run on Windows; keep CRLF so they behave the same as
+# everything else edited in a Windows editor.
+*.ps1 text eol=crlf
+
+# Avoid line-ending diffs on binary-ish or generated artifacts.
+*.jar binary
+*.dump binary
