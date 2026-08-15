@@ -1,5 +1,6 @@
 package com.joe.taskira.support;
 
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -11,6 +12,7 @@ import org.testcontainers.utility.DockerImageName;
  * <p>The singleton lifecycle keeps one real database for the complete integration-test
  * phase. Each Spring test context still controls its own transactions and schema checks.</p>
  */
+@ActiveProfiles("test")
 public abstract class PostgreSqlIntegrationTest {
 
     private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse(

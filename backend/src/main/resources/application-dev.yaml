@@ -1,0 +1,7 @@
+logging:
+  level:
+    com.joe.taskira: DEBUG
+
+spring:
+  jpa:
+    show-sql: true
