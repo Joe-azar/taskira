@@ -5,6 +5,9 @@
 .env.*
 !.env.example
 
+# Local database backups (may contain real data, never commit)
+/backups/
+
 # Logs and temporary files
 *.log
 *.tmp

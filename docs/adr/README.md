@@ -6,11 +6,11 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | --- | --- | --- | --- |
 | [0001](0001-modular-monolith.md) | Monolithe modulaire | Accepted | Organisation progressive P5 |
 | [0002](0002-java-21.md) | Java 21 LTS | Accepted | Déjà utilisé |
-| [0003](0003-angular-22.md) | Migration Angular 22 | Proposed | P6 |
-| [0004](0004-postgresql.md) | PostgreSQL | Accepted | PostgreSQL 16; upgrade P6 |
+| [0003](0003-angular-22.md) | Migration Angular 22 | Accepted | Terminée P6 |
+| [0004](0004-postgresql.md) | PostgreSQL | Accepted | PostgreSQL 18 depuis P6 |
 | [0005](0005-flyway-only.md) | Flyway seul pour le schéma | Accepted | Déjà appliqué |
 | [0006](0006-session-cookie-auth.md) | Session cookie sécurisée | Proposed | P8 |
-| [0007](0007-github-actions.md) | GitHub Actions | Proposed | Run distant vert; protection `main` manquante |
+| [0007](0007-github-actions.md) | GitHub Actions | Accepted | Run distant vert; protection `main` activée |
 | [0008](0008-docker-compose.md) | Docker Compose runtime principal | Accepted | Dev actuel; profils futurs |
 | [0009](0009-local-filesystem-first.md) | Filesystem avant stockage objet | Proposed | P13 |
 | [0010](0010-no-kafka-rabbitmq-main-runtime.md) | Pas de Kafka/RabbitMQ principal | Accepted | Contrainte active |
@@ -20,5 +20,6 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0014](0014-incremental-test-first-migration.md) | Migration incrémentale test-first | Accepted | Appliquée depuis P2 |
 | [0015](0015-sonarqube-quality-gate.md) | SonarQube Community Build local et éphémère | Accepted | Validée localement P4 |
 | [0016](0016-spring-modulith-boundaries.md) | Spring Modulith pour la vérification des frontières | Accepted | Validée localement P5; cycle project/ticket détecté et corrigé |
+| [0017](0017-postgresql-18-migration.md) | Migration PostgreSQL 16 vers 18 | Accepted | Validée localement P6 : Flyway, restauration et Hibernate testés avant bascule |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.

@@ -1,12 +1,12 @@
 services:
   postgres:
-    image: postgres:16.15-alpine3.23@sha256:5e6e44180efd2d95cffabc2a0e3e9bc246ee052c9bc08a95f67dbb0cc860654f
+    image: postgres:18.6-alpine3.23@sha256:f65cfc1a73466fc0807f4a33496e1c438b19269091c8f998faec871874df8e5e
     environment:
       POSTGRES_DB: taskira_e2e
       POSTGRES_USER: taskira_e2e
       POSTGRES_PASSWORD: taskira_e2e_only
     tmpfs:
-      - /var/lib/postgresql/data:rw,noexec,nosuid,size=512m
+      - /var/lib/postgresql:rw,noexec,nosuid,size=512m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U taskira_e2e -d taskira_e2e"]
       interval: 2s

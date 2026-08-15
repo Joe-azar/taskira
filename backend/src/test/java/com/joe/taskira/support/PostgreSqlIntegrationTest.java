@@ -14,7 +14,7 @@ import org.testcontainers.utility.DockerImageName;
 public abstract class PostgreSqlIntegrationTest {
 
     private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse(
-            "postgres:16.15-alpine3.23@sha256:5e6e44180efd2d95cffabc2a0e3e9bc246ee052c9bc08a95f67dbb0cc860654f"
+            "postgres:18.6-alpine3.23@sha256:f65cfc1a73466fc0807f4a33496e1c438b19269091c8f998faec871874df8e5e"
     ).asCompatibleSubstituteFor("postgres");
 
     protected static final PostgreSQLContainer<?> POSTGRESQL =
