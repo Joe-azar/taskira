@@ -8,7 +8,7 @@ Ce fichier est le journal central de la migration. Il doit être enrichi après 
 
 `TASKIRA ENTERPRISE MIGRATION PARTIALLY COMPLETE`
 
-Les phases 0, 1, 2, 4, 5 (critère mécanique) et 6 sont terminées. `main` est protégée depuis le 15 août 2026 (PR et `CI Gate` obligatoires, force-push/suppression interdits, pas de revue humaine requise, admin non bloqué), levant le blocage de la phase 3. Toute la phase 6 (Spring Boot 4, Angular 22, Node 24, PostgreSQL 18, Material) a été menée sur la branche protégée `feat/phase6-stack-upgrade`, jamais directement sur `main`. Reste avant fusion : vérifier que `ci.yml`, `quality.yml`, `security.yml` et `codeql.yml` sont verts sur le HEAD de cette branche (le run précédent date du commit de fin de phase 5). Les phases 7 à 20 ne sont pas déclarées terminées.
+Les phases 0 à 6 sont terminées (phase 5 pour son critère mécanique, dette architecturale résiduelle documentée). `main` est protégée depuis le 15 août 2026 (`protected: true` vérifié via l'API GitHub) et la phase 6 (Spring Boot 4, Angular 22, Node 24, PostgreSQL 18, Material) est fusionnée dans `main` (PR #28, commit `a7463afce0b9ce454519ae35ce493faaa2cffed5`), après vérification réelle sur GitHub — pas seulement locale — de `ci.yml`, `quality.yml`, `security.yml` et `codeql.yml`. Toute la migration a été menée sur des branches dédiées (`feat/phase6-stack-upgrade`, puis `chore/sync-enterprise-migration-status` pour ce lot), jamais directement sur `main`. Les phases 7 à 20 ne sont pas déclarées terminées.
 
 ## Journal des phases
 
@@ -17,10 +17,10 @@ Les phases 0, 1, 2, 4, 5 (critère mécanique) et 6 sont terminées. `main` est 
 | 2026-08-14 | 0 — Baseline Git | Terminée | Commit `fd84c54`, tag `pre-enterprise-migration`, branche `feat/enterprise-platform-migration`; stack Docker restaurée et validée avant migration. | Aucun pour le critère de baseline; conserver le point de retour. |
 | 2026-08-15 | 1 — Documentation | Terminée localement | `AGENTS.md`, matrices, rapport, documentation d'architecture et ADR créés; liens et cohérence vérifiés; commit local `cccf2ee`. | Publier la branche avec les autres lots validés. |
 | 2026-08-14–15 | 2 — Filet de sécurité | Terminée localement | 14 tests backend, 20 Vitest, couvertures/seuils backend et frontend, build Angular et 9/9 Playwright validés dans Docker; stack E2E isolée détruite après le run. Rejoué et reconfirmé le 15/08 lors de l'audit de phase 4. | Maintenir ce filet. Ajouter désarchivage projet et suppression ticket en P7, après création de leurs endpoints. |
-| 2026-08-15 | 3 — GitHub Actions CI | Partielle | [PR draft #1](https://github.com/Joe-azar/taskira/pull/1), HEAD `6db6115`; [run #3](https://github.com/Joe-azar/taskira/actions/runs/31851279947) vert : Backend, Frontend avec lint, Containers and E2E et CI Gate. | Activer la protection de `main`; `protected=false` et aucun ruleset sont encore observés. |
-| 2026-08-15 | 4 — SonarQube et scans | Terminée localement | SonarQube Community Build éphémère (Docker) : Quality Gate `OK`, 0 bug, 0 vulnérabilité, 0 security hotspot, 24 code smells, couverture 13,0 %, duplication 1,4 %, 9010 ncloc. Deux bugs d'accessibilité détectés puis corrigés avant la seconde analyse. Trivy (fs + 2 images) et CodeQL configurés et exécutés localement; 0 secret détecté. | Vérifier `quality.yml`/`security.yml`/`codeql.yml` sur un run GitHub distant dès l'authentification disponible; traiter les CVE identifiées en P6. |
-| 2026-08-15 | 5 — Architecture modulaire | Terminée localement (critère mécanique) | Spring Modulith 1.4.1 ajouté; `ModularityTests` vérifie frontières et absence de cycle à chaque `mvn verify` (18 tests backend au total désormais, tous verts : 11 initiaux + 2 `ModularityTests` + 2 nouveaux tests `ProjectService.removeMember` + 3 intégration). Un cycle réel `project -> ticket -> project` détecté et corrigé par port/adapter (`ProjectMemberAssignmentCheck`) sans changer le comportement transactionnel. Documentation générée dans `docs/architecture/modules.md`. | Couche `api`/`application`/`domain`/`infrastructure` complète et événements métier restent à faire; le couplage direct aux repositories/entités d'autres modules est documenté comme dette (ADR-0016), pas éliminé. |
-| 2026-08-15 | 6 — Montées technologiques | Terminée sur `feat/phase6-stack-upgrade` | `main` protégée puis migration complète : Spring Boot 4.1.0/Framework 7.0.8/Security 7.1.0/Hibernate 7.4.1, Spring Modulith 2.1.0, Springdoc 3.1.0, MapStruct 1.6.3, Jackson 3; Angular/CLI/CDK/Material 22.1.x, TypeScript 6.0.3, Node 24.19.0, npm 12.0.2; PostgreSQL 18.6 par sauvegarde/restauration réelle vérifiée (ancien volume conservé). 18 tests backend et 9/9 Playwright verts après chaque sous-étape; deux bugs indépendants trouvés et corrigés (CRLF cassant l'entrypoint E2E, assertion Playwright fragile). Détail complet ci-dessous. | Vérifier `ci.yml`/`quality.yml`/`security.yml`/`codeql.yml` sur le HEAD de la branche, revue finale des breaking changes, puis fusion vers `main`. |
+| 2026-08-15 | 3 — GitHub Actions CI | Terminée | [PR draft #1](https://github.com/Joe-azar/taskira/pull/1) puis [PR #28](https://github.com/Joe-azar/taskira/pull/28); `main` protégée (`protected: true` vérifié via l'API GitHub) : PR obligatoire (`required_approving_review_count: 0`), `CI Gate` obligatoire et à jour (`strict: true`), force-push et suppression interdits, admin non bloqué (`enforce_admins: false`). | Aucun pour le critère de sortie de P3. |
+| 2026-08-15 | 4 — SonarQube et scans | Terminée | SonarQube Community Build éphémère (Docker) : Quality Gate `OK` vérifiée sur GitHub (PR #28). CodeQL et Trivy (fs + 2 images) verts sur GitHub via `codeql.yml`/`security.yml`, pas seulement localement. Deux bugs d'accessibilité détectés puis corrigés avant la validation. 0 secret détecté. | Rescanning post-P6 fait (voir section dédiée); surveiller les futures CVE au fil des mises à jour Dependabot. |
+| 2026-08-15 | 5 — Architecture modulaire | Terminée localement (critère mécanique) | Spring Modulith (2.1.0 depuis P6) ajouté; `ModularityTests` vérifie frontières et absence de cycle à chaque `mvn verify` (18 tests backend au total, tous verts). Un cycle réel `project -> ticket -> project` détecté et corrigé par port/adapter (`ProjectMemberAssignmentCheck`) sans changer le comportement transactionnel. Documentation générée dans `docs/architecture/modules.md`. | Couche `api`/`application`/`domain`/`infrastructure` complète et événements métier restent à faire; le couplage direct aux repositories/entités d'autres modules est documenté comme dette (ADR-0016), pas éliminé — décision assumée, pas un blocage. |
+| 2026-08-15 | 6 — Montées technologiques | **Terminée et fusionnée** | PR #28, commit de fusion `a7463afce0b9ce454519ae35ce493faaa2cffed5`, branche `feat/phase6-stack-upgrade` supprimée après fusion. Spring Boot 4.1.0/Framework 7.0.8/Security 7.1.0/Hibernate 7.4.1, Spring Modulith 2.1.0, Springdoc 3.1.0, MapStruct 1.6.3, Jackson 3; Angular/CLI/Material 22.1.2, TypeScript 6.0.3, Node 24.19.0, npm 12.0.2; PostgreSQL 18.6 par sauvegarde/restauration réelle vérifiée (ancien volume conservé). 18 tests backend, 20 Vitest, 9/9 Playwright; `CI Gate`, Quality Gate SonarQube, CodeQL et Trivy tous vérifiés verts sur GitHub (PR #28) avant fusion. Détail complet ci-dessous. | Aucun pour le critère de sortie de P6; rescanning sécurité post-migration fait (voir section dédiée). |
 | — | 7–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
 
 ## Incident de stockage et récupération
@@ -80,9 +80,9 @@ Voir [l'architecture générale](docs/architecture/overview.md) et [ADR-0001](do
 - Trivy (`aquasecurity/trivy-action` pinée par SHA) : scan fs (dépendances + secrets) et scan image (backend, frontend) avec upload SARIF vers l'onglet Security GitHub, dans `.github/workflows/security.yml`.
 - CodeQL (`github/codeql-action` pinée par SHA) : analyse `java-kotlin` et `javascript-typescript` sur push/PR et hebdomadaire, dans `.github/workflows/codeql.yml`.
 - Dependabot (`.github/dependabot.yml`) : maven (backend), npm (frontend), docker (backend/frontend/e2e) et github-actions, mise à jour hebdomadaire groupée par écosystème majeur (Spring Boot, Angular).
-- Spring Modulith 1.4.1 (`spring-modulith-api` en dépendance de compilation pour les annotations `package-info.java`; `spring-modulith-starter-test` et `spring-modulith-docs` en dépendances de test) : `ModularityTests` vérifie les frontières de module et l'absence de cycle, et régénère la documentation PlantUML des modules à chaque exécution.
+- Spring Modulith (1.4.1 en P5, 2.1.0 depuis P6 — `spring-modulith-api` en dépendance de compilation pour les annotations `package-info.java`; `spring-modulith-starter-test` et `spring-modulith-docs` en dépendances de test) : `ModularityTests` vérifie les frontières de module et l'absence de cycle, et régénère la documentation PlantUML des modules à chaque exécution.
 
-Le run GitHub distant #3 (P3) est vert. Les workflows `quality.yml`, `security.yml` et `codeql.yml` (P4) sont validés localement et avec `actionlint` mais pas encore vérifiés sur un run GitHub distant, faute d'authentification GitHub interactive sur ce poste. Nginx production, observabilité et labs ne sont pas encore ajoutés.
+`ci.yml`, `quality.yml`, `security.yml` et `codeql.yml` sont tous vérifiés verts sur un run GitHub distant réel (PR #28, avant fusion dans `main`), pas seulement validés localement ou avec `actionlint`. Nginx production, observabilité et labs ne sont pas encore ajoutés.
 
 ## Tests
 
@@ -103,7 +103,7 @@ Couverture validée le 15 août 2026 :
 - backend JaCoCo : lignes 20,17 %, branches 3,75 %, instructions 18,11 %, méthodes 23,01 %, classes 42,25 %; seuil ligne 19 % atteint, `./mvnw verify` exit 0;
 - frontend V8 : statements 12,44 %, branches 11,27 %, fonctions 11,78 %, lignes 11,84 %; seuils respectifs 12/11/11/11 % atteints, 20/20 tests et commande exit 0.
 
-La commande racine `& .\e2e\playwright\run.ps1` construit et exécute `e2e/playwright/compose.e2e.yml`. PostgreSQL 16.15 utilise un `tmpfs`; aucun service n'expose de port hôte et la stack ne définit ni `container_name` ni volume persistant pour la base. Les données générées emploient le domaine réservé `.test`. Le `finally` exécute `down --volumes --remove-orphans`; le contrôle final a confirmé zéro conteneur, réseau ou volume restant. Les rapports Playwright et résultats sont écrits dans des répertoires ignorés par Git et restent disponibles après la destruction. Voir [la stratégie de tests](docs/testing-strategy.md).
+La commande racine `& .\e2e\playwright\run.ps1` construit et exécute `e2e/playwright/compose.e2e.yml`. PostgreSQL (18.6 depuis P6) utilise un `tmpfs`; aucun service n'expose de port hôte et la stack ne définit ni `container_name` ni volume persistant pour la base. Les données générées emploient le domaine réservé `.test`. Le `finally` exécute `down --volumes --remove-orphans`; le contrôle final a confirmé zéro conteneur, réseau ou volume restant. Les rapports Playwright et résultats sont écrits dans des répertoires ignorés par Git et restent disponibles après la destruction. Voir [la stratégie de tests](docs/testing-strategy.md).
 
 Le désarchivage projet et la suppression ticket ne sont pas simulés : les endpoints correspondants sont absents. Leur ajout et leurs E2E constituent un gap explicite de P7, pas un échec du critère P2.
 
@@ -112,12 +112,12 @@ Le désarchivage projet et la suppression ticket ne sont pas simulés : les endp
 Le workflow `.github/workflows/ci.yml` définit :
 
 - backend Java 21 avec `./mvnw verify` et rapports tests/JaCoCo;
-- frontend Node 22.23.2/npm 11.9.0 avec lint, couverture, 20 Vitest et build;
+- frontend Node 24.19.0/npm 12.0.2 avec lint, couverture, 20 Vitest et build (Node 22.23.2/npm 11.9.0 avant P6);
 - même fichier Compose E2E éphémère, attente de disponibilité, Playwright, logs/artifacts et job de destruction systématique.
 
-Les actions tierces sont pinées par SHA, les permissions globales sont `contents: read` et `persist-credentials` est désactivé. `actionlint` 1.7.12 passe localement. Sur la PR draft #1 au HEAD `6db6115`, le run GitHub #3 (`31851279947`) valide Backend, Frontend, Containers and E2E et CI Gate. Le lint Angular passe avec 0 erreur et 41 avertissements liés à la dette `any`.
+Les actions tierces sont pinées par SHA, les permissions globales sont `contents: read` et `persist-credentials` est désactivé. `actionlint` 1.7.12 passe localement. Historique des runs distants verts : run #3 (`31851279947`) sur la PR draft #1 au HEAD `6db6115` (P3 initiale), puis l'ensemble `ci.yml`/`quality.yml`/`security.yml`/`codeql.yml` vert sur la PR #28 (fin P6, commit `a7463af`) avant fusion. Le lint Angular passe avec 0 erreur et 41 avertissements liés à la dette `any`.
 
-P3 reste partielle pour une seule raison : `main` est encore signalée `protected=false` et aucun ruleset n'est configuré. Le connecteur a reçu `403` sur les réglages administratifs. La protection est disponible sans coût supplémentaire, mais son activation nécessite l'interface GitHub ou un jeton administrateur interactif; aucune élévation n'est contournée. GHCR, release, staging et production manuelle relèvent de P15.
+P3 est terminée : `main` est protégée (`protected: true`, vérifié via l'API GitHub après activation) — `required_status_checks` (`CI Gate`, `strict: true`), `required_pull_request_reviews` (`required_approving_review_count: 0`, pas de revue humaine requise), `enforce_admins: false`, `allow_force_pushes: false`, `allow_deletions: false`. L'activation a utilisé un jeton déjà présent dans le Gestionnaire d'identification Windows (utilisé par les opérations `git` habituelles, retrouvé via `git credential fill`), avec les scopes `repo`/`workflow` et un accès admin confirmé sur le dépôt — pas de contournement de sécurité. GHCR, release, staging et production manuelle relèvent toujours de P15.
 
 ## Résultats de la phase 4 (SonarQube et scans)
 
@@ -130,7 +130,7 @@ Analyse SonarQube Community Build `26.8.0.126808` exécutée localement le 15 ao
 - Couverture : 13,0 %. Duplication : 1,4 %. Lignes de code analysées : 9010.
 - Secrets : 0 détecté (scanner intégré `TextAndSecretsSensor`).
 
-Trivy (CLI `aquasec/trivy`, cache `~/.cache/trivy` réutilisé) exécuté localement le 15 août 2026 :
+Trivy (CLI `aquasec/trivy`, cache `~/.cache/trivy` réutilisé) exécuté localement le 15 août 2026, **avant** la migration P6 :
 
 - `backend/pom.xml` : 21 vulnérabilités (17 HIGH, 4 CRITICAL) sur `jackson-core`/`jackson-databind`, `tomcat-embed-core`, `postgresql` (pilote JDBC), `spring-boot`, `spring-data-commons`, `spring-security-web`, `spring-expression`/`spring-webmvc`. La quasi-totalité n'est corrigée que par une version cible Spring Boot 4.x/Spring 7 (P6); aucun correctif isolé sûr n'existe dans la ligne 3.5.x pour plusieurs d'entre elles.
 - `frontend/package-lock.json` : 8 vulnérabilités HIGH sur `@angular/common`, `@angular/compiler`, `@angular/core`, corrigées uniquement à partir d'Angular 22.x (P6).
@@ -139,9 +139,11 @@ Trivy (CLI `aquasec/trivy`, cache `~/.cache/trivy` réutilisé) exécuté locale
 - Aucun secret détecté sur le système de fichiers du dépôt.
 - Deux limites opérationnelles rencontrées et corrigées dans les workflows : (1) Maven Central a renvoyé `429 Too Many Requests` sans cache `.m2` local — `security.yml` réchauffe désormais le cache Maven avant le scan; (2) le téléchargement de la base Java de Trivy (~900 Mo) dépasse le délai par défaut au premier run — `timeout: 10m0s` ajouté et la base mise en cache via `actions/cache`.
 
-CodeQL (`java-kotlin`, `javascript-typescript`) est configuré et validé avec `actionlint`; non exécuté sur GitHub faute d'authentification distante disponible sur ce poste.
+Ces chiffres sont **historiques** (état pré-P6); voir « Rescanning sécurité post-phase 6 » ci-dessous pour l'état réel actuel — ne pas les citer comme dette courante.
 
-Limite documentée de l'édition Community (voir [ADR-0015](docs/adr/0015-sonarqube-quality-gate.md)) : pas de décoration de pull request ni d'analyse multi-branches; seule la branche par défaut est analysée à chaque exécution.
+CodeQL (`java-kotlin`, `javascript-typescript`) est configuré, validé avec `actionlint`, et depuis vérifié vert sur un run GitHub distant réel (PR #28).
+
+Limite documentée de l'édition Community (voir [ADR-0015](docs/adr/0015-sonarqube-quality-gate.md)) : pas de décoration de pull request ni d'analyse multi-branches; seule la branche par défaut est analysée à chaque exécution. La Quality Gate SonarQube a depuis été vérifiée verte sur un run GitHub distant réel (PR #28), pas seulement localement.
 
 ## Résultats de la phase 5 (architecture modulaire, critère mécanique)
 
@@ -208,15 +210,43 @@ Voir [ADR-0017](docs/adr/0017-postgresql-18-migration.md) pour le détail comple
 
 9/9 scénarios Playwright verts après les deux corrections, sur un run complet avec reconstruction et destruction de la stack (pas une relance partielle).
 
+## Rescanning sécurité post-phase 6
+
+Demandé explicitement en fin de phase 6 : mesurer réellement ce qu'il reste des 21 CVE backend / 8 CVE frontend identifiées en phase 4, pas supposer qu'elles ont disparu. Rescanné le 15 août 2026 sur le code fusionné dans `main` (commit `a7463af`), avec les mêmes outils qu'en phase 4 (Trivy `aquasec/trivy`, cache partagé) plus une lecture directe des alertes GitHub Code Scanning.
+
+### Avant / après
+
+| Cible | Avant P6 (14/08) | Après P6, avant correctif (15/08) | Après correctif driver PostgreSQL |
+| --- | --- | --- | --- |
+| `backend/pom.xml` | 21 (17 HIGH, 4 CRITICAL) | 1 (1 HIGH, 0 CRITICAL) | **0** |
+| `frontend/package-lock.json` | 8 (8 HIGH, 0 CRITICAL) | **0** | 0 |
+| Image `infra-backend` (jar applicatif) | CVE applicatives identiques à `pom.xml` | 0 (après le correctif ci-dessous) | 0 |
+| Image `infra-frontend` (dépendances de l'app, `app/node_modules`) | non isolé du reste de l'image en P4 | **0** | 0 |
+| Secrets (filesystem) | 0 | 0 | 0 |
+
+### Ce qui est réellement corrigé
+
+- **20 des 21 CVE backend** ont disparu avec la migration Spring Boot 4.1.0/Spring Security 7.1.0/Spring Framework 7.0.8 (Jackson, Tomcat embarqué, `spring-data-commons`, `spring-security-web`, `spring-expression`/`spring-webmvc`) : versions gérées par le BOM Boot 4, aucune action manuelle nécessaire au-delà de la montée de version elle-même.
+- La **21ᵉ** (`org.postgresql:postgresql` 42.7.11, `CVE-2026-54291`, contournement MITM SCRAM-SHA-256) n'était pas couverte par la montée de version Boot 4 seule — le BOM ne fixe qu'un plancher compatible, pas nécessairement le dernier patch. Corrigée dans ce lot en épinglant explicitement `42.7.13` dans `backend/pom.xml`. Suite complète (18 tests) revérifiée verte après ce changement.
+- **Les 8 CVE frontend** ont toutes disparu avec Angular 22.1.2 (`@angular/common`, `@angular/compiler`, `@angular/core`) : `frontend/package-lock.json` scanne à 0 vulnérabilité, confirmé indépendamment par `npm install` (1 vulnérabilité low restante, contre 6 high/35 total avant P6, voir section Phase 6 frontend) et par Trivy.
+
+### Ce qui reste ouvert (hors du périmètre de dépendances applicatives)
+
+- **Image `infra-backend`, `usr/bin/pebble`** : 8 CVE HIGH (`stdlib` Go — DoS, contournement, XSS) inchangées depuis la phase 4. `pebble` est un binaire Go embarqué dans l'image de base `eclipse-temurin:21-jre`, pas une dépendance déclarée par Taskira; corrigible uniquement par une nouvelle publication de l'image de base par Eclipse Temurin, pas par un changement dans ce dépôt. Java reste fixé en 21 LTS comme demandé, donc le tag de base ne change pas dans ce lot.
+- **Image `infra-frontend`, `usr/local/lib/node_modules/npm/node_modules/`** : 3 CVE HIGH (`brace-expansion`, `ip-address`) dans les dépendances internes de l'outil `npm` lui-même (bundlées dans l'image Node officielle), pas dans `app/node_modules` (0 vulnérabilité, confirmé séparément). N'affecte pas le runtime applicatif : `npm` n'est utilisé qu'à la construction de l'image, jamais exécuté en production, et une image de production Nginx/statique (P11) n'embarquera ni Node ni npm.
+- **CodeQL, 1 alerte ouverte** : `java/spring-disabled-csrf-protection` sur `SecurityConfig.java:33`. Connue et intentionnelle : CSRF est pertinent pour une authentification par cookie de session, pas pour le JWT stateless actuel; la correction fait partie du périmètre déclaré de la migration session cookie de la phase 8 ([ADR-0006](docs/adr/0006-session-cookie-auth.md)), pas une régression de P6.
+
+Conclusion : la dette CVE réelle et actionnable dans le périmètre de dépendances applicatives de Taskira est désormais **nulle** (0 backend, 0 frontend). Ce qui reste ouvert appartient soit à des composants hors du contrôle du dépôt (image de base, outillage npm), soit à une décision d'architecture déjà planifiée (P8).
+
 ## Qualité et sécurité
 
-- SonarQube et Quality Gate : Quality Gate `OK` validée localement en P4 (voir section précédente); non vérifiée sur un run GitHub distant.
-- CodeQL, Dependabot et Trivy : configurés et exécutés/validés localement en P4; contrôle automatisé des secrets couvert par le scanner Trivy intégré (0 résultat).
-- CVE ouvertes identifiées par Trivy le 15 août 2026 : 21 backend (17 HIGH/4 CRITICAL) et 8 frontend (HIGH), corrigibles principalement par la montée de version P6; traitées comme dette documentée, pas comme régression P4.
-- Audit npm du 2026-08-14 : 6 vulnérabilités élevées dans l'arbre de production et 35 au total, dont 1 critique dans l'outillage. Recoupe partiellement le résultat Trivy du 15/08 (Angular); à re-scanner avant correction en P6.
+- SonarQube et Quality Gate : Quality Gate `OK`, vérifiée à la fois localement (P4) et sur un run GitHub distant réel (PR #28).
+- CodeQL, Dependabot et Trivy : configurés en P4, vérifiés verts sur GitHub distant depuis la PR #28; contrôle automatisé des secrets couvert par le scanner Trivy intégré (0 résultat, avant et après P6).
+- CVE applicatives : **0 backend, 0 frontend** après rescanning post-P6 (détail dans la section dédiée ci-dessus). Les 21 backend/8 frontend de la phase 4 sont un historique, pas une dette courante. Reste ouvert hors dépendances applicatives : 8 CVE sur le binaire `pebble` de l'image de base backend, 3 CVE sur l'outillage interne npm de l'image frontend, 1 alerte CodeQL CSRF déjà planifiée pour P8.
+- Audit npm du 2026-08-14 (historique, pré-P6) : 6 vulnérabilités élevées dans l'arbre de production et 35 au total, dont 1 critique dans l'outillage. Un nouveau `npm install` post-P6 rapporte 1 vulnérabilité low; confirmé par Trivy (0 HIGH/CRITICAL sur `frontend/package-lock.json`).
 - Lint Angular : 0 erreur, 41 avertissements `any`; dette visible à réduire progressivement sans désactiver la règle.
 - Aucun `npm audit fix --force` n'a été appliqué.
-- Auth session HttpOnly/CSRF et bootstrap admin dev : proposés pour P8; JWT/localStorage reste le comportement actuel.
+- Auth session HttpOnly/CSRF et bootstrap admin dev : proposés pour P8; JWT/localStorage reste le comportement actuel (alerte CodeQL CSRF associée, voir rescanning post-P6).
 
 ## Docker et déploiement
 
@@ -238,13 +268,12 @@ Actuator, Micrometer, Prometheus et Grafana sont planifiés en P10. Les request 
 ## Problèmes et dettes ouverts
 
 1. Désarchivage projet et suppression ticket impossibles à couvrir tant que leurs endpoints ne sont pas ajoutés en P7; ne pas simuler ces workflows.
-2. Les CVE identifiées en P4 (21 backend, 8 frontend) sont vraisemblablement en grande partie corrigées par la montée de version P6 (Spring Boot 4/Spring Security 7 et Angular 22 corrigent la plupart des bibliothèques concernées), mais un nouveau scan Trivy contre la stack P6 n'a pas été rejoué pour le confirmer chiffre par chiffre; à faire avant de considérer ce point clos.
-3. Auth actuelle fondée sur JWT/localStorage, sans session cookie ni CSRF.
-4. Absence d'image frontend production/Nginx et de staging.
-5. Absence d'observabilité et de stratégie backup/restore planifiée récurrente (le script ponctuel de P6 couvre la sauvegarde/restauration à la demande, pas une politique quotidienne/hebdomadaire/mensuelle).
-6. SonarQube Community Build ne décore pas les pull requests ni n'analyse les branches séparément (limite d'édition documentée, [ADR-0015](docs/adr/0015-sonarqube-quality-gate.md)).
-7. Couplage direct restant aux repositories/entités d'autres modules (`ticket`/`comment` -> `project`; `comment`/`dashboard` -> `ticket`; quasiment tous -> `user`), nommé et vérifié par Spring Modulith mais pas éliminé; `dashboard` -> `ticket.specification` est la coupure de moindre qualité à traiter en priorité si l'aggregation dashboard est revue ([ADR-0016](docs/adr/0016-spring-modulith-boundaries.md)).
-8. `feat/phase6-stack-upgrade` n'est pas encore fusionnée vers `main` : les workflows GitHub distants (`ci.yml`, `quality.yml`, `security.yml`, `codeql.yml`) doivent être vérifiés verts sur son HEAD avant fusion.
+2. Auth actuelle fondée sur JWT/localStorage, sans session cookie ni CSRF; l'alerte CodeQL `java/spring-disabled-csrf-protection` en est la conséquence directe et attendue, à traiter avec la migration session cookie de P8 ([ADR-0006](docs/adr/0006-session-cookie-auth.md)).
+3. Absence d'image frontend production/Nginx et de staging.
+4. Absence d'observabilité et de stratégie backup/restore planifiée récurrente (le script ponctuel de P6 couvre la sauvegarde/restauration à la demande, pas une politique quotidienne/hebdomadaire/mensuelle).
+5. SonarQube Community Build ne décore pas les pull requests ni n'analyse les branches séparément (limite d'édition documentée, [ADR-0015](docs/adr/0015-sonarqube-quality-gate.md)).
+6. Couplage direct restant aux repositories/entités d'autres modules (`ticket`/`comment` -> `project`; `comment`/`dashboard` -> `ticket`; quasiment tous -> `user`), nommé et vérifié par Spring Modulith mais pas éliminé; `dashboard` -> `ticket.specification` est la coupure de moindre qualité à traiter en priorité si l'aggregation dashboard est revue ([ADR-0016](docs/adr/0016-spring-modulith-boundaries.md)).
+7. CVE hors du périmètre applicatif direct, non actionnables sans changer une contrainte posée ailleurs dans le plan : 8 CVE sur `usr/bin/pebble` dans l'image de base backend (nécessite une nouvelle image `eclipse-temurin`, Java reste fixé en 21 LTS), 3 CVE sur l'outillage interne de npm dans l'image frontend de développement (disparaît de fait avec l'image de production Nginx de P11).
 
 ## Décisions
 
