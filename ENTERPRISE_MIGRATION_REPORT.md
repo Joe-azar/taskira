@@ -8,7 +8,7 @@ Ce fichier est le journal central de la migration. Il doit être enrichi après 
 
 `TASKIRA ENTERPRISE MIGRATION PARTIALLY COMPLETE`
 
-Les phases 0, 1, 2 et 4 sont terminées localement. Le pipeline distant de phase 3 est vert, mais la phase reste partielle tant que `main` n'est pas protégée. Aucune authentification GitHub interactive (`gh auth login`) n'est disponible sur ce poste : ceci bloque la protection de `main` (P3) et la vérification distante des nouveaux workflows `quality.yml`, `security.yml` et `codeql.yml` (P4). C'est une action humaine, pas un choix technique. Les phases 5 à 20 ne sont pas déclarées terminées.
+Les phases 0, 1, 2, 4 et 5 (critère mécanique) sont terminées localement. Le pipeline distant de phase 3 est vert, mais la phase reste partielle tant que `main` n'est pas protégée. Aucune authentification GitHub interactive (`gh auth login`) n'est disponible sur ce poste : ceci bloque la protection de `main` (P3) et la vérification distante des nouveaux workflows `quality.yml`, `security.yml` et `codeql.yml` (P4). C'est une action humaine, pas un choix technique. Les phases 6 à 20 ne sont pas déclarées terminées.
 
 ## Journal des phases
 
@@ -19,7 +19,8 @@ Les phases 0, 1, 2 et 4 sont terminées localement. Le pipeline distant de phase
 | 2026-08-14–15 | 2 — Filet de sécurité | Terminée localement | 14 tests backend, 20 Vitest, couvertures/seuils backend et frontend, build Angular et 9/9 Playwright validés dans Docker; stack E2E isolée détruite après le run. Rejoué et reconfirmé le 15/08 lors de l'audit de phase 4. | Maintenir ce filet. Ajouter désarchivage projet et suppression ticket en P7, après création de leurs endpoints. |
 | 2026-08-15 | 3 — GitHub Actions CI | Partielle | [PR draft #1](https://github.com/Joe-azar/taskira/pull/1), HEAD `6db6115`; [run #3](https://github.com/Joe-azar/taskira/actions/runs/31851279947) vert : Backend, Frontend avec lint, Containers and E2E et CI Gate. | Activer la protection de `main`; `protected=false` et aucun ruleset sont encore observés. |
 | 2026-08-15 | 4 — SonarQube et scans | Terminée localement | SonarQube Community Build éphémère (Docker) : Quality Gate `OK`, 0 bug, 0 vulnérabilité, 0 security hotspot, 24 code smells, couverture 13,0 %, duplication 1,4 %, 9010 ncloc. Deux bugs d'accessibilité détectés puis corrigés avant la seconde analyse. Trivy (fs + 2 images) et CodeQL configurés et exécutés localement; 0 secret détecté. | Vérifier `quality.yml`/`security.yml`/`codeql.yml` sur un run GitHub distant dès l'authentification disponible; traiter les CVE identifiées en P6. |
-| — | 5–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
+| 2026-08-15 | 5 — Architecture modulaire | Terminée localement (critère mécanique) | Spring Modulith 1.4.1 ajouté; `ModularityTests` vérifie frontières et absence de cycle à chaque `mvn verify` (18 tests backend au total désormais, tous verts : 11 initiaux + 2 `ModularityTests` + 2 nouveaux tests `ProjectService.removeMember` + 3 intégration). Un cycle réel `project -> ticket -> project` détecté et corrigé par port/adapter (`ProjectMemberAssignmentCheck`) sans changer le comportement transactionnel. Documentation générée dans `docs/architecture/modules.md`. | Couche `api`/`application`/`domain`/`infrastructure` complète et événements métier restent à faire; le couplage direct aux repositories/entités d'autres modules est documenté comme dette (ADR-0016), pas éliminé. |
+| — | 6–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
 
 ## Incident de stockage et récupération
 
@@ -75,6 +76,7 @@ Voir [l'architecture générale](docs/architecture/overview.md) et [ADR-0001](do
 - Trivy (`aquasecurity/trivy-action` pinée par SHA) : scan fs (dépendances + secrets) et scan image (backend, frontend) avec upload SARIF vers l'onglet Security GitHub, dans `.github/workflows/security.yml`.
 - CodeQL (`github/codeql-action` pinée par SHA) : analyse `java-kotlin` et `javascript-typescript` sur push/PR et hebdomadaire, dans `.github/workflows/codeql.yml`.
 - Dependabot (`.github/dependabot.yml`) : maven (backend), npm (frontend), docker (backend/frontend/e2e) et github-actions, mise à jour hebdomadaire groupée par écosystème majeur (Spring Boot, Angular).
+- Spring Modulith 1.4.1 (`spring-modulith-api` en dépendance de compilation pour les annotations `package-info.java`; `spring-modulith-starter-test` et `spring-modulith-docs` en dépendances de test) : `ModularityTests` vérifie les frontières de module et l'absence de cycle, et régénère la documentation PlantUML des modules à chaque exécution.
 
 Le run GitHub distant #3 (P3) est vert. Les workflows `quality.yml`, `security.yml` et `codeql.yml` (P4) sont validés localement et avec `actionlint` mais pas encore vérifiés sur un run GitHub distant, faute d'authentification GitHub interactive sur ce poste. Nginx production, observabilité et labs ne sont pas encore ajoutés.
 
@@ -137,6 +139,26 @@ CodeQL (`java-kotlin`, `javascript-typescript`) est configuré et validé avec `
 
 Limite documentée de l'édition Community (voir [ADR-0015](docs/adr/0015-sonarqube-quality-gate.md)) : pas de décoration de pull request ni d'analyse multi-branches; seule la branche par défaut est analysée à chaque exécution.
 
+## Résultats de la phase 5 (architecture modulaire, critère mécanique)
+
+Spring Modulith 1.4.1 ajouté (`spring-modulith-api` en dépendance principale pour les annotations, `spring-modulith-starter-test`/`spring-modulith-docs` en test). `ModularityTests` (`verifiesModularStructure` + `writesModuleDocumentation`) tourne à chaque `mvn verify`.
+
+Configuration par défaut de Spring Modulith non exploitable telle quelle : seuls les types du package racine d'un module sont considérés publics, or Taskira place systématiquement son code dans des sous-packages (`entity/`, `repository/`, `dto/`, `enums/`). La première exécution a donc échoué massivement (65 violations rapportées avant même d'atteindre tous les modules). Deux catégories de correction ont été appliquées :
+
+1. `common`, `config` et `security` déclarés `@ApplicationModule(type = OPEN)` : socle transversal partagé, pas des contextes métier.
+2. Pour `project`, `ticket` et `user`, exposition explicite via `@NamedInterface` des seuls sous-packages réellement consommés ailleurs aujourd'hui (`entity`, `repository`, `enums`, `dto` selon le module; plus deux types spécifiques : `TicketHistoryService` et `ProjectMemberAssignmentCheck`). `comment`, `dashboard` et `auth` ne sont consommés par personne et restent fermés.
+
+**Cycle réel détecté** : `project -> ticket -> project`. `ProjectService.removeMember()` appelait directement `TicketRepository.countByProjectIdAndAssigneeId(...)` pour la règle « impossible de retirer un membre avec des tickets assignés », alors que `Ticket` dépend structurellement de `Project` (relation JPA `@ManyToOne`, requise pour la référence `PROJ-123`, les contrôles d'accès, etc.). Corrigé par inversion de dépendance : port `ProjectMemberAssignmentCheck` défini dans `project`, implémenté par `ProjectMemberAssignmentCheckAdapter` dans `ticket`. Comportement transactionnel et requête SQL identiques; seule la direction de dépendance au moment de la compilation change. `removeMember` n'avait aucun test dédié avant ce lot; deux tests Mockito ont été ajoutés (`removeMemberRejectsATargetUserWithAssignedTickets`, `removeMemberDeletesATargetUserWithoutAssignedTickets`) pour vérifier le comportement réel, pas seulement la compilation. Suite complète revérifiée verte après le changement : 18 tests backend au total (15 rapides, soit les 11 initiaux plus les 2 `ModularityTests` et les 2 nouveaux tests `removeMember`, plus 3 intégration Testcontainers), JaCoCo au seuil.
+
+Documentation générée dans [`docs/architecture/modules.md`](docs/architecture/modules.md) (graphe PlantUML + table des interfaces nommées), avec copie du diagramme vérifié le 15 août 2026 puisque `backend/target/spring-modulith-docs/` n'est pas versionné.
+
+Ce qui n'est **pas** fait et reste dette explicite (voir [ADR-0016](docs/adr/0016-spring-modulith-boundaries.md)) :
+
+- Le couplage direct aux repositories/entités d'autres modules est nommé et vérifié, pas éliminé (à l'exception du cycle project/ticket corrigé). Remplacer `ticket`/`comment`/`dashboard` injectant directement `ProjectRepository`/`TicketRepository`/`UserRepository` par de vraies façades applicatives est un refactor distinct, plus risqué, volontairement pas tenté dans ce lot.
+- Aucune couche `api`/`application`/`domain`/`infrastructure` n'est introduite : les modules existants restent à plat (`controller`/`service`/`repository`/`entity`/`dto`).
+- Aucun événement métier (`ProjectCreatedEvent`, `TicketCreatedEvent`, etc.) n'est introduit; aucun cas d'usage concret ne le justifie encore.
+- `dashboard` dépend de `ticket.specification` (constructeurs de `Specification` JPA), un couplage de moins bonne qualité que les autres expositions puisqu'il s'agit d'un détail d'implémentation de requête plutôt que d'une vraie API; identifié comme priorité de nettoyage future.
+
 ## Qualité et sécurité
 
 - SonarQube et Quality Gate : Quality Gate `OK` validée localement en P4 (voir section précédente); non vérifiée sur un run GitHub distant.
@@ -173,6 +195,7 @@ Actuator, Micrometer, Prometheus et Grafana sont planifiés en P10. Les request 
 5. Absence d'image frontend production/Nginx et de staging.
 6. Absence d'observabilité et de stratégie backup/restore testée.
 7. SonarQube Community Build ne décore pas les pull requests ni n'analyse les branches séparément (limite d'édition documentée, [ADR-0015](docs/adr/0015-sonarqube-quality-gate.md)).
+8. Couplage direct restant aux repositories/entités d'autres modules (`ticket`/`comment` -> `project`; `comment`/`dashboard` -> `ticket`; quasiment tous -> `user`), nommé et vérifié par Spring Modulith mais pas éliminé; `dashboard` -> `ticket.specification` est la coupure de moindre qualité à traiter en priorité si l'aggregation dashboard est revue ([ADR-0016](docs/adr/0016-spring-modulith-boundaries.md)).
 
 ## Décisions
 

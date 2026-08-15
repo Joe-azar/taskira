@@ -32,7 +32,7 @@ Cette matrice suit l'avancement par capacité métier. Elle complète la [feuill
 
 | Domaine | État validé | Dette ou prochaine sortie |
 | --- | --- | --- |
-| Architecture | Feature-first existant; décision monolithe modulaire acceptée | Frontières publiques et Spring Modulith en P5. |
+| Architecture | Terminé localement P5 : Spring Modulith vérifie les frontières et l'absence de cycle (`common`/`config`/`security` ouverts, `project`/`ticket`/`user` exposent des interfaces nommées); cycle `project`/`ticket` détecté et corrigé par port/adapter | Couche `api`/`application`/`domain`/`infrastructure` complète et événements métier (`TicketCreatedEvent`, etc.) restent à faire; le couplage direct aux repositories d'autres modules est documenté comme dette, pas éliminé. |
 | Base de données | PostgreSQL 16, Flyway `V1`–`V6`, `ddl-auto=validate` | Upgrade PostgreSQL en P6; toute évolution par `V7+`. |
 | Tests backend | 11 rapides + 3 intégration Testcontainers/Flyway; JaCoCo lignes 20,17 %, seuil 19 % vert | Étendre la couverture métier pour accompagner les prochaines phases. |
 | Tests frontend | 20 Vitest; couverture lignes 11,84 %, branches 11,27 %, fonctions 11,78 %, seuils verts; lint 0 erreur/41 avertissements `any` | Étendre aux features au-delà de l'authentification et réduire la dette `any`. |
