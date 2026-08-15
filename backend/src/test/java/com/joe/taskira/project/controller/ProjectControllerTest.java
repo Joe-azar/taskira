@@ -1,5 +1,6 @@
 package com.joe.taskira.project.controller;
 
+import com.joe.taskira.audit.service.AuditService;
 import com.joe.taskira.common.exception.ForbiddenException;
 import com.joe.taskira.common.exception.GlobalExceptionHandler;
 import com.joe.taskira.project.dto.ProjectResponse;
@@ -53,6 +54,9 @@ class ProjectControllerTest {
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @MockitoBean
+    private AuditService auditService;
 
     @Test
     void listProjectsRequiresAuthentication() throws Exception {

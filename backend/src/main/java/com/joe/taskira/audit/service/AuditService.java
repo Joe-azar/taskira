@@ -23,11 +23,15 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @org.springframework.modulith.NamedInterface
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class AuditService {
 
     private final AuditEventRepository auditEventRepository;
 
+    // REQUIRES_NEW, not the caller's transaction: several call sites (a failed login being
+    // the clearest) record an event describing why the enclosing transaction is about to
+    // roll back. Joining that transaction would roll the audit row back right along with it,
+    // silently losing exactly the events most worth keeping.
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void record(
             Long actorId,
             String actorEmail,

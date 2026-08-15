@@ -1,5 +1,8 @@
 package com.joe.taskira.security;
 
+import com.joe.taskira.audit.entity.AuditEvent;
+import com.joe.taskira.audit.enums.AuditAction;
+import com.joe.taskira.audit.repository.AuditEventRepository;
 import com.joe.taskira.support.PostgreSqlIntegrationTest;
 import com.joe.taskira.user.entity.User;
 import com.joe.taskira.user.repository.UserRepository;
@@ -7,12 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.util.MultiValueMap;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,6 +37,9 @@ class SessionAuthenticationIT extends PostgreSqlIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AuditEventRepository auditEventRepository;
 
     private RestTestClient client() {
         return RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
@@ -309,5 +317,75 @@ class SessionAuthenticationIT extends PostgreSqlIntegrationTest {
         ResponseCookie csrfCookie = result.getResponseCookies().getFirst(CSRF_COOKIE);
         assertThat(csrfCookie).isNotNull();
         assertThat(csrfCookie.isHttpOnly()).isFalse();
+    }
+
+    @Test
+    void successfulLoginWritesALoginSuccessAuditEventWithTheActorSet() {
+        Registered registered = register("audit-login-success");
+        String csrfToken = seedCsrfToken();
+
+        ExchangeResult result = client().post().uri("/api/v1/auth/login")
+                .cookie(CSRF_COOKIE, csrfToken)
+                .header(CSRF_HEADER, csrfToken)
+                .header(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON)
+                .body("""
+                        {"email": "%s", "password": "%s"}
+                        """.formatted(registered.email(), TEST_PASSWORD))
+                .exchange()
+                .returnResult();
+        assertThat(result.getStatus().value()).isEqualTo(200);
+
+        AuditEvent event = latestAuditEvent();
+        assertThat(event.getAction()).isEqualTo(AuditAction.LOGIN_SUCCESS);
+        assertThat(event.getActorId()).isNotNull();
+        assertThat(event.getActorEmail()).isEqualTo(registered.email());
+    }
+
+    @Test
+    void failedLoginWritesALoginFailureAuditEventWithNoActorAndNeverStoresThePassword() {
+        Registered registered = register("audit-login-failure");
+        String csrfToken = seedCsrfToken();
+
+        ExchangeResult result = client().post().uri("/api/v1/auth/login")
+                .cookie(CSRF_COOKIE, csrfToken)
+                .header(CSRF_HEADER, csrfToken)
+                .header(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON)
+                .body("""
+                        {"email": "%s", "password": "not-the-real-password"}
+                        """.formatted(registered.email()))
+                .exchange()
+                .returnResult();
+        assertThat(result.getStatus().value()).isEqualTo(401);
+
+        AuditEvent event = latestAuditEvent();
+        assertThat(event.getAction()).isEqualTo(AuditAction.LOGIN_FAILURE);
+        assertThat(event.getActorId()).isNull();
+        assertThat(event.getActorEmail()).isEqualTo(registered.email());
+        assertThat(event.getDetail()).isNull();
+    }
+
+    @Test
+    void logoutWritesALogoutAuditEventForTheUserWhoWasLoggedIn() {
+        Registered registered = register("audit-logout");
+
+        ExchangeResult logout = client().post().uri("/api/v1/auth/logout")
+                .cookie(SESSION_COOKIE, registered.sessionCookie())
+                .cookie(CSRF_COOKIE, registered.csrfCookie())
+                .header(CSRF_HEADER, registered.csrfCookie())
+                .exchange()
+                .returnResult();
+        assertThat(logout.getStatus().value()).isEqualTo(204);
+
+        AuditEvent event = latestAuditEvent();
+        assertThat(event.getAction()).isEqualTo(AuditAction.LOGOUT);
+        assertThat(event.getActorEmail()).isEqualTo(registered.email());
+    }
+
+    private AuditEvent latestAuditEvent() {
+        List<AuditEvent> page = auditEventRepository
+                .findAllByOrderByOccurredAtDescIdDesc(PageRequest.of(0, 1))
+                .getContent();
+        assertThat(page).as("at least one audit event recorded").isNotEmpty();
+        return page.get(0);
     }
 }
