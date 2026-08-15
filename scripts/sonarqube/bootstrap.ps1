@@ -30,6 +30,36 @@ function Get-BasicAuthHeader {
     return @{ Authorization = "Basic $([Convert]::ToBase64String($bytes))" }
 }
 
+function Get-HttpErrorBody {
+    # Invoke-RestMethod's error object shape differs by PowerShell edition: Windows
+    # PowerShell 5.1 (used locally) exposes a System.Net.HttpWebResponse with
+    # GetResponseStream(); PowerShell Core / pwsh (used by GitHub Actions' Linux
+    # runners, ci quality.yml) exposes a System.Net.Http.HttpResponseMessage instead,
+    # which has no such method. Handle both so a real failure is never masked by a
+    # second error thrown while trying to read the first one's body.
+    param($ErrorRecord)
+    $response = $ErrorRecord.Exception.Response
+    if (-not $response) {
+        return $ErrorRecord.Exception.Message
+    }
+    if ($response.PSObject.Methods.Name -contains "GetResponseStream") {
+        $stream = $response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        return $reader.ReadToEnd()
+    }
+    if ($response.Content) {
+        try {
+            return $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        } catch {
+            return $ErrorRecord.Exception.Message
+        }
+    }
+    if ($ErrorRecord.ErrorDetails -and $ErrorRecord.ErrorDetails.Message) {
+        return $ErrorRecord.ErrorDetails.Message
+    }
+    return $ErrorRecord.Exception.Message
+}
+
 function Test-SonarToken {
     param([string]$Token)
     try {
@@ -67,21 +97,29 @@ $special = "!@#%*-_" -split "" | Where-Object { $_ } | Get-Random -Count 1
 $newPassword = (-join $alnum) + $special
 $adminPass = "admin"
 
-try {
-    $headers = Get-BasicAuthHeader -User "admin" -Pass "admin"
-    $body = "login=admin&previousPassword=admin&password=$newPassword"
-    Invoke-RestMethod -Method Post -Uri "$SonarUrl/api/users/change_password" -Headers $headers -Body $body -ContentType "application/x-www-form-urlencoded"
-    $adminPass = $newPassword
-    Write-Host "Rotated default admin/admin credentials."
-} catch {
-    $webResponse = $_.Exception.Response
-    $reason = $_.Exception.Message
-    if ($webResponse) {
-        $stream = $webResponse.GetResponseStream()
-        $reader = New-Object System.IO.StreamReader($stream)
-        $reason = $reader.ReadToEnd()
+$headers = Get-BasicAuthHeader -User "admin" -Pass "admin"
+$body = "login=admin&previousPassword=admin&password=$newPassword"
+$attempts = 0
+$rotated = $false
+$lastReason = $null
+do {
+    $attempts++
+    try {
+        Invoke-RestMethod -Method Post -Uri "$SonarUrl/api/users/change_password" -Headers $headers -Body $body -ContentType "application/x-www-form-urlencoded"
+        $adminPass = $newPassword
+        $rotated = $true
+        Write-Host "Rotated default admin/admin credentials."
+    } catch {
+        $lastReason = Get-HttpErrorBody -ErrorRecord $_
+        if ($attempts -lt 5) {
+            Write-Host "change_password attempt $attempts failed ($lastReason); SonarQube may still be finishing startup, retrying ..."
+            Start-Sleep -Seconds 5
+        }
     }
-    throw "Cannot rotate admin/admin credentials (and no valid token was found in $envFile): $reason"
+} while (-not $rotated -and $attempts -lt 5)
+
+if (-not $rotated) {
+    throw "Cannot rotate admin/admin credentials after $attempts attempts (and no valid token was found in $envFile): $lastReason"
 }
 
 $authHeaders = Get-BasicAuthHeader -User "admin" -Pass $adminPass

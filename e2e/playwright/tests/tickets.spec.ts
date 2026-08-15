@@ -70,8 +70,16 @@ test.describe('tickets and comments', () => {
     await page.getByRole('button', { name: 'Mettre à jour le statut' }).click();
     const statusResponse = await statusResponsePromise;
     expect(statusResponse.status()).toBe(200);
-    expect((await statusResponse.json()).status).toBe('IN_PROGRESS');
     await expect(page.getByText('Statut mis à jour avec succès.')).toBeVisible();
+    // The response body is read via the UI, not response.json(): the app refetches
+    // the ticket immediately after this PATCH succeeds, and that follow-up request
+    // races Playwright's out-of-process CDP call for the PATCH response body, which
+    // is sometimes already evicted by the time it resolves (a documented Playwright/
+    // CDP limitation, not an application bug - see the "Response body is not
+    // available for a response that was navigated away from" error it raises).
+    await expect(page.locator('.page-header').locator('app-status-badge')).toHaveText(
+      'In progress'
+    );
 
     await chooseOptionContaining(page.getByLabel('Membre du projet'), member.email);
     const assigneeResponsePromise = page.waitForResponse(
@@ -82,8 +90,14 @@ test.describe('tickets and comments', () => {
     await page.getByRole('button', { name: /Mettre à jour l.assignation/ }).click();
     const assigneeResponse = await assigneeResponsePromise;
     expect(assigneeResponse.status()).toBe(200);
-    expect((await assigneeResponse.json()).assignee.email).toBe(member.email);
     await expect(page.getByText('Assignation mise à jour avec succès.')).toBeVisible();
+    // Same reasoning as the status check above: assert the UI after the app's own
+    // reload settles, rather than reading the PATCH response body via CDP. Angular's
+    // [ngValue] binding encodes the <select>'s DOM value as "<index>: <value>", so
+    // assert on the selected option's visible label instead of the raw value.
+    await expect(
+      page.getByLabel('Membre du projet').locator('option:checked')
+    ).toHaveText(new RegExp(member.email));
   });
 
   test('creates, updates, and deletes a comment', async ({ page, request }, testInfo) => {

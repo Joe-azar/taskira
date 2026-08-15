@@ -1,23 +1,22 @@
 package com.joe.taskira.security.config;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.joe.taskira.common.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SecurityErrorHandlerTests {
 
-    private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+    private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     @Test
     void authenticationEntryPointReturnsJsonWithTimestamp() throws Exception {

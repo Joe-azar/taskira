@@ -1,6 +1,5 @@
 package com.joe.taskira.security.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.joe.taskira.common.dto.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -10,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -18,7 +18,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     @Override
     public void commence(

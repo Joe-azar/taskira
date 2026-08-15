@@ -1,8 +1,8 @@
-FROM node:22.23.2-bookworm-slim@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436
+FROM node:24.19.0-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03
 
 WORKDIR /workspace
 
-RUN npm install --global npm@11.9.0
+RUN npm install --global npm@12.0.2
 
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci

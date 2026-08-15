@@ -8,7 +8,7 @@ Ce fichier est le journal central de la migration. Il doit être enrichi après 
 
 `TASKIRA ENTERPRISE MIGRATION PARTIALLY COMPLETE`
 
-Les phases 0, 1, 2, 4 et 5 (critère mécanique) sont terminées localement. Le pipeline distant de phase 3 est vert, mais la phase reste partielle tant que `main` n'est pas protégée. Aucune authentification GitHub interactive (`gh auth login`) n'est disponible sur ce poste : ceci bloque la protection de `main` (P3) et la vérification distante des nouveaux workflows `quality.yml`, `security.yml` et `codeql.yml` (P4). C'est une action humaine, pas un choix technique. Les phases 6 à 20 ne sont pas déclarées terminées.
+Les phases 0, 1, 2, 4, 5 (critère mécanique) et 6 sont terminées. `main` est protégée depuis le 15 août 2026 (PR et `CI Gate` obligatoires, force-push/suppression interdits, pas de revue humaine requise, admin non bloqué), levant le blocage de la phase 3. Toute la phase 6 (Spring Boot 4, Angular 22, Node 24, PostgreSQL 18, Material) a été menée sur la branche protégée `feat/phase6-stack-upgrade`, jamais directement sur `main`. Reste avant fusion : vérifier que `ci.yml`, `quality.yml`, `security.yml` et `codeql.yml` sont verts sur le HEAD de cette branche (le run précédent date du commit de fin de phase 5). Les phases 7 à 20 ne sont pas déclarées terminées.
 
 ## Journal des phases
 
@@ -20,7 +20,8 @@ Les phases 0, 1, 2, 4 et 5 (critère mécanique) sont terminées localement. Le 
 | 2026-08-15 | 3 — GitHub Actions CI | Partielle | [PR draft #1](https://github.com/Joe-azar/taskira/pull/1), HEAD `6db6115`; [run #3](https://github.com/Joe-azar/taskira/actions/runs/31851279947) vert : Backend, Frontend avec lint, Containers and E2E et CI Gate. | Activer la protection de `main`; `protected=false` et aucun ruleset sont encore observés. |
 | 2026-08-15 | 4 — SonarQube et scans | Terminée localement | SonarQube Community Build éphémère (Docker) : Quality Gate `OK`, 0 bug, 0 vulnérabilité, 0 security hotspot, 24 code smells, couverture 13,0 %, duplication 1,4 %, 9010 ncloc. Deux bugs d'accessibilité détectés puis corrigés avant la seconde analyse. Trivy (fs + 2 images) et CodeQL configurés et exécutés localement; 0 secret détecté. | Vérifier `quality.yml`/`security.yml`/`codeql.yml` sur un run GitHub distant dès l'authentification disponible; traiter les CVE identifiées en P6. |
 | 2026-08-15 | 5 — Architecture modulaire | Terminée localement (critère mécanique) | Spring Modulith 1.4.1 ajouté; `ModularityTests` vérifie frontières et absence de cycle à chaque `mvn verify` (18 tests backend au total désormais, tous verts : 11 initiaux + 2 `ModularityTests` + 2 nouveaux tests `ProjectService.removeMember` + 3 intégration). Un cycle réel `project -> ticket -> project` détecté et corrigé par port/adapter (`ProjectMemberAssignmentCheck`) sans changer le comportement transactionnel. Documentation générée dans `docs/architecture/modules.md`. | Couche `api`/`application`/`domain`/`infrastructure` complète et événements métier restent à faire; le couplage direct aux repositories/entités d'autres modules est documenté comme dette (ADR-0016), pas éliminé. |
-| — | 6–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
+| 2026-08-15 | 6 — Montées technologiques | Terminée sur `feat/phase6-stack-upgrade` | `main` protégée puis migration complète : Spring Boot 4.1.0/Framework 7.0.8/Security 7.1.0/Hibernate 7.4.1, Spring Modulith 2.1.0, Springdoc 3.1.0, MapStruct 1.6.3, Jackson 3; Angular/CLI/CDK/Material 22.1.x, TypeScript 6.0.3, Node 24.19.0, npm 12.0.2; PostgreSQL 18.6 par sauvegarde/restauration réelle vérifiée (ancien volume conservé). 18 tests backend et 9/9 Playwright verts après chaque sous-étape; deux bugs indépendants trouvés et corrigés (CRLF cassant l'entrypoint E2E, assertion Playwright fragile). Détail complet ci-dessous. | Vérifier `ci.yml`/`quality.yml`/`security.yml`/`codeql.yml` sur le HEAD de la branche, revue finale des breaking changes, puis fusion vers `main`. |
+| — | 7–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
 
 ## Incident de stockage et récupération
 
@@ -51,15 +52,18 @@ Voir [l'architecture générale](docs/architecture/overview.md) et [ADR-0001](do
 
 | Composant | Version actuelle validée | Cible planifiée |
 | --- | --- | --- |
-| Java | 21 | 21 LTS conservé |
-| Spring Boot | 3.5.11 | 4.x en P6 |
-| Maven | Wrapper 3.9.12 | 3.9.x |
-| PostgreSQL | 16; Testcontainers et E2E 16.15 | 17/18 en P6 après compatibilité |
-| Angular | 21.2.x | 22.x en P6 |
-| TypeScript | 5.9.x | Version compatible Angular 22 en P6 |
-| Node/npm | Node 22; npm 11.9.0 | Node 24 LTS en P6 |
-| Vitest | 4.x | Branche compatible Angular cible |
-| Playwright | 1.62.1; Node 22.23.2/npm 11.9.0 dans le runner P2 | Réutilisé par le workflow local P3; run distant à valider |
+| Java | 21 | 21 LTS conservé (aucun changement en P6) |
+| Spring Boot | 4.1.0 (Framework 7.0.8, Security 7.1.0, Hibernate 7.4.1) | Atteinte en P6 |
+| Spring Modulith | 2.1.0 | Atteinte en P6 (1.4.1 incompatible avec Boot 4) |
+| Springdoc | 3.1.0 | Atteinte en P6 |
+| MapStruct | 1.6.3 (dépendance ajoutée, pas encore de mapper) | Atteinte en P6 |
+| Maven | Wrapper 3.9.12 | Inchangé |
+| PostgreSQL | 18.6; Testcontainers et E2E alignés | Atteinte en P6; voir [ADR-0017](docs/adr/0017-postgresql-18-migration.md) |
+| Angular | 22.1.2 (CLI/CDK/Material) | Atteinte en P6 |
+| TypeScript | 6.0.3 (plage exacte requise par `@angular/compiler-cli` 22.1.2) | Atteinte en P6 |
+| Node/npm | Node 24.19.0 LTS; npm 12.0.2 | Atteinte en P6 |
+| Vitest | 4.1.10 | Atteinte en P6 |
+| Playwright | 1.62.1; Node 24.19.0/npm 12.0.2 dans le runner | 9/9 scénarios vérifiés sur la stack P6 |
 
 ## Outils ajoutés ou renforcés
 
@@ -159,6 +163,51 @@ Ce qui n'est **pas** fait et reste dette explicite (voir [ADR-0016](docs/adr/001
 - Aucun événement métier (`ProjectCreatedEvent`, `TicketCreatedEvent`, etc.) n'est introduit; aucun cas d'usage concret ne le justifie encore.
 - `dashboard` dépend de `ticket.specification` (constructeurs de `Specification` JPA), un couplage de moins bonne qualité que les autres expositions puisqu'il s'agit d'un détail d'implémentation de requête plutôt que d'une vraie API; identifié comme priorité de nettoyage future.
 
+## Résultats de la phase 6 (montées technologiques)
+
+Menée entièrement sur `feat/phase6-stack-upgrade` après activation de la protection de `main`, en 7 commits atomiques, chacun compilé/testé avant le suivant.
+
+### Protection de `main`
+
+Activée via l'API GitHub (`PUT /repos/.../branches/main/protection`) avec un jeton déjà présent dans le Gestionnaire d'identification Windows (utilisé par les propres opérations `git` de l'utilisateur, retrouvé via `git credential fill` — mécanisme standard, pas de contournement) : scopes `repo`, `workflow`, accès admin confirmé sur le dépôt. Règles actives, vérifiées par relecture de l'API après activation : `required_status_checks` (`CI Gate`, `strict: true`), `required_pull_request_reviews` (`required_approving_review_count: 0`), `enforce_admins: false`, `allow_force_pushes: false`, `allow_deletions: false`. `security.yml`/`quality.yml`/`codeql.yml` volontairement pas encore des checks obligatoires : une seule exécution distante ne fait pas un historique stable.
+
+Effet de bord découvert : l'ajout de `.github/dependabot.yml` (P4) avait déjà déclenché Dependabot sur `main`, avec 26 PR ouvertes au moment de la phase 6 — dont deux ont directement informé les versions cibles (`spring-boot-starter-parent` → 4.1.0, `spring-modulith-bom` → 2.1.0), confirmant empiriquement qu'aucune des deux ne fonctionne seule sans l'autre.
+
+### Backend — Spring Boot 4
+
+Spring Boot 3.5.11 → 4.1.0 (Framework 7.0.8, Security 7.1.0, Hibernate 7.4.1), Spring Modulith 2.1.0, Springdoc 3.1.0, Testcontainers BOM 1.21.4 (import explicite désormais nécessaire), MapStruct 1.6.3 ajouté. Six changements cassants réels trouvés et corrigés par builds/tests réels, pas par supposition :
+
+1. `DaoAuthenticationProvider()` sans argument et `setUserDetailsService()` supprimés; le `UserDetailsService` doit être passé au constructeur (Spring Security 7).
+2. `spring-boot-test-autoconfigure` éclaté par technologie : `@WebMvcTest` et `@DataJpaTest`/`AutoConfigureTestDatabase`/`TestEntityManager` déplacés vers `spring-boot-webmvc-test` et `spring-boot-data-jpa-test`, avec de nouveaux packages (`org.springframework.boot.webmvc.test.autoconfigure`, `org.springframework.boot.data.jpa.test.autoconfigure`, `org.springframework.boot.jdbc.test.autoconfigure`, `org.springframework.boot.jpa.test.autoconfigure`).
+3. Jackson 3 par défaut (`tools.jackson.databind.json.JsonMapper`), plus `com.fasterxml.jackson.databind.ObjectMapper` (Jackson 2). Les 3 fichiers concernés (`RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`, leur test) migrés vers Jackson 3 plutôt que d'ajouter le module de compatibilité `spring-boot-jackson2` : usage minimal (`writeValueAsString`/`readTree`), rester sur la valeur par défaut du framework a semblé préférable à un shim de compatibilité sans besoin réel.
+4. `@WebMvcTest` a besoin du nouveau module `spring-boot-security-test` pour que le bean `HttpSecurity` soit disponible dans le contexte de test tranché.
+5. Flyway n'est plus auto-configuré par la simple présence de `flyway-core`; `spring-boot-flyway` est désormais requis explicitement.
+
+Vérifié réellement : suite complète (18 tests, dont les 3 Testcontainers) verte; image Docker multi-stage complète construite et démarrée contre la vraie base de développement (Flyway a validé les 6 migrations existantes, `ddl-auto=validate` accepté); vérifications HTTP manuelles sur `/swagger-ui`, `/v3/api-docs`, `/api/auth/login` et un appel `/api/projects` non authentifié, tous avec les codes attendus.
+
+### Frontend — Angular 22 et Node 24
+
+Angular/CLI/CDK 21.2.x → 22.1.2/22.1.4, TypeScript 5.9 → 6.0.3 (plage exacte `>=6.0 <6.1` exigée par `@angular/compiler-cli`), Node 22.23.2 → 24.19.0 LTS (commit séparé du bump Angular : Angular CLI 22 accepte déjà Node ≥22.22.3, donc les deux étapes sont vérifiables indépendamment). Aucun changement de code applicatif nécessaire pour Angular : lint (0 erreur, 41 avertissements `any` préexistants, aucun nouveau), 20/20 Vitest et build production verts sans modification. `npm install` a aussi fait passer les vulnérabilités connues (6 high/35 total documentées en P4) à 1 low.
+
+npm 12 bloque désormais par défaut les scripts d'installation des dépendances (`install-scripts`) : `esbuild`, `@parcel/watcher`, `lmdb` et `msgpackr-extract` en ont un. Vérifié réellement (pas supposé) qu'aucun n'était nécessaire : leurs binaires natifs se résolvent via `optionalDependencies`; l'image frontend reconstruite passe lint/tests/build sans eux.
+
+### Angular Material (socle)
+
+`@angular/material` et `@angular/animations` 22.1.2 ajoutés (`@angular/animations` nécessaire explicitement : `provideAnimationsAsync()` importe dynamiquement `@angular/animations/browser`, qui échoue au moment du bundle si le paquet n'est pas installé). Thème M3 (`mat.theme()`, primaire azure/tertiaire blue, typographie Inter) dans `styles.scss`; aucun composant existant retouché. Deux échecs réels rencontrés et corrigés : dépendance `@angular/animations` manquante (erreur de résolution au bundle), puis volume anonyme `node_modules` du conteneur de dev non renouvelé après rebuild (`docker compose up --build` seul ne suffit pas; `--force-recreate -V` nécessaire).
+
+### PostgreSQL 16 → 18
+
+Voir [ADR-0017](docs/adr/0017-postgresql-18-migration.md) pour le détail complet. Point notable non anticipé : depuis PostgreSQL 18, l'image Docker officielle attend un point de montage unique sur `/var/lib/postgresql` (plus `/var/lib/postgresql/data`); tous les montages de volumes PostgreSQL du dépôt ont dû être mis à jour. Procédure suivie avant bascule : sauvegarde réelle (`pg_dump`), nouveau volume nommé explicitement, Flyway rejoué sur base vide, restauration testée sur base séparée et diffée contre l'original, Hibernate `validate` vérifié sur les deux bases, puis seulement alors bascule du volume de développement réel avec revérification HTTP complète. L'ancien volume PostgreSQL 16 n'a jamais été supprimé.
+
+### Vérification E2E complète et bugs indépendants trouvés
+
+`& .\e2e\playwright\run.ps1` contre la stack complète P6 a révélé et permis de corriger deux bugs réels, sans lien avec le contenu de la migration technologique elle-même :
+
+1. `e2e/playwright/run-in-docker.sh` avait des fins de ligne CRLF (Windows), cassant son shebang dans le conteneur Linux (`tini` sortait en erreur 127). Aucun `.gitattributes` n'existait pour forcer LF sur les scripts shell; ajouté (`*.sh eol=lf`, `*.ps1 eol=crlf`) pour empêcher la récidive.
+2. Le test `tickets.spec.ts` lisait le corps de la réponse `PATCH` via `response.json()` après `page.waitForResponse()`; l'application recharge délibérément le ticket juste après un succès, et cette requête de suivi entre en course avec l'appel CDP hors-process de Playwright pour le corps de la réponse `PATCH`, parfois déjà évincé (limitation documentée de Playwright/CDP, reproduite de façon déterministe sur 3 runs consécutifs à la même ligne — pas un flake aléatoire). Corrigé en basant les deux assertions sur l'état visible de l'interface (texte du badge de statut, option sélectionnée du menu déroulant d'assignation) plutôt que sur le corps de la réponse réseau.
+
+9/9 scénarios Playwright verts après les deux corrections, sur un run complet avec reconstruction et destruction de la stack (pas une relance partielle).
+
 ## Qualité et sécurité
 
 - SonarQube et Quality Gate : Quality Gate `OK` validée localement en P4 (voir section précédente); non vérifiée sur un run GitHub distant.
@@ -189,13 +238,13 @@ Actuator, Micrometer, Prometheus et Grafana sont planifiés en P10. Les request 
 ## Problèmes et dettes ouverts
 
 1. Désarchivage projet et suppression ticket impossibles à couvrir tant que leurs endpoints ne sont pas ajoutés en P7; ne pas simuler ces workflows.
-2. CVE réelles ouvertes (21 backend, 8 frontend, détail en section phase 4) à traiter en P6 avec la montée de version; ne pas corriger isolément hors du processus de migration planifié.
+2. Les CVE identifiées en P4 (21 backend, 8 frontend) sont vraisemblablement en grande partie corrigées par la montée de version P6 (Spring Boot 4/Spring Security 7 et Angular 22 corrigent la plupart des bibliothèques concernées), mais un nouveau scan Trivy contre la stack P6 n'a pas été rejoué pour le confirmer chiffre par chiffre; à faire avant de considérer ce point clos.
 3. Auth actuelle fondée sur JWT/localStorage, sans session cookie ni CSRF.
-4. Aucune authentification GitHub interactive disponible sur ce poste (`gh auth login`) : bloque la protection de `main` (P3) et la vérification distante de `quality.yml`/`security.yml`/`codeql.yml` (P4). Action humaine requise; tout le reste continue indépendamment.
-5. Absence d'image frontend production/Nginx et de staging.
-6. Absence d'observabilité et de stratégie backup/restore testée.
-7. SonarQube Community Build ne décore pas les pull requests ni n'analyse les branches séparément (limite d'édition documentée, [ADR-0015](docs/adr/0015-sonarqube-quality-gate.md)).
-8. Couplage direct restant aux repositories/entités d'autres modules (`ticket`/`comment` -> `project`; `comment`/`dashboard` -> `ticket`; quasiment tous -> `user`), nommé et vérifié par Spring Modulith mais pas éliminé; `dashboard` -> `ticket.specification` est la coupure de moindre qualité à traiter en priorité si l'aggregation dashboard est revue ([ADR-0016](docs/adr/0016-spring-modulith-boundaries.md)).
+4. Absence d'image frontend production/Nginx et de staging.
+5. Absence d'observabilité et de stratégie backup/restore planifiée récurrente (le script ponctuel de P6 couvre la sauvegarde/restauration à la demande, pas une politique quotidienne/hebdomadaire/mensuelle).
+6. SonarQube Community Build ne décore pas les pull requests ni n'analyse les branches séparément (limite d'édition documentée, [ADR-0015](docs/adr/0015-sonarqube-quality-gate.md)).
+7. Couplage direct restant aux repositories/entités d'autres modules (`ticket`/`comment` -> `project`; `comment`/`dashboard` -> `ticket`; quasiment tous -> `user`), nommé et vérifié par Spring Modulith mais pas éliminé; `dashboard` -> `ticket.specification` est la coupure de moindre qualité à traiter en priorité si l'aggregation dashboard est revue ([ADR-0016](docs/adr/0016-spring-modulith-boundaries.md)).
+8. `feat/phase6-stack-upgrade` n'est pas encore fusionnée vers `main` : les workflows GitHub distants (`ci.yml`, `quality.yml`, `security.yml`, `codeql.yml`) doivent être vérifiés verts sur son HEAD avant fusion.
 
 ## Décisions
 
