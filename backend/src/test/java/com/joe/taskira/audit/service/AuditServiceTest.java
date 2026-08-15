@@ -1,5 +1,6 @@
 package com.joe.taskira.audit.service;
 
+import com.joe.taskira.audit.dto.AuditEventPageResponse;
 import com.joe.taskira.audit.entity.AuditEvent;
 import com.joe.taskira.audit.enums.AuditAction;
 import com.joe.taskira.audit.enums.AuditEntityType;
@@ -14,10 +15,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -82,5 +88,30 @@ class AuditServiceTest {
 
         assertThat(event.getRequestId()).isNull();
         assertThat(event.getIpAddress()).isNull();
+    }
+
+    @Test
+    void listEventsClampsAnOutOfRangePageSizeToTheUpperBound() {
+        when(auditEventRepository.findAllByOrderByOccurredAtDescIdDesc(any()))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
+
+        auditService.listEvents(0, 5000);
+
+        ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(auditEventRepository).findAllByOrderByOccurredAtDescIdDesc(captor.capture());
+        assertThat(captor.getValue().getPageSize()).isEqualTo(100);
+    }
+
+    @Test
+    void listEventsClampsANegativePageNumberToZero() {
+        when(auditEventRepository.findAllByOrderByOccurredAtDescIdDesc(any()))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+        AuditEventPageResponse response = auditService.listEvents(-3, 20);
+
+        ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(auditEventRepository).findAllByOrderByOccurredAtDescIdDesc(captor.capture());
+        assertThat(captor.getValue().getPageNumber()).isEqualTo(0);
+        assertThat(response.page()).isEqualTo(0);
     }
 }

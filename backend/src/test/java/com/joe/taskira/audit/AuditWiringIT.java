@@ -298,4 +298,26 @@ class AuditWiringIT extends PostgreSqlIntegrationTest {
         AuditEvent event = latestAuditEventFor(AuditAction.USER_DEACTIVATED);
         assertThat(event.getEntityId()).isEqualTo(target.userId());
     }
+
+    @Test
+    void listingAuditEventsSucceedsForAnAdminAndIsForbiddenForAnOrdinaryUser() {
+        Actor admin = loginAsPersistedAdmin("audit-list-admin-" + UUID.randomUUID() + "@taskira.test");
+        Actor user = register("audit-list-user");
+        // Guarantees at least one row exists to page over, independent of test order.
+        createProject(admin, "AWL" + admin.userId());
+
+        ExchangeResult asAdmin = client().get().uri("/api/v1/audit/events?page=0&size=5")
+                .cookie(SESSION_COOKIE, admin.sessionCookie())
+                .exchange()
+                .returnResult();
+        assertThat(asAdmin.getStatus().value()).isEqualTo(200);
+        String body = new String(asAdmin.getResponseBodyContent());
+        assertThat(body).contains("\"content\"");
+
+        ExchangeResult asUser = client().get().uri("/api/v1/audit/events")
+                .cookie(SESSION_COOKIE, user.sessionCookie())
+                .exchange()
+                .returnResult();
+        assertThat(asUser.getStatus().value()).isEqualTo(403);
+    }
 }

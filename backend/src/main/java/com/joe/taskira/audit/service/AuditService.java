@@ -1,5 +1,7 @@
 package com.joe.taskira.audit.service;
 
+import com.joe.taskira.audit.dto.AuditEventPageResponse;
+import com.joe.taskira.audit.dto.AuditEventResponse;
 import com.joe.taskira.audit.entity.AuditEvent;
 import com.joe.taskira.audit.enums.AuditAction;
 import com.joe.taskira.audit.enums.AuditEntityType;
@@ -8,6 +10,8 @@ import com.joe.taskira.common.web.RequestIdContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -52,6 +56,23 @@ public class AuditService {
                 .build();
 
         auditEventRepository.save(event);
+    }
+
+    public AuditEventPageResponse listEvents(int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 100);
+
+        Page<AuditEvent> result = auditEventRepository.findAllByOrderByOccurredAtDescIdDesc(
+                PageRequest.of(safePage, safeSize)
+        );
+
+        return new AuditEventPageResponse(
+                result.getContent().stream().map(AuditEventResponse::from).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
     }
 
     private String currentRemoteAddress() {
