@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,6 +78,7 @@ class ProjectControllerTest {
         when(projectService.createProject(any())).thenReturn(projectResponse());
 
         mockMvc.perform(post(PROJECTS_URL)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -100,6 +102,7 @@ class ProjectControllerTest {
     @WithMockUser(username = "owner@taskira.test")
     void createProjectReturnsStructuredBadRequestForInvalidInput() throws Exception {
         mockMvc.perform(post(PROJECTS_URL)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -122,7 +125,7 @@ class ProjectControllerTest {
         when(projectService.archiveProject(42L))
                 .thenThrow(new ForbiddenException("You are not allowed to manage this project"));
 
-        mockMvc.perform(patch(PROJECTS_URL + "/42/archive"))
+        mockMvc.perform(patch(PROJECTS_URL + "/42/archive").with(csrf()))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(403))

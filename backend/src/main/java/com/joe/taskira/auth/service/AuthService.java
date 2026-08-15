@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -55,6 +56,12 @@ public class AuthService {
         user = userRepository.save(user);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(user);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        authenticatedUser, null, authenticatedUser.getAuthorities()
+                )
+        );
+
         String token = jwtService.generateToken(authenticatedUser);
 
         return AuthResponse.of(token, jwtProperties.getExpirationMs(), user);
@@ -73,6 +80,8 @@ public class AuthService {
         if (!(principal instanceof AuthenticatedUser authenticatedUser)) {
             throw new UnauthorizedException("Authentication failed");
         }
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String token = jwtService.generateToken(authenticatedUser);
         return AuthResponse.of(token, jwtProperties.getExpirationMs(), authenticatedUser.getUser());

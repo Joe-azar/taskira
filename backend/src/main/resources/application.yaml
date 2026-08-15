@@ -29,6 +29,16 @@ springdoc:
 
 server:
   port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      cookie:
+        name: TASKIRA_SESSION
+        http-only: true
+        same-site: lax
+        # Base/dev/test default: this stack runs over plain HTTP locally, and a Secure
+        # cookie is never sent by the browser over HTTP. Overridden to true in
+        # application-prod.yaml, the only environment expected to run over HTTPS.
+        secure: false
 
 app:
   jwt:
