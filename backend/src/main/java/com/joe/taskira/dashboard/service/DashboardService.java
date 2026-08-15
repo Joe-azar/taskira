@@ -11,6 +11,7 @@ import com.joe.taskira.ticket.enums.TicketStatus;
 import com.joe.taskira.ticket.repository.TicketRepository;
 import com.joe.taskira.ticket.specification.TicketSpecifications;
 import com.joe.taskira.user.enums.GlobalRole;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -21,6 +22,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class DashboardService {
 
     private final ProjectRepository projectRepository;
