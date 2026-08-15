@@ -19,6 +19,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Exposed to the comment module so it can log history entries for ticket-affecting
+ * comment actions, without opening the rest of {@code ticket.service} (notably
+ * {@link TicketService} itself).
+ */
+@org.springframework.modulith.NamedInterface
 @Service
 @RequiredArgsConstructor
 @Transactional
