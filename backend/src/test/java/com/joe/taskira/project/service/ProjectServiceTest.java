@@ -11,7 +11,6 @@ import com.joe.taskira.project.enums.ProjectStatus;
 import com.joe.taskira.project.repository.ProjectMemberRepository;
 import com.joe.taskira.project.repository.ProjectRepository;
 import com.joe.taskira.security.model.AuthenticatedUser;
-import com.joe.taskira.ticket.repository.TicketRepository;
 import com.joe.taskira.user.entity.User;
 import com.joe.taskira.user.enums.GlobalRole;
 import com.joe.taskira.user.repository.UserRepository;
@@ -45,7 +44,7 @@ class ProjectServiceTest {
     private ProjectMemberRepository projectMemberRepository;
 
     @Mock
-    private TicketRepository ticketRepository;
+    private ProjectMemberAssignmentCheck projectMemberAssignmentCheck;
 
     @Mock
     private UserRepository userRepository;
@@ -146,6 +145,46 @@ class ProjectServiceTest {
         assertThat(response.status()).isEqualTo(ProjectStatus.ARCHIVED);
         assertThat(response.memberCount()).isEqualTo(2L);
         verify(projectRepository).save(project);
+    }
+
+    @Test
+    void removeMemberRejectsATargetUserWithAssignedTickets() {
+        User owner = authenticate(7L, GlobalRole.USER);
+        Project project = project(42L, owner);
+        ProjectMember member = ProjectMember.builder()
+                .project(project)
+                .user(user(20L, GlobalRole.USER))
+                .projectRole(ProjectRole.MEMBER)
+                .build();
+
+        when(projectRepository.findById(42L)).thenReturn(Optional.of(project));
+        when(projectMemberRepository.findByProjectIdAndUserId(42L, 20L)).thenReturn(Optional.of(member));
+        when(projectMemberAssignmentCheck.countAssignedTickets(42L, 20L)).thenReturn(2L);
+
+        assertThatThrownBy(() -> projectService.removeMember(42L, 20L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Cannot remove member with assigned tickets. Reassign or unassign first.");
+
+        verify(projectMemberRepository, never()).delete(any());
+    }
+
+    @Test
+    void removeMemberDeletesATargetUserWithoutAssignedTickets() {
+        User owner = authenticate(7L, GlobalRole.USER);
+        Project project = project(42L, owner);
+        ProjectMember member = ProjectMember.builder()
+                .project(project)
+                .user(user(20L, GlobalRole.USER))
+                .projectRole(ProjectRole.MEMBER)
+                .build();
+
+        when(projectRepository.findById(42L)).thenReturn(Optional.of(project));
+        when(projectMemberRepository.findByProjectIdAndUserId(42L, 20L)).thenReturn(Optional.of(member));
+        when(projectMemberAssignmentCheck.countAssignedTickets(42L, 20L)).thenReturn(0L);
+
+        projectService.removeMember(42L, 20L);
+
+        verify(projectMemberRepository).delete(member);
     }
 
     private User authenticate(Long id, GlobalRole role) {

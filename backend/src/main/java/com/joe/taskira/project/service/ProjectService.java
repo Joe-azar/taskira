@@ -17,7 +17,6 @@ import com.joe.taskira.project.enums.ProjectStatus;
 import com.joe.taskira.project.repository.ProjectMemberRepository;
 import com.joe.taskira.project.repository.ProjectRepository;
 import com.joe.taskira.security.model.AuthenticatedUser;
-import com.joe.taskira.ticket.repository.TicketRepository;
 import com.joe.taskira.user.entity.User;
 import com.joe.taskira.user.enums.GlobalRole;
 import com.joe.taskira.user.repository.UserRepository;
@@ -34,7 +33,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
-    private final TicketRepository ticketRepository;
+    private final ProjectMemberAssignmentCheck projectMemberAssignmentCheck;
     private final UserRepository userRepository;
 
     public ProjectResponse createProject(CreateProjectRequest request) {
@@ -142,7 +141,7 @@ public class ProjectService {
             }
         }
 
-        long assignedTickets = ticketRepository.countByProjectIdAndAssigneeId(projectId, userId);
+        long assignedTickets = projectMemberAssignmentCheck.countAssignedTickets(projectId, userId);
         if (assignedTickets > 0) {
             throw new ConflictException("Cannot remove member with assigned tickets. Reassign or unassign first.");
         }
