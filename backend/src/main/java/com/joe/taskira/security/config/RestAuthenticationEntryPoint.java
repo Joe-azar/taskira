@@ -1,5 +1,6 @@
 package com.joe.taskira.security.config;
 
+import com.joe.taskira.common.web.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
-import java.net.URI;
 
 @Component
 @RequiredArgsConstructor
@@ -26,8 +26,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
             HttpServletResponse response,
             AuthenticationException authException
     ) throws IOException {
-        ProblemDetail body = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Unauthorized");
-        body.setInstance(URI.create(request.getRequestURI()));
+        ProblemDetail body = ProblemDetails.of(HttpStatus.UNAUTHORIZED, "Unauthorized", request.getRequestURI());
 
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

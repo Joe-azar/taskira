@@ -1,5 +1,6 @@
 package com.joe.taskira.common.exception;
 
+import com.joe.taskira.common.web.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.net.URI;
 import java.util.Optional;
 
 @RestControllerAdvice
@@ -94,8 +94,6 @@ public class GlobalExceptionHandler {
             String message,
             String path
     ) {
-        ProblemDetail body = ProblemDetail.forStatusAndDetail(status, message);
-        body.setInstance(URI.create(path));
-        return ResponseEntity.status(status).body(body);
+        return ResponseEntity.status(status).body(ProblemDetails.of(status, message, path));
     }
 }

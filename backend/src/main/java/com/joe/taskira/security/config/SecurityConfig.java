@@ -4,6 +4,7 @@ import com.joe.taskira.audit.enums.AuditAction;
 import com.joe.taskira.audit.enums.AuditEntityType;
 import com.joe.taskira.audit.service.AuditService;
 import com.joe.taskira.common.web.ApiVersion;
+import com.joe.taskira.common.web.RequestIdFilter;
 import com.joe.taskira.security.model.AuthenticatedUser;
 import com.joe.taskira.security.service.CustomUserDetailsService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +29,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.session.DisableEncodeUrlFilter;
 
 @Configuration
 @EnableMethodSecurity
@@ -78,7 +80,11 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                 )
-                .addFilterAfter(new CsrfCookieFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(new CsrfCookieFilter(), UsernamePasswordAuthenticationFilter.class)
+                // First in the chain, ahead of Spring Security's own first filter - so CORS/
+                // CSRF/auth-entry-point/access-denied failures are covered too, not only
+                // requests that make it to a controller.
+                .addFilterBefore(new RequestIdFilter(), DisableEncodeUrlFilter.class);
 
         return http.build();
     }

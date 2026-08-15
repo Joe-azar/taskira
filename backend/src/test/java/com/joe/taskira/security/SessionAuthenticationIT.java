@@ -165,6 +165,19 @@ class SessionAuthenticationIT extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    void everyResponseCarriesAnXRequestIdHeaderAndTheProblemDetailBodyMatchesItOnError() {
+        ExchangeResult anonymous = client().get().uri(AUTH_ME_URL).exchange().returnResult();
+        String headerRequestId = anonymous.getResponseHeaders().getFirst("X-Request-Id");
+        assertThat(headerRequestId).isNotBlank();
+
+        String body = new String(anonymous.getResponseBodyContent());
+        assertThat(body).contains("\"requestId\":\"" + headerRequestId + "\"");
+
+        ExchangeResult ok = client().get().uri("/v3/api-docs").exchange().returnResult();
+        assertThat(ok.getResponseHeaders().getFirst("X-Request-Id")).isNotBlank();
+    }
+
+    @Test
     void aUserCallingAnAdminEndpointReturns403() {
         Registered registered = register("forbidden-admin");
 
