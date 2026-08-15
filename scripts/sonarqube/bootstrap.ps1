@@ -98,7 +98,11 @@ $newPassword = (-join $alnum) + $special
 $adminPass = "admin"
 
 $headers = Get-BasicAuthHeader -User "admin" -Pass "admin"
-$body = "login=admin&previousPassword=admin&password=$newPassword"
+# Body is a hashtable, not a hand-built query string: Invoke-RestMethod URL-encodes each
+# value itself, so a randomly generated password containing a reserved/escape character
+# (e.g. a bare "%", which Tomcat's UDecoder rejects as an incomplete escape sequence) is
+# always transmitted correctly.
+$body = @{ login = "admin"; previousPassword = "admin"; password = $newPassword }
 $attempts = 0
 $rotated = $false
 $lastReason = $null
@@ -126,17 +130,17 @@ $authHeaders = Get-BasicAuthHeader -User "admin" -Pass $adminPass
 
 $projects = Invoke-RestMethod -Method Get -Uri "$SonarUrl/api/projects/search?projects=$ProjectKey" -Headers $authHeaders
 if (-not $projects.components -or $projects.components.Count -eq 0) {
-    Invoke-RestMethod -Method Post -Uri "$SonarUrl/api/projects/create" -Headers $authHeaders -Body "project=$ProjectKey&name=$ProjectName" -ContentType "application/x-www-form-urlencoded" | Out-Null
+    Invoke-RestMethod -Method Post -Uri "$SonarUrl/api/projects/create" -Headers $authHeaders -Body @{ project = $ProjectKey; name = $ProjectName } -ContentType "application/x-www-form-urlencoded" | Out-Null
     Write-Host "Created SonarQube project '$ProjectKey'."
 } else {
     Write-Host "SonarQube project '$ProjectKey' already exists."
 }
 
 try {
-    Invoke-RestMethod -Method Post -Uri "$SonarUrl/api/user_tokens/revoke" -Headers $authHeaders -Body "name=$TokenName" -ContentType "application/x-www-form-urlencoded" | Out-Null
+    Invoke-RestMethod -Method Post -Uri "$SonarUrl/api/user_tokens/revoke" -Headers $authHeaders -Body @{ name = $TokenName } -ContentType "application/x-www-form-urlencoded" | Out-Null
 } catch { }
 
-$tokenResponse = Invoke-RestMethod -Method Post -Uri "$SonarUrl/api/user_tokens/generate" -Headers $authHeaders -Body "name=$TokenName" -ContentType "application/x-www-form-urlencoded"
+$tokenResponse = Invoke-RestMethod -Method Post -Uri "$SonarUrl/api/user_tokens/generate" -Headers $authHeaders -Body @{ name = $TokenName } -ContentType "application/x-www-form-urlencoded"
 
 $envContent = "SONAR_HOST_URL=$SonarUrl`nSONAR_TOKEN=$($tokenResponse.token)`nSONAR_ADMIN_PASSWORD=$adminPass`n"
 [System.IO.File]::WriteAllText($envFile, $envContent, (New-Object System.Text.UTF8Encoding($false)))
