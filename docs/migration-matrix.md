@@ -11,7 +11,7 @@ Statuts : `Terminée`, `Terminée localement`, `Partielle`, `Planifiée`. Une ph
 | 0 | Baseline Git | Critique | Terminée | État fonctionnel validé, commit `fd84c54`, tag `pre-enterprise-migration` et branche de migration présents. |
 | 1 | Documentation | Critique | Terminée localement | `AGENTS.md`, matrices, rapport, architecture et ADR complets; liens, cohérence et diff vérifiés; commit local `cccf2ee`. |
 | 2 | Filet de sécurité | Critique | Terminée localement | 14 backend, 20 Vitest et seuils JaCoCo/V8 sont verts; 9/9 Playwright couvrent auth, autorisation et workflows métier sur une stack isolée détruite après le run. |
-| 3 | GitHub Actions CI | Critique | Partielle | `ci.yml` et `actionlint` sont validés localement; jobs tests/coverage/build et E2E isolé sont définis. Run distant, lint et checks requis manquent. |
+| 3 | GitHub Actions CI | Critique | Partielle | La PR draft #1 et le run #3 sont verts sur `6db6115`, y compris lint, tests, build, E2E et CI Gate. Seule la protection de `main` manque (`protected=false`, aucun ruleset; réglages admin refusés au connecteur). |
 | 4 | SonarQube et scans | Haute | Planifiée | Quality Gate, couverture, CodeQL, dépendances, secrets et images sont analysés automatiquement et les résultats triés. |
 | 5 | Architecture modulaire | Haute | Planifiée | Frontières feature-first publiques, architecture hexagonale légère et tests Spring Modulith sans cycles. |
 | 6 | Montées technologiques | Haute | Planifiée | Java 21 conservé; Spring Boot 4/Spring 7, Angular 22, Node 24, Material et PostgreSQL 17/18 passent la non-régression. |

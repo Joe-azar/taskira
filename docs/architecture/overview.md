@@ -31,7 +31,7 @@ Le backend et le frontend sont déjà organisés par fonctionnalités. Les front
 - Phase 0 : baseline Git terminée.
 - Phase 1 : documentation terminée localement.
 - Phase 2 : tests, seuils de couverture et 9/9 parcours E2E isolés validés; phase terminée localement.
-- Phase 3 : workflow CI présent et validé statiquement; exécution GitHub distante encore non validée.
+- Phase 3 : run GitHub #3 vert sur la PR draft #1 au commit `6db6115`; seule la protection de `main` reste à activer.
 - Phases 4 à 20 : planifiées.
 
 Voir la [feuille de route](../migration-matrix.md) et le [rapport cumulatif](../../ENTERPRISE_MIGRATION_REPORT.md).

@@ -29,9 +29,11 @@ Le JWT est actuellement stocké dans `localStorage`; ce comportement doit rester
 
 Vingt tests Vitest couvrent l'authentification, les guards, l'intercepteur et le rendu asynchrone du login. Les 9 tests Playwright couvrent login/logout, login invalide, guard anonyme, refus admin pour `USER`, projet create/update/archive, membre add/remove, ticket create/update/status/assign et commentaire create/update/delete. La couverture unitaire des autres features reste à renforcer.
 
+Le lint repose sur `angular-eslint` 21.4.0, ESLint 10.3.0 et `typescript-eslint` 8.59.2. Le run distant validé passe avec 0 erreur et 41 avertissements `any`; cette dette reste visible et doit diminuer progressivement.
+
 ## Évolutions planifiées
 
-- P3 : tests, couverture et build sont définis localement dans GitHub Actions; ajouter le lint, valider un run distant et protéger `main` par les checks requis.
+- P3 : lint, tests, couverture, build et E2E sont verts dans GitHub Actions; protéger `main` par les checks requis.
 - P6 : Angular 22, Node 24, TypeScript compatible et Angular Material progressif.
 - P8 : cookies/session, XSRF et suppression du stockage JWT après migration validée.
 - P11 : build statique servi par Nginx; `ng serve` reste réservé au développement.

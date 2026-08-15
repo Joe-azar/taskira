@@ -27,7 +27,7 @@ Playwright couvre la page de connexion, login/logout, login invalide, guard anon
 | Persistance/intégration | Spring Boot Test, Testcontainers PostgreSQL | Requêtes JPA, contraintes, transactions et migrations Flyway | PostgreSQL éphémère réel |
 | Frontend unitaire/composant | Vitest, Angular TestBed | Services, guards, intercepteurs, formulaires et rendu | Doubles HTTP ciblés |
 | Parcours navigateur, phase 2 | Playwright | Authentification, autorisation et workflows métier | Runner racine et stack Compose dédiée, isolée et éphémère |
-| Parcours navigateur, phase 3 | Playwright dans GitHub Actions | Rejouer le même filet sur chaque changement | Même stack isolée; run GitHub distant à valider |
+| Parcours navigateur, phase 3 | Playwright dans GitHub Actions | Rejouer le même filet sur chaque changement | Même stack isolée; run GitHub #3 validé |
 
 H2 n'est pas utilisé pour simuler PostgreSQL. Les tests d'intégration démarrent la base, appliquent Flyway de `V1` à la dernière migration, exécutent les scénarios puis détruisent le conteneur.
 
@@ -56,7 +56,7 @@ Un lot applicatif est acceptable lorsque :
 
 1. les tests nouveaux et existants sont verts;
 2. le backend compile et son package est produit avec Java 21;
-3. le frontend passe Vitest et le build Angular de production;
+3. le frontend passe le lint, Vitest et le build Angular de production;
 4. les migrations démarrent sur une base PostgreSQL vide;
 5. les contrôles d'autorisation et contrats affectés sont couverts;
 6. aucune vulnérabilité ou régression connue n'est masquée.
@@ -72,6 +72,7 @@ Exécuter toutes les commandes suivantes depuis la racine du dépôt.
 ```powershell
 docker compose -f infra/docker-compose.yml config
 docker build -f frontend/Dockerfile -t taskira-frontend-tests frontend
+docker run --rm taskira-frontend-tests npm run lint
 docker run --rm taskira-frontend-tests npm run test:unit
 docker run --rm taskira-frontend-tests npm run test:coverage
 docker run --rm taskira-frontend-tests npm run build
@@ -123,6 +124,8 @@ Ne pas lancer `npm audit fix` automatiquement : cela modifierait les versions sa
 
 ## CI de phase 3
 
-Le workflow local `.github/workflows/ci.yml` exécute les tests backend et frontend, les rapports de couverture, le build Angular, puis le même fichier Compose et la même image Playwright sur une stack dédiée. Un job `always()` la supprime avec ses volumes. `actionlint` 1.7.12 passe.
+Le workflow `.github/workflows/ci.yml` exécute les tests backend, puis le lint, les 20 Vitest, les rapports de couverture et le build Angular, avant le même fichier Compose et la même image Playwright sur une stack dédiée. Un job `always()` la supprime avec ses volumes. `actionlint` 1.7.12 passe.
 
-La phase reste partielle tant qu'un run GitHub distant n'est pas vert, que le lint frontend n'est pas intégré et que les checks requis ne protègent pas `main` lorsque les permissions le permettent. SonarQube et les scans bloquants appartiennent à la phase 4.
+Le run GitHub #3 (`31851279947`) est vert sur la PR draft #1 au commit `6db6115` : Backend, Frontend, Containers and E2E et CI Gate réussissent. Le lint utilise `angular-eslint` 21.4.0, ESLint 10.3.0 et `typescript-eslint` 8.59.2; il produit 0 erreur et 41 avertissements `any`, laissés visibles comme dette de typage.
+
+La phase reste partielle uniquement parce que les checks ne protègent pas encore `main` : l'API signale `protected=false` et aucun ruleset. Le connecteur reçoit `403` pour les réglages administratifs; l'activation, disponible sans offre payante, nécessite l'interface GitHub ou un jeton administrateur interactif. SonarQube et les scans bloquants appartiennent à la phase 4.

@@ -35,9 +35,9 @@ Cette matrice suit l'avancement par capacité métier. Elle complète la [feuill
 | Architecture | Feature-first existant; décision monolithe modulaire acceptée | Frontières publiques et Spring Modulith en P5. |
 | Base de données | PostgreSQL 16, Flyway `V1`–`V6`, `ddl-auto=validate` | Upgrade PostgreSQL en P6; toute évolution par `V7+`. |
 | Tests backend | 11 rapides + 3 intégration Testcontainers/Flyway; JaCoCo lignes 20,17 %, seuil 19 % vert | Étendre la couverture métier pour accompagner les prochaines phases. |
-| Tests frontend | 20 Vitest; couverture lignes 11,84 %, branches 11,27 %, fonctions 11,78 %, seuils verts | Étendre aux features au-delà de l'authentification. |
+| Tests frontend | 20 Vitest; couverture lignes 11,84 %, branches 11,27 %, fonctions 11,78 %, seuils verts; lint 0 erreur/41 avertissements `any` | Étendre aux features au-delà de l'authentification et réduire la dette `any`. |
 | Tests navigateur | Playwright 1.62.1 : 9/9 en 1,3 min sur la stack isolée `e2e/playwright/compose.e2e.yml` | Désarchivage projet et suppression ticket après création des endpoints P7; maintenir le nettoyage intégral. |
-| CI/CD | Partiel : `ci.yml` local et `actionlint` vert | Run distant, lint frontend et protection de branche requis pour clore P3; GHCR/staging/release en P15. |
+| CI/CD | Partiel : PR draft #1, run GitHub #3 vert sur `6db6115` avec Backend, Frontend lint/tests/build, Containers and E2E et CI Gate | Activer la protection de `main`; GHCR/staging/release restent en P15. |
 | Qualité et scans | Audit npm manuel uniquement | SonarQube, CodeQL, Dependabot et Trivy en P4. |
 | Sécurité | Backend autoritaire; JWT/localStorage actuel | Session HttpOnly, CSRF, CORS credentials et bootstrap dev en P8. |
 | Observabilité | Logs Spring standards | Request ID/logs en P9; Actuator/Micrometer/Prometheus/Grafana en P10. |

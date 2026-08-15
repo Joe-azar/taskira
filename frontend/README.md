@@ -26,12 +26,13 @@ List the available schematics with:
 docker compose -f infra/docker-compose.yml exec frontend npm exec ng -- generate --help
 ```
 
-## Build and unit tests
+## Build, lint, and unit tests
 
-Build the frontend test image once, then run the production build and Vitest suite in isolated containers:
+Build the frontend test image once, then run lint, the production build, and the Vitest suite in isolated containers:
 
 ```powershell
 docker build -f frontend/Dockerfile -t taskira-frontend-tests frontend
+docker run --rm taskira-frontend-tests npm run lint
 docker run --rm taskira-frontend-tests npm run build
 docker run --rm taskira-frontend-tests npm run test:unit
 ```

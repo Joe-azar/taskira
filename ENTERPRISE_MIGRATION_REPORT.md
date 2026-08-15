@@ -8,7 +8,7 @@ Ce fichier est le journal central de la migration. Il doit être enrichi après 
 
 `TASKIRA ENTERPRISE MIGRATION PARTIALLY COMPLETE`
 
-Les phases 0, 1 et 2 sont terminées localement. La phase 3 possède des livrables validés localement mais reste partielle. Les phases 4 à 20 ne sont pas déclarées terminées.
+Les phases 0, 1 et 2 sont terminées localement. Le pipeline distant de phase 3 est vert, mais la phase reste partielle tant que `main` n'est pas protégée. Les phases 4 à 20 ne sont pas déclarées terminées.
 
 ## Journal des phases
 
@@ -17,7 +17,7 @@ Les phases 0, 1 et 2 sont terminées localement. La phase 3 possède des livrabl
 | 2026-08-14 | 0 — Baseline Git | Terminée | Commit `fd84c54`, tag `pre-enterprise-migration`, branche `feat/enterprise-platform-migration`; stack Docker restaurée et validée avant migration. | Aucun pour le critère de baseline; conserver le point de retour. |
 | 2026-08-15 | 1 — Documentation | Terminée localement | `AGENTS.md`, matrices, rapport, documentation d'architecture et ADR créés; liens et cohérence vérifiés; commit local `cccf2ee`. | Publier la branche avec les autres lots validés. |
 | 2026-08-14–15 | 2 — Filet de sécurité | Terminée localement | 14 tests backend, 20 Vitest, couvertures/seuils backend et frontend, build Angular et 9/9 Playwright validés dans Docker; stack E2E isolée détruite après le run. | Maintenir ce filet. Ajouter désarchivage projet et suppression ticket en P7, après création de leurs endpoints. |
-| 2026-08-15 | 3 — GitHub Actions CI | Partielle | `ci.yml` local : jobs backend, frontend coverage/build et stack Compose+E2E; actions pinées par SHA, permissions `contents: read`, cleanup volumes; `actionlint` 1.7.12 réussi. | Obtenir un run GitHub distant vert, ajouter le lint frontend et configurer les checks/protection de `main` si permis. |
+| 2026-08-15 | 3 — GitHub Actions CI | Partielle | [PR draft #1](https://github.com/Joe-azar/taskira/pull/1), HEAD `6db6115`; [run #3](https://github.com/Joe-azar/taskira/actions/runs/31851279947) vert : Backend, Frontend avec lint, Containers and E2E et CI Gate. | Activer la protection de `main`; `protected=false` et aucun ruleset sont encore observés. |
 | — | 4–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
 
 ## Incident de stockage et récupération
@@ -66,9 +66,10 @@ Voir [l'architecture générale](docs/architecture/overview.md) et [ADR-0001](do
 - Runner Playwright Docker racine avec 9 scénarios et stack Compose E2E isolée.
 - JaCoCo 0.8.13 fusionne les résultats Surefire/Failsafe, produit XML/HTML et applique un seuil ligne global; `coverage-v8` 4.1.0 produit LCOV/HTML et applique quatre seuils frontend.
 - Workflow GitHub Actions `ci.yml` créé et validé statiquement avec `actionlint` 1.7.12.
+- Lint Angular intégré avec `angular-eslint` 21.4.0, ESLint 10.3.0 et `typescript-eslint` 8.59.2.
 - Maven Wrapper 3.9.12 et images Java, Node et PostgreSQL critiques épinglés; les images E2E Node/PostgreSQL sont référencées par digest.
 
-Aucun run GitHub distant n'est encore disponible. SonarQube, scans, Nginx production, observabilité et labs ne sont pas encore ajoutés.
+Le run GitHub distant #3 est vert. SonarQube, scans, Nginx production, observabilité et labs ne sont pas encore ajoutés.
 
 ## Tests
 
@@ -78,6 +79,7 @@ Résultat validé de phase 2 :
 - backend intégration/Testcontainers : 3 tests;
 - backend total : 14 tests;
 - frontend Vitest : 20 tests;
+- frontend lint : 0 erreur et 41 avertissements `any` non bloquants;
 - navigateur : Playwright 1.62.1, 9/9 tests en 1,3 minute;
 - build Angular de production : réussi.
 
@@ -94,19 +96,22 @@ Le désarchivage projet et la suppression ticket ne sont pas simulés : les endp
 
 ## CI/CD
 
-Un workflow local `.github/workflows/ci.yml` définit :
+Le workflow `.github/workflows/ci.yml` définit :
 
 - backend Java 21 avec `./mvnw verify` et rapports tests/JaCoCo;
-- frontend Node 22.23.2/npm 11.9.0 avec couverture et build;
+- frontend Node 22.23.2/npm 11.9.0 avec lint, couverture, 20 Vitest et build;
 - même fichier Compose E2E éphémère, attente de disponibilité, Playwright, logs/artifacts et job de destruction systématique.
 
-Les actions tierces sont pinées par SHA, les permissions globales sont `contents: read` et `persist-credentials` est désactivé. `actionlint` 1.7.12 passe localement. Aucun run GitHub distant, lint frontend, check requis ou protection de `main` n'est encore validé; P3 reste partielle. GHCR, release, staging et production manuelle relèvent de P15.
+Les actions tierces sont pinées par SHA, les permissions globales sont `contents: read` et `persist-credentials` est désactivé. `actionlint` 1.7.12 passe localement. Sur la PR draft #1 au HEAD `6db6115`, le run GitHub #3 (`31851279947`) valide Backend, Frontend, Containers and E2E et CI Gate. Le lint Angular passe avec 0 erreur et 41 avertissements liés à la dette `any`.
+
+P3 reste partielle pour une seule raison : `main` est encore signalée `protected=false` et aucun ruleset n'est configuré. Le connecteur a reçu `403` sur les réglages administratifs. La protection est disponible sans coût supplémentaire, mais son activation nécessite l'interface GitHub ou un jeton administrateur interactif; aucune élévation n'est contournée. GHCR, release, staging et production manuelle relèvent de P15.
 
 ## Qualité et sécurité
 
 - SonarQube et Quality Gate : non installés, P4.
 - CodeQL, Dependabot, Trivy et contrôle automatisé des secrets : non configurés, P4.
 - Audit npm du 2026-08-14 : 6 vulnérabilités élevées dans l'arbre de production et 35 au total, dont 1 critique dans l'outillage. Ces valeurs sont historiques et doivent être rescannées avant correction.
+- Lint Angular : 0 erreur, 41 avertissements `any`; dette visible à réduire progressivement sans désactiver la règle.
 - Aucun `npm audit fix --force` n'a été appliqué.
 - Auth session HttpOnly/CSRF et bootstrap admin dev : proposés pour P8; JWT/localStorage reste le comportement actuel.
 
@@ -132,7 +137,7 @@ Actuator, Micrometer, Prometheus et Grafana sont planifiés en P10. Les request 
 1. Désarchivage projet et suppression ticket impossibles à couvrir tant que leurs endpoints ne sont pas ajoutés en P7; ne pas simuler ces workflows.
 2. Vulnérabilités npm connues à réévaluer et traiter pendant P4/P6.
 3. Auth actuelle fondée sur JWT/localStorage, sans session cookie ni CSRF.
-4. CI seulement locale : run GitHub distant, lint et protection de branche manquants; Quality Gate et scans absents.
+4. CI distante verte, mais protection de `main` non activée faute d'accès administratif interactif; Quality Gate et scans encore absents.
 5. Absence d'image frontend production/Nginx et de staging.
 6. Absence d'observabilité et de stratégie backup/restore testée.
 

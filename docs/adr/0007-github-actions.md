@@ -5,7 +5,7 @@
 
 ## Contexte
 
-Le dépôt officiel est hébergé sur GitHub. Un workflow existe localement, sans exécution distante validée.
+Le dépôt officiel est hébergé sur GitHub. Le workflow est exécuté sur la PR draft #1 et son run #3 est vert au commit `6db6115`.
 
 ## Proposition
 
@@ -21,4 +21,4 @@ Les runners GitHub-hosted sont prioritaires. Aucun runner persistant sur un post
 
 ## État d'implémentation
 
-`ci.yml` est créé et passe `actionlint` 1.7.12. Les jobs backend, frontend et Compose+E2E sont définis avec permissions minimales et actions pinées. Le run GitHub distant, le lint et la protection de branche restent à valider; l'ADR demeure `Proposed` jusque-là.
+`ci.yml` passe `actionlint` 1.7.12. Le run GitHub #3 valide Backend, Frontend avec lint, Containers and E2E et CI Gate; les permissions restent minimales et les actions pinées. `main` est toutefois encore non protégée (`protected=false`, aucun ruleset). Le connecteur ne peut pas modifier ces réglages administratifs et reçoit `403`; l'activation doit être faite dans l'interface GitHub ou avec un jeton administrateur interactif. L'ADR demeure `Proposed` jusqu'à cette activation.

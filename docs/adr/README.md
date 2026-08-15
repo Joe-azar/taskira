@@ -10,7 +10,7 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0004](0004-postgresql.md) | PostgreSQL | Accepted | PostgreSQL 16; upgrade P6 |
 | [0005](0005-flyway-only.md) | Flyway seul pour le schéma | Accepted | Déjà appliqué |
 | [0006](0006-session-cookie-auth.md) | Session cookie sécurisée | Proposed | P8 |
-| [0007](0007-github-actions.md) | GitHub Actions | Proposed | P3 partielle localement |
+| [0007](0007-github-actions.md) | GitHub Actions | Proposed | Run distant vert; protection `main` manquante |
 | [0008](0008-docker-compose.md) | Docker Compose runtime principal | Accepted | Dev actuel; profils futurs |
 | [0009](0009-local-filesystem-first.md) | Filesystem avant stockage objet | Proposed | P13 |
 | [0010](0010-no-kafka-rabbitmq-main-runtime.md) | Pas de Kafka/RabbitMQ principal | Accepted | Contrainte active |

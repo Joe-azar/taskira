@@ -22,4 +22,4 @@ La stratégie détaillée, les commandes Docker-first et la dette connue sont ma
 
 ## Cible suivante
 
-Le désarchivage projet et la suppression ticket ne disposent pas encore d'endpoints; ils seront ajoutés et testés en P7, sans simulation E2E. P3 possède localement le workflow de stack éphémère et les artefacts de diagnostic, mais attend un run GitHub distant, le lint et la protection de branche. P4 ajoute SonarQube et les scans.
+Le désarchivage projet et la suppression ticket ne disposent pas encore d'endpoints; ils seront ajoutés et testés en P7, sans simulation E2E. En P3, le run GitHub #3 valide lint, tests, build, stack éphémère et artefacts de diagnostic. Seule la protection de `main` reste à activer. P4 ajoute SonarQube et les scans.
