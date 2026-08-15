@@ -1,6 +1,8 @@
 package com.joe.taskira.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -19,6 +21,8 @@ import java.util.Optional;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ProblemDetail> handleBusinessException(
@@ -81,6 +85,7 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request
     ) {
+        log.error("Unhandled exception while processing {} {}", request.getMethod(), request.getRequestURI(), ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request.getRequestURI());
     }
 

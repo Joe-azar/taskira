@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-import { authHeaders, expectStatus, registerUser, testKey, testPassword } from '../support/api';
+import {
+  authHeaders,
+  expectStatus,
+  registerUser,
+  testKey,
+  testPassword,
+} from '../support/api';
 import { loginThroughUi } from '../support/ui';
 
 const apiBaseUrl = process.env['TASKIRA_API_BASE_URL'] ?? 'http://localhost:8080/api/v1';
@@ -47,17 +53,21 @@ test.describe('authentication and authorization', () => {
 
     await loginThroughUi(page, user);
     await expect(page.getByText(user.email)).toBeVisible();
-    await expect(page.evaluate(() => localStorage.getItem('taskira_token'))).resolves.toBeTruthy();
+
+    const cookiesAfterLogin = await page.context().cookies();
+    expect(cookiesAfterLogin.some((cookie) => cookie.name === 'TASKIRA_SESSION')).toBe(true);
 
     await page.getByRole('button', { name: 'Se déconnecter' }).click();
     await expect(page).toHaveURL((url) => url.pathname === '/login');
-    expect(await page.evaluate(() => localStorage.getItem('taskira_token'))).toBeNull();
+
+    const cookiesAfterLogout = await page.context().cookies();
+    expect(cookiesAfterLogout.some((cookie) => cookie.name === 'TASKIRA_SESSION')).toBe(false);
   });
 
   test('refuses a USER on the administration API and route', async ({ page, request }, testInfo) => {
     const user = await registerUser(request, testInfo, 'ordinary-user');
     const forbiddenResponse = await request.post(`${apiBaseUrl}/users`, {
-      headers: authHeaders(user),
+      headers: await authHeaders(request, user),
       data: {
         firstName: 'E2E',
         lastName: 'Forbidden',

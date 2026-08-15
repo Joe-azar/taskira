@@ -8,8 +8,6 @@ import com.joe.taskira.project.service.ProjectService;
 import com.joe.taskira.security.config.RestAccessDeniedHandler;
 import com.joe.taskira.security.config.RestAuthenticationEntryPoint;
 import com.joe.taskira.security.config.SecurityConfig;
-import com.joe.taskira.security.jwt.JwtAuthenticationFilter;
-import com.joe.taskira.security.jwt.JwtService;
 import com.joe.taskira.security.service.CustomUserDetailsService;
 import com.joe.taskira.user.dto.UserSummaryResponse;
 import com.joe.taskira.user.enums.GlobalRole;
@@ -28,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -38,7 +37,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ProjectController.class)
 @Import({
         SecurityConfig.class,
-        JwtAuthenticationFilter.class,
         RestAuthenticationEntryPoint.class,
         RestAccessDeniedHandler.class,
         GlobalExceptionHandler.class
@@ -52,9 +50,6 @@ class ProjectControllerTest {
 
     @MockitoBean
     private ProjectService projectService;
-
-    @MockitoBean
-    private JwtService jwtService;
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
@@ -77,6 +72,7 @@ class ProjectControllerTest {
         when(projectService.createProject(any())).thenReturn(projectResponse());
 
         mockMvc.perform(post(PROJECTS_URL)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -100,6 +96,7 @@ class ProjectControllerTest {
     @WithMockUser(username = "owner@taskira.test")
     void createProjectReturnsStructuredBadRequestForInvalidInput() throws Exception {
         mockMvc.perform(post(PROJECTS_URL)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -122,7 +119,7 @@ class ProjectControllerTest {
         when(projectService.archiveProject(42L))
                 .thenThrow(new ForbiddenException("You are not allowed to manage this project"));
 
-        mockMvc.perform(patch(PROJECTS_URL + "/42/archive"))
+        mockMvc.perform(patch(PROJECTS_URL + "/42/archive").with(csrf()))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(403))
