@@ -1,9 +1,12 @@
 package com.joe.taskira;
 
+import com.joe.taskira.config.DevAdminBootstrap;
 import com.joe.taskira.support.PostgreSqlIntegrationTest;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.test.context.ActiveProfiles;
@@ -20,6 +23,9 @@ class ProdProfileTest extends PostgreSqlIntegrationTest {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private ApplicationContext applicationContext;
 
     private RestTestClient client() {
         return RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
@@ -69,5 +75,10 @@ class ProdProfileTest extends PostgreSqlIntegrationTest {
         ResponseCookie sessionCookie = result.getResponseCookies().getFirst("TASKIRA_SESSION");
         assertThat(sessionCookie).isNotNull();
         assertThat(sessionCookie.isSecure()).isTrue();
+    }
+
+    @Test
+    void theDevAdminBootstrapIsNotWiredUpUnderTheProdProfile() {
+        assertThat(applicationContext.getBeanNamesForType(DevAdminBootstrap.class)).isEmpty();
     }
 }

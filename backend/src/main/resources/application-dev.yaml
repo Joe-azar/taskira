@@ -5,3 +5,10 @@ logging:
 spring:
   jpa:
     show-sql: true
+
+app:
+  # Overridable for local use, e.g. if the default credentials collide with a seeded
+  # fixture. See DevAdminBootstrap - this only ever runs under the "dev" profile.
+  dev-admin:
+    email: ${APP_DEV_ADMIN_EMAIL:admin@taskira.test}
+    password: ${APP_DEV_ADMIN_PASSWORD:Taskira-Admin-42!}
