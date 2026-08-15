@@ -94,11 +94,15 @@ class AuditEventRepositoryIT extends PostgreSqlIntegrationTest {
 
     @Test
     void findAllByOrderByOccurredAtDescReturnsTheMostRecentEventFirst() {
+        // This table isn't exclusive to this test class - other IT suites commit real rows
+        // to the same shared Testcontainers database (unlike @DataJpaTest's own writes here,
+        // which roll back after each method). Asking for only the top 2 keeps the assertion
+        // valid regardless of what else has already accumulated in the table.
         AuditEvent older = entityManager.persistAndFlush(minimalEvent(AuditAction.LOGIN_SUCCESS));
         AuditEvent newer = entityManager.persistAndFlush(minimalEvent(AuditAction.LOGOUT));
         entityManager.clear();
 
-        var page = auditEventRepository.findAllByOrderByOccurredAtDescIdDesc(PageRequest.of(0, 10));
+        var page = auditEventRepository.findAllByOrderByOccurredAtDescIdDesc(PageRequest.of(0, 2));
 
         assertThat(page.getContent())
                 .extracting(AuditEvent::getId)

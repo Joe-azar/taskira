@@ -1,5 +1,8 @@
 package com.joe.taskira.project.service;
 
+import com.joe.taskira.audit.enums.AuditAction;
+import com.joe.taskira.audit.enums.AuditEntityType;
+import com.joe.taskira.audit.service.AuditService;
 import com.joe.taskira.common.exception.ConflictException;
 import com.joe.taskira.common.exception.ForbiddenException;
 import com.joe.taskira.common.exception.ResourceNotFoundException;
@@ -35,6 +38,7 @@ public class ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectMemberAssignmentCheck projectMemberAssignmentCheck;
     private final UserRepository userRepository;
+    private final AuditService auditService;
 
     public ProjectResponse createProject(CreateProjectRequest request) {
         User currentUser = SecurityUtils.getCurrentUser().getUser();
@@ -62,6 +66,15 @@ public class ProjectService {
                 .build();
 
         projectMemberRepository.save(ownerMember);
+
+        auditService.record(
+                currentUser.getId(),
+                currentUser.getEmail(),
+                AuditEntityType.PROJECT,
+                project.getId(),
+                AuditAction.PROJECT_CREATED,
+                project.getCode()
+        );
 
         return ProjectResponse.from(project, 1);
     }
@@ -115,6 +128,16 @@ public class ProjectService {
 
         member = projectMemberRepository.save(member);
 
+        AuthenticatedUser actor = SecurityUtils.getCurrentUser();
+        auditService.record(
+                actor.getId(),
+                actor.getUser().getEmail(),
+                AuditEntityType.PROJECT_MEMBER,
+                member.getId(),
+                AuditAction.PROJECT_MEMBER_ADDED,
+                project.getCode() + ":" + targetUser.getEmail()
+        );
+
         return ProjectMemberResponse.from(member);
     }
 
@@ -146,7 +169,19 @@ public class ProjectService {
             throw new ConflictException("Cannot remove member with assigned tickets. Reassign or unassign first.");
         }
 
+        Long removedMemberId = member.getId();
+        String removedUserEmail = member.getUser().getEmail();
         projectMemberRepository.delete(member);
+
+        AuthenticatedUser actor = SecurityUtils.getCurrentUser();
+        auditService.record(
+                actor.getId(),
+                actor.getUser().getEmail(),
+                AuditEntityType.PROJECT_MEMBER,
+                removedMemberId,
+                AuditAction.PROJECT_MEMBER_REMOVED,
+                project.getCode() + ":" + removedUserEmail
+        );
     }
 
     @Transactional
@@ -196,6 +231,16 @@ public class ProjectService {
 
         project.setStatus(ProjectStatus.ARCHIVED);
         project = projectRepository.save(project);
+
+        AuthenticatedUser actor = SecurityUtils.getCurrentUser();
+        auditService.record(
+                actor.getId(),
+                actor.getUser().getEmail(),
+                AuditEntityType.PROJECT,
+                project.getId(),
+                AuditAction.PROJECT_ARCHIVED,
+                project.getCode()
+        );
 
         long memberCount = projectMemberRepository.countByProjectId(projectId);
         return ProjectResponse.from(project, memberCount);
