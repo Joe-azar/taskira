@@ -1,5 +1,6 @@
 package com.joe.taskira.security.config;
 
+import com.joe.taskira.common.web.ApiVersion;
 import com.joe.taskira.security.jwt.JwtAuthenticationFilter;
 import com.joe.taskira.security.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,7 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",
+                                ApiVersion.V1 + "/auth/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"

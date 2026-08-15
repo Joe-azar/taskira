@@ -17,6 +17,7 @@ import {
 
 import { AuthService } from '../../../../core/auth/auth.service';
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
+import { extractErrorMessage } from '../../../../core/http/extract-error-message';
 import { ProjectMember } from '../../../projects/models/project.models';
 import { ProjectService } from '../../../projects/services/project.service';
 import {
@@ -202,10 +203,7 @@ export class TicketDetailPage {
             history: [],
             comments: [],
             projectMembers: [],
-            errorMessage:
-              error?.error?.message ||
-              error?.message ||
-              'Impossible de charger le ticket.',
+            errorMessage: extractErrorMessage(error, 'Impossible de charger le ticket.'),
           } as TicketDetailVm)
         )
       );
@@ -266,10 +264,7 @@ export class TicketDetailPage {
           this.reloadSubject.next();
         },
         error: (error) => {
-          this.statusErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de mettre à jour le statut.';
+          this.statusErrorMessage = extractErrorMessage(error, 'Impossible de mettre à jour le statut.');
         },
       });
   }
@@ -300,10 +295,7 @@ export class TicketDetailPage {
           this.reloadSubject.next();
         },
         error: (error) => {
-          this.assigneeErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de mettre à jour l’assignation.';
+          this.assigneeErrorMessage = extractErrorMessage(error, 'Impossible de mettre à jour l’assignation.');
         },
       });
   }
@@ -346,10 +338,7 @@ export class TicketDetailPage {
           });
         },
         error: (error) => {
-          this.commentErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible d’ajouter le commentaire.';
+          this.commentErrorMessage = extractErrorMessage(error, 'Impossible d’ajouter le commentaire.');
         },
       });
   }
@@ -408,10 +397,7 @@ export class TicketDetailPage {
           }
         },
         error: (error) => {
-          this.editCommentErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de modifier le commentaire.';
+          this.editCommentErrorMessage = extractErrorMessage(error, 'Impossible de modifier le commentaire.');
         },
       });
   }
@@ -436,10 +422,7 @@ export class TicketDetailPage {
         }
       },
       error: (error) => {
-        this.commentErrorMessage =
-          error?.error?.message ||
-          error?.message ||
-          'Impossible de supprimer le commentaire.';
+        this.commentErrorMessage = extractErrorMessage(error, 'Impossible de supprimer le commentaire.');
       },
     });
   }
@@ -508,10 +491,7 @@ export class TicketDetailPage {
           }, 3000);
         },
         error: (error) => {
-          this.editErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de mettre à jour le ticket.';
+          this.editErrorMessage = extractErrorMessage(error, 'Impossible de mettre à jour le ticket.');
         },
       });
   }

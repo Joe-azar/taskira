@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { BehaviorSubject, combineLatest, finalize, map } from 'rxjs';
 
+import { extractErrorMessage } from '../../../../core/http/extract-error-message';
 import { CreateProjectRequest, ProjectSummary } from '../../models/project.models';
 import { ProjectService } from '../../services/project.service';
 
@@ -65,9 +66,7 @@ export class ProjectListPage {
         this.loadingSubject.next(false);
       },
       error: (error) => {
-        this.errorSubject.next(
-          error?.error?.message || error?.message || 'Impossible de charger les projets.'
-        );
+        this.errorSubject.next(extractErrorMessage(error, 'Impossible de charger les projets.'));
         this.loadingSubject.next(false);
       },
     });
@@ -105,10 +104,7 @@ export class ProjectListPage {
           });
         },
         error: (error) => {
-          this.createErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de créer le projet.';
+          this.createErrorMessage = extractErrorMessage(error, 'Impossible de créer le projet.');
         },
       });
   }

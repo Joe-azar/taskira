@@ -1,5 +1,6 @@
 package com.joe.taskira.ticket.controller;
 
+import com.joe.taskira.common.web.ApiVersion;
 import com.joe.taskira.ticket.dto.*;
 import com.joe.taskira.ticket.enums.TicketPriority;
 import com.joe.taskira.ticket.enums.TicketStatus;
@@ -14,24 +15,25 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping(ApiVersion.V1)
 @RequiredArgsConstructor
 public class TicketController {
 
     private final TicketService ticketService;
     private final TicketHistoryService ticketHistoryService;
 
-    @PostMapping("/api/tickets")
+    @PostMapping("/tickets")
     @ResponseStatus(HttpStatus.CREATED)
     public TicketResponse createTicket(@Valid @RequestBody CreateTicketRequest request) {
         return ticketService.createTicket(request);
     }
 
-    @GetMapping("/api/projects/{projectId}/tickets")
+    @GetMapping("/projects/{projectId}/tickets")
     public List<TicketSummaryResponse> listProjectTickets(@PathVariable Long projectId) {
         return ticketService.listProjectTickets(projectId);
     }
 
-    @GetMapping("/api/tickets")
+    @GetMapping("/tickets")
     public List<TicketSummaryResponse> searchTickets(
             @RequestParam(required = false) Long projectId,
             @RequestParam(required = false) TicketStatus status,
@@ -54,7 +56,7 @@ public class TicketController {
         );
     }
 
-    @GetMapping("/api/tickets/paged")
+    @GetMapping("/tickets/paged")
     public TicketPageResponse searchTicketsPaged(
             @RequestParam(required = false) Long projectId,
             @RequestParam(required = false) TicketStatus status,
@@ -83,17 +85,17 @@ public class TicketController {
         );
     }
 
-    @GetMapping("/api/tickets/{ticketId}")
+    @GetMapping("/tickets/{ticketId}")
     public TicketResponse getTicketById(@PathVariable Long ticketId) {
         return ticketService.getTicketById(ticketId);
     }
 
-    @GetMapping("/api/tickets/{ticketId}/history")
+    @GetMapping("/tickets/{ticketId}/history")
     public List<TicketHistoryResponse> listTicketHistory(@PathVariable Long ticketId) {
         return ticketHistoryService.listTicketHistory(ticketId);
     }
 
-    @PatchMapping("/api/tickets/{ticketId}/status")
+    @PatchMapping("/tickets/{ticketId}/status")
     public TicketResponse updateStatus(
             @PathVariable Long ticketId,
             @Valid @RequestBody UpdateTicketStatusRequest request
@@ -101,7 +103,7 @@ public class TicketController {
         return ticketService.updateStatus(ticketId, request);
     }
 
-    @PatchMapping("/api/tickets/{ticketId}/assignee")
+    @PatchMapping("/tickets/{ticketId}/assignee")
     public TicketResponse updateAssignee(
             @PathVariable Long ticketId,
             @RequestBody UpdateTicketAssigneeRequest request
@@ -109,7 +111,7 @@ public class TicketController {
         return ticketService.updateAssignee(ticketId, request);
     }
 
-    @PutMapping("/api/tickets/{ticketId}")
+    @PutMapping("/tickets/{ticketId}")
     public TicketResponse updateTicket(
             @PathVariable Long ticketId,
             @Valid @RequestBody UpdateTicketRequest request

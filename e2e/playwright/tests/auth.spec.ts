@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { authHeaders, expectStatus, registerUser, testKey, testPassword } from '../support/api';
 import { loginThroughUi } from '../support/ui';
 
-const apiBaseUrl = process.env['TASKIRA_API_BASE_URL'] ?? 'http://localhost:8080/api';
+const apiBaseUrl = process.env['TASKIRA_API_BASE_URL'] ?? 'http://localhost:8080/api/v1';
 
 test.describe('authentication and authorization', () => {
   test('shows the public login form', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('authentication and authorization', () => {
     const responsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'POST' &&
-        new URL(response.url()).pathname === '/api/auth/login'
+        new URL(response.url()).pathname === '/api/v1/auth/login'
     );
     await page.getByRole('button', { name: 'Se connecter' }).click();
     expect((await responsePromise).status()).toBe(401);

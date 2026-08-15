@@ -14,7 +14,7 @@ export async function loginThroughUi(page: Page, user: TestUser): Promise<void> 
   const loginResponsePromise = page.waitForResponse(
     (response) =>
       response.request().method() === 'POST' &&
-      new URL(response.url()).pathname === '/api/auth/login'
+      new URL(response.url()).pathname === '/api/v1/auth/login'
   );
 
   try {

@@ -1,5 +1,6 @@
 package com.joe.taskira.user.controller;
 
+import com.joe.taskira.common.web.ApiVersion;
 import com.joe.taskira.user.dto.CreateUserRequest;
 import com.joe.taskira.user.dto.UpdateUserRequest;
 import com.joe.taskira.user.dto.UpdateUserStatusRequest;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping(ApiVersion.V1 + "/users")
 @RequiredArgsConstructor
 public class UserController {
 

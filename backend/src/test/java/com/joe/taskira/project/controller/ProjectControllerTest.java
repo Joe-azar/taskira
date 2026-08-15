@@ -45,6 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 class ProjectControllerTest {
 
+    private static final String PROJECTS_URL = "/api/v1/projects";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -59,12 +61,12 @@ class ProjectControllerTest {
 
     @Test
     void listProjectsRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/api/projects"))
+        mockMvc.perform(get(PROJECTS_URL))
                 .andExpect(status().isUnauthorized())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.message").value("Unauthorized"))
-                .andExpect(jsonPath("$.path").value("/api/projects"));
+                .andExpect(jsonPath("$.detail").value("Unauthorized"))
+                .andExpect(jsonPath("$.instance").value(PROJECTS_URL));
 
         verifyNoInteractions(projectService);
     }
@@ -74,7 +76,7 @@ class ProjectControllerTest {
     void createProjectReturnsCreatedForAValidAuthenticatedRequest() throws Exception {
         when(projectService.createProject(any())).thenReturn(projectResponse());
 
-        mockMvc.perform(post("/api/projects")
+        mockMvc.perform(post(PROJECTS_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -97,7 +99,7 @@ class ProjectControllerTest {
     @Test
     @WithMockUser(username = "owner@taskira.test")
     void createProjectReturnsStructuredBadRequestForInvalidInput() throws Exception {
-        mockMvc.perform(post("/api/projects")
+        mockMvc.perform(post(PROJECTS_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -106,10 +108,10 @@ class ProjectControllerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.message").value("Project code must contain between 2 and 20 characters"))
-                .andExpect(jsonPath("$.path").value("/api/projects"));
+                .andExpect(jsonPath("$.detail").value("Project code must contain between 2 and 20 characters"))
+                .andExpect(jsonPath("$.instance").value(PROJECTS_URL));
 
         verifyNoInteractions(projectService);
     }
@@ -120,12 +122,12 @@ class ProjectControllerTest {
         when(projectService.archiveProject(42L))
                 .thenThrow(new ForbiddenException("You are not allowed to manage this project"));
 
-        mockMvc.perform(patch("/api/projects/42/archive"))
+        mockMvc.perform(patch(PROJECTS_URL + "/42/archive"))
                 .andExpect(status().isForbidden())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("You are not allowed to manage this project"))
-                .andExpect(jsonPath("$.path").value("/api/projects/42/archive"));
+                .andExpect(jsonPath("$.detail").value("You are not allowed to manage this project"))
+                .andExpect(jsonPath("$.instance").value(PROJECTS_URL + "/42/archive"));
     }
 
     private ProjectResponse projectResponse() {

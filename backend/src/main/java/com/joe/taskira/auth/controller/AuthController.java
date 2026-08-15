@@ -5,6 +5,7 @@ import com.joe.taskira.auth.dto.LoginRequest;
 import com.joe.taskira.auth.dto.MeResponse;
 import com.joe.taskira.auth.dto.RegisterRequest;
 import com.joe.taskira.auth.service.AuthService;
+import com.joe.taskira.common.web.ApiVersion;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping(ApiVersion.V1 + "/auth")
 @RequiredArgsConstructor
 public class AuthController {
 

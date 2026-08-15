@@ -6,6 +6,7 @@ import { BehaviorSubject, combineLatest, map } from 'rxjs';
 
 import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
+import { extractErrorMessage } from '../../../../core/http/extract-error-message';
 import { ProjectSummary } from '../../../projects/models/project.models';
 import { ProjectService } from '../../../projects/services/project.service';
 import { TICKET_STATUSES, TICKET_TYPES } from '../../ticket.constants';
@@ -145,9 +146,7 @@ export class TicketListPage {
           this.loadingSubject.next(false);
         },
         error: (error) => {
-          this.errorSubject.next(
-            error?.error?.message || error?.message || 'Impossible de charger les tickets.'
-          );
+          this.errorSubject.next(extractErrorMessage(error, 'Impossible de charger les tickets.'));
           this.loadingSubject.next(false);
         },
       });

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { expect, type APIRequestContext, type APIResponse, type TestInfo } from '@playwright/test';
 
-const apiBaseUrl = process.env['TASKIRA_API_BASE_URL'] ?? 'http://localhost:8080/api';
+const apiBaseUrl = process.env['TASKIRA_API_BASE_URL'] ?? 'http://localhost:8080/api/v1';
 
 export const testPassword = 'Taskira-E2E-Only-42!';
 

@@ -51,9 +51,9 @@ describe('authInterceptor', () => {
   it('adds the bearer token to protected API requests', () => {
     tokenService.setToken('test-jwt');
 
-    httpClient.get('/api/projects').subscribe();
+    httpClient.get('/api/v1/projects').subscribe();
 
-    const request = httpTesting.expectOne('/api/projects');
+    const request = httpTesting.expectOne('/api/v1/projects');
     expect(request.request.headers.get('Authorization')).toBe('Bearer test-jwt');
     request.flush([]);
   });
@@ -61,9 +61,9 @@ describe('authInterceptor', () => {
   it('does not add the bearer token to login requests', () => {
     tokenService.setToken('test-jwt');
 
-    httpClient.post('/api/auth/login', {}).subscribe();
+    httpClient.post('/api/v1/auth/login', {}).subscribe();
 
-    const request = httpTesting.expectOne('/api/auth/login');
+    const request = httpTesting.expectOne('/api/v1/auth/login');
     expect(request.request.headers.has('Authorization')).toBe(false);
     request.flush({ token: 'new-test-jwt' });
   });
@@ -72,11 +72,11 @@ describe('authInterceptor', () => {
     tokenService.setToken('expired-test-token');
     let receivedStatus: number | undefined;
 
-    httpClient.get('/api/projects').subscribe({
+    httpClient.get('/api/v1/projects').subscribe({
       error: (error) => (receivedStatus = error.status),
     });
 
-    httpTesting.expectOne('/api/projects').flush(
+    httpTesting.expectOne('/api/v1/projects').flush(
       { message: 'Unauthorized' },
       { status: 401, statusText: 'Unauthorized' }
     );
@@ -89,11 +89,11 @@ describe('authInterceptor', () => {
   it('leaves login failures to the login page', () => {
     let receivedStatus: number | undefined;
 
-    httpClient.post('/api/auth/login', {}).subscribe({
+    httpClient.post('/api/v1/auth/login', {}).subscribe({
       error: (error) => (receivedStatus = error.status),
     });
 
-    httpTesting.expectOne('/api/auth/login').flush(
+    httpTesting.expectOne('/api/v1/auth/login').flush(
       { message: 'Invalid credentials' },
       { status: 401, statusText: 'Unauthorized' }
     );

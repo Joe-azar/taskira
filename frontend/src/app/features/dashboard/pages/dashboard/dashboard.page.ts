@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { catchError, map, of, startWith } from 'rxjs';
 
+import { extractErrorMessage } from '../../../../core/http/extract-error-message';
 import { DashboardSummary } from '../../../../core/models/dashboard.models';
 import { DashboardService } from '../../../../core/services/dashboard.service';
 
@@ -36,10 +37,7 @@ export class DashboardPage {
       of({
         loading: false,
         summary: null,
-        errorMessage:
-          error?.error?.message ||
-          error?.message ||
-          'Impossible de charger le dashboard.',
+        errorMessage: extractErrorMessage(error, 'Impossible de charger le dashboard.'),
       } as DashboardVm)
     )
   );

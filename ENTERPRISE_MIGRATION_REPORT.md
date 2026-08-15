@@ -8,7 +8,7 @@ Ce fichier est le journal central de la migration. Il doit être enrichi après 
 
 `TASKIRA ENTERPRISE MIGRATION PARTIALLY COMPLETE`
 
-Les phases 0 à 6 sont terminées (phase 5 pour son critère mécanique, dette architecturale résiduelle documentée). `main` est protégée depuis le 15 août 2026 (`protected: true` vérifié via l'API GitHub) et la phase 6 (Spring Boot 4, Angular 22, Node 24, PostgreSQL 18, Material) est fusionnée dans `main` (PR #28, commit `a7463afce0b9ce454519ae35ce493faaa2cffed5`), après vérification réelle sur GitHub — pas seulement locale — de `ci.yml`, `quality.yml`, `security.yml` et `codeql.yml`. Toute la migration a été menée sur des branches dédiées (`feat/phase6-stack-upgrade`, puis `chore/sync-enterprise-migration-status` pour ce lot), jamais directement sur `main`. Les phases 7 à 20 ne sont pas déclarées terminées.
+Les phases 0 à 6 sont terminées et fusionnées (phase 5 pour son critère mécanique, dette architecturale résiduelle documentée). `main` est protégée depuis le 15 août 2026 (`protected: true` vérifié via l'API GitHub). La phase 7 (API `/api/v1`, profils Spring, `ProblemDetail`, transactions applicatives, verrouillage optimiste) est terminée et vérifiée (22 tests backend, 20 Vitest, 9/9 Playwright) sur la branche dédiée `feat/phase7-api-concurrency`, pas encore fusionnée dans `main` au moment de la rédaction de cette section. Toute la migration a été menée sur des branches dédiées (`feat/phase6-stack-upgrade`, `chore/sync-enterprise-migration-status`, `feat/phase7-api-concurrency`), jamais directement sur `main`. Les phases 8 à 20 ne sont pas déclarées terminées.
 
 ## Journal des phases
 
@@ -16,12 +16,13 @@ Les phases 0 à 6 sont terminées (phase 5 pour son critère mécanique, dette a
 | --- | ---: | --- | --- | --- |
 | 2026-08-14 | 0 — Baseline Git | Terminée | Commit `fd84c54`, tag `pre-enterprise-migration`, branche `feat/enterprise-platform-migration`; stack Docker restaurée et validée avant migration. | Aucun pour le critère de baseline; conserver le point de retour. |
 | 2026-08-15 | 1 — Documentation | Terminée localement | `AGENTS.md`, matrices, rapport, documentation d'architecture et ADR créés; liens et cohérence vérifiés; commit local `cccf2ee`. | Publier la branche avec les autres lots validés. |
-| 2026-08-14–15 | 2 — Filet de sécurité | Terminée localement | 14 tests backend, 20 Vitest, couvertures/seuils backend et frontend, build Angular et 9/9 Playwright validés dans Docker; stack E2E isolée détruite après le run. Rejoué et reconfirmé le 15/08 lors de l'audit de phase 4. | Maintenir ce filet. Ajouter désarchivage projet et suppression ticket en P7, après création de leurs endpoints. |
+| 2026-08-14–15 | 2 — Filet de sécurité | Terminée localement | 14 tests backend, 20 Vitest, couvertures/seuils backend et frontend, build Angular et 9/9 Playwright validés dans Docker; stack E2E isolée détruite après le run. Rejoué et reconfirmé le 15/08 lors de l'audit de phase 4. | Maintenir ce filet. Désarchivage projet et suppression ticket restent un gap sans phase assignée (hors du périmètre réel de P7, voir la ligne P7 ci-dessous). |
 | 2026-08-15 | 3 — GitHub Actions CI | Terminée | [PR draft #1](https://github.com/Joe-azar/taskira/pull/1) puis [PR #28](https://github.com/Joe-azar/taskira/pull/28); `main` protégée (`protected: true` vérifié via l'API GitHub) : PR obligatoire (`required_approving_review_count: 0`), `CI Gate` obligatoire et à jour (`strict: true`), force-push et suppression interdits, admin non bloqué (`enforce_admins: false`). | Aucun pour le critère de sortie de P3. |
 | 2026-08-15 | 4 — SonarQube et scans | Terminée | SonarQube Community Build éphémère (Docker) : Quality Gate `OK` vérifiée sur GitHub (PR #28). CodeQL et Trivy (fs + 2 images) verts sur GitHub via `codeql.yml`/`security.yml`, pas seulement localement. Deux bugs d'accessibilité détectés puis corrigés avant la validation. 0 secret détecté. | Rescanning post-P6 fait (voir section dédiée); surveiller les futures CVE au fil des mises à jour Dependabot. |
 | 2026-08-15 | 5 — Architecture modulaire | Terminée localement (critère mécanique) | Spring Modulith (2.1.0 depuis P6) ajouté; `ModularityTests` vérifie frontières et absence de cycle à chaque `mvn verify` (18 tests backend au total, tous verts). Un cycle réel `project -> ticket -> project` détecté et corrigé par port/adapter (`ProjectMemberAssignmentCheck`) sans changer le comportement transactionnel. Documentation générée dans `docs/architecture/modules.md`. | Couche `api`/`application`/`domain`/`infrastructure` complète et événements métier restent à faire; le couplage direct aux repositories/entités d'autres modules est documenté comme dette (ADR-0016), pas éliminé — décision assumée, pas un blocage. |
 | 2026-08-15 | 6 — Montées technologiques | **Terminée et fusionnée** | PR #28, commit de fusion `a7463afce0b9ce454519ae35ce493faaa2cffed5`, branche `feat/phase6-stack-upgrade` supprimée après fusion. Spring Boot 4.1.0/Framework 7.0.8/Security 7.1.0/Hibernate 7.4.1, Spring Modulith 2.1.0, Springdoc 3.1.0, MapStruct 1.6.3, Jackson 3; Angular/CLI/Material 22.1.2, TypeScript 6.0.3, Node 24.19.0, npm 12.0.2; PostgreSQL 18.6 par sauvegarde/restauration réelle vérifiée (ancien volume conservé). 18 tests backend, 20 Vitest, 9/9 Playwright; `CI Gate`, Quality Gate SonarQube, CodeQL et Trivy tous vérifiés verts sur GitHub (PR #28) avant fusion. Détail complet ci-dessous. | Aucun pour le critère de sortie de P6; rescanning sécurité post-migration fait (voir section dédiée). |
-| — | 7–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
+| 2026-08-15 | 7 — API et robustesse applicative | Terminée | Branche `feat/phase7-api-concurrency`, 5 commits atomiques vérifiés indépendamment : `/api/v1` sur les six contrôleurs; profils `dev`/`test`/`prod` avec différences réelles (logs, springdoc désactivé en `prod`, prouvé par test dédié); erreurs migrées vers `ProblemDetail` RFC 7807/9457 côté backend et frontend (~25 sites); `@Transactional` ajouté sur `AuthService`/`UserService`/`DashboardService`; verrouillage optimiste (`@Version`, Flyway `V7`) avec 409 sur conflit, prouvé contre PostgreSQL réel (`OptimisticLockingIT`). 22 tests backend, 20 Vitest, 9/9 Playwright. Détail complet ci-dessous. | PR à ouvrir, checks GitHub à vérifier, puis fusion dans `main`. |
+| — | 8–20 | Planifiées | Aucun critère de sortie déclaré atteint. | Suivre [la feuille de route](docs/migration-matrix.md) dans l'ordre. |
 
 ## Incident de stockage et récupération
 
@@ -105,7 +106,7 @@ Couverture validée le 15 août 2026 :
 
 La commande racine `& .\e2e\playwright\run.ps1` construit et exécute `e2e/playwright/compose.e2e.yml`. PostgreSQL (18.6 depuis P6) utilise un `tmpfs`; aucun service n'expose de port hôte et la stack ne définit ni `container_name` ni volume persistant pour la base. Les données générées emploient le domaine réservé `.test`. Le `finally` exécute `down --volumes --remove-orphans`; le contrôle final a confirmé zéro conteneur, réseau ou volume restant. Les rapports Playwright et résultats sont écrits dans des répertoires ignorés par Git et restent disponibles après la destruction. Voir [la stratégie de tests](docs/testing-strategy.md).
 
-Le désarchivage projet et la suppression ticket ne sont pas simulés : les endpoints correspondants sont absents. Leur ajout et leurs E2E constituent un gap explicite de P7, pas un échec du critère P2.
+Le désarchivage projet et la suppression ticket ne sont pas simulés : les endpoints correspondants sont absents. Leur ajout et leurs E2E restent un gap explicite sans phase assignée (hors du périmètre réel de P7 — voir les résultats de phase 7), pas un échec du critère P2.
 
 ## CI/CD
 
@@ -238,6 +239,44 @@ Demandé explicitement en fin de phase 6 : mesurer réellement ce qu'il reste de
 
 Conclusion : la dette CVE réelle et actionnable dans le périmètre de dépendances applicatives de Taskira est désormais **nulle** (0 backend, 0 frontend). Ce qui reste ouvert appartient soit à des composants hors du contrôle du dépôt (image de base, outillage npm), soit à une décision d'architecture déjà planifiée (P8).
 
+## Résultats de la phase 7 (API et robustesse applicative)
+
+Menée entièrement sur `feat/phase7-api-concurrency`, en cinq commits atomiques, chacun vérifié (build + tests réels) avant le suivant.
+
+### Versionnage `/api/v1`
+
+Constante partagée `ApiVersion.V1` appliquée aux six contrôleurs (`auth`, `users`, `projects`, `tickets`, `comments`, `dashboard`) — trois portaient déjà un `@RequestMapping` de classe, trois codaient `/api/...` en dur sur chaque méthode; les deux styles convergent maintenant sur `/api/v1`. Le matcher `permitAll` de `SecurityConfig` suit le même préfixe. Front (`environment.ts`/`environment.development.ts`) et toute la suite Playwright (base URL et assertions de chemin) migrés en lock-step, sans quoi les E2E auraient cassé silencieusement. Vérifié à la main sur la vraie stack dev : `POST /api/v1/auth/register` réussit (201), l'ancien `POST /api/auth/register` non versionné ne route plus vers aucun contrôleur (401, bloqué par la sécurité avant même la résolution de handler).
+
+### Profils Spring `dev`/`test`/`prod`
+
+Aucun profil n'existait avant P7; la séparation d'environnement se faisait uniquement par variables d'environnement. Trois profils ajoutés avec des différences réelles, pas de la scaffolding :
+
+- `dev` : logs `DEBUG` pour `com.joe.taskira` et `spring.jpa.show-sql=true`, activé sur le backend de `infra/docker-compose.yml`; vérifié sur le conteneur réel après reconstruction (lignes `DEBUG` et `show-sql` bien présentes).
+- `test` : `logging.level.root=WARN` pendant `mvn test`/`mvn verify`, via `@ActiveProfiles("test")` sur `PostgreSqlIntegrationTest`; les échecs de test restent visibles (stack traces JUnit/Surefire indépendantes du niveau de log).
+- `prod` : désactive `springdoc.api-docs`/`swagger-ui` — directement justifié par l'avertissement de démarrage de Spring Boot lui-même, pas une supposition. Non activé par un environnement réel (aucun déploiement de production n'existe avant P11/P15); prouvé par un test dédié (`ProdProfileTest`) qui démarre l'application complète avec le profil actif et vérifie que les deux endpoints cessent de répondre en 2xx.
+
+`e2e/playwright/compose.e2e.yml` n'active volontairement aucun profil : son comportement est inchangé par ce commit.
+
+### Migration vers `ProblemDetail` (RFC 7807/9457)
+
+`ApiErrorResponse` (DTO maison `timestamp/status/error/message/path`) supprimé, remplacé par `ProblemDetail` standard (`type/title/status/detail/instance`) dans `GlobalExceptionHandler`, `RestAuthenticationEntryPoint` et `RestAccessDeniedHandler`. Un vrai bug trouvé au passage : les routes non résolues (`NoResourceFoundException`) tombaient dans le handler générique et remontaient en 500 au lieu de 404 — corrigé par un handler dédié.
+
+Le type de contenu passe à `application/problem+json`, non compatible avec un matcher `application/json` strict dans MockMvc (confirmé par un échec de test réel, pas supposé) — les assertions de `ProjectControllerTest` corrigées en conséquence.
+
+Impact frontend réel et non trivial : aucun type `ApiError` n'existait, et ~25 sites dans 8 pages lisaient `error?.error?.message` — le nom de champ de l'ancien format. Laissés tels quels, ils auraient silencieusement affiché leur message de repli générique au lieu du vrai message backend après ce changement. Ajout de `ApiProblemDetail` (`core/models`) et `extractErrorMessage()` (`core/http`) pour centraliser la chaîne detail → message → repli en un seul endroit, puis migration des ~25 sites.
+
+### Transactions applicatives
+
+`ProjectService`, `TicketService`, `CommentService` et `TicketHistoryService` portaient déjà un `@Transactional` de classe; `AuthService.register()`, `UserService.createUser/updateUser/updateUserStatus` et `DashboardService.getSummary()` en étaient dépourvus malgré des séquences lecture-puis-écriture ou multi-lecture équivalentes. Même annotation ajoutée, sans `readOnly=true` (convention absente du reste du code, pas introduite ici pour rester cohérent). `CustomUserDetailsService` et l'adaptateur `ProjectMemberAssignmentCheck` vérifiés et laissés tels quels : ils participent déjà à la transaction de leur appelant ou n'ont besoin d'aucune atomicité multi-étapes.
+
+### Verrouillage optimiste
+
+`@Version` ajouté à `AuditableEntity` (base commune de `Project`/`Ticket`/`User`/`Comment`), migration Flyway `V7__add_optimistic_locking.sql` (colonne `version` sur `users`/`projects`/`tickets`/`comments`; `project_members` et `ticket_history` volontairement exclus, aucune mutation en place). `GlobalExceptionHandler` mappe `OptimisticLockingFailureException` vers 409. Prouvé contre PostgreSQL réel via Testcontainers (`OptimisticLockingIT` : deux lectures indépendantes de la même ligne, la seconde sauvegardée avec succès, la première — restée périmée — lève bien l'exception à la sauvegarde) et contre la vraie base de développement déjà peuplée (`V7` appliquée sur des données existantes, `ddl-auto=validate` accepté après reconstruction du conteneur réel).
+
+### Vérification
+
+22 tests backend (18 rapides + 4 intégration, dont `OptimisticLockingIT` et `ProdProfileTest` nouveaux), 20 Vitest, lint frontend 0 erreur (41 avertissements `any` préexistants inchangés), build Angular de production réussi, 9/9 Playwright sur une stack isolée reconstruite après chacun des cinq commits. Deux exécutions E2E ont échoué sur des timeouts génériques (tests différents à chaque fois) après ~30 Go de cache de build Docker accumulé pendant cette session; le nettoyage du cache (`docker builder prune`) a suffi à obtenir un 9/9 propre — diagnostiqué comme de la contention de ressources locale, pas une régression du code (confirmé par la reproductibilité : un test différent échouait à chaque tentative, toujours par timeout générique, jamais par une assertion de comportement incorrect).
+
 ## Qualité et sécurité
 
 - SonarQube et Quality Gate : Quality Gate `OK`, vérifiée à la fois localement (P4) et sur un run GitHub distant réel (PR #28).
@@ -267,7 +306,7 @@ Actuator, Micrometer, Prometheus et Grafana sont planifiés en P10. Les request 
 
 ## Problèmes et dettes ouverts
 
-1. Désarchivage projet et suppression ticket impossibles à couvrir tant que leurs endpoints ne sont pas ajoutés en P7; ne pas simuler ces workflows.
+1. Désarchivage projet et suppression ticket impossibles à couvrir tant que leurs endpoints ne sont pas ajoutés; gap sans phase assignée (hors du périmètre réel de P7, voir les résultats de phase 7) — ne pas simuler ces workflows.
 2. Auth actuelle fondée sur JWT/localStorage, sans session cookie ni CSRF; l'alerte CodeQL `java/spring-disabled-csrf-protection` en est la conséquence directe et attendue, à traiter avec la migration session cookie de P8 ([ADR-0006](docs/adr/0006-session-cookie-auth.md)).
 3. Absence d'image frontend production/Nginx et de staging.
 4. Absence d'observabilité et de stratégie backup/restore planifiée récurrente (le script ponctuel de P6 couvre la sauvegarde/restauration à la demande, pas une politique quotidienne/hebdomadaire/mensuelle).

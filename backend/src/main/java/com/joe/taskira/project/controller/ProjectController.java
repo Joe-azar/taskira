@@ -1,5 +1,6 @@
 package com.joe.taskira.project.controller;
 
+import com.joe.taskira.common.web.ApiVersion;
 import com.joe.taskira.project.dto.AddProjectMemberRequest;
 import com.joe.taskira.project.dto.CreateProjectRequest;
 import com.joe.taskira.project.dto.ProjectMemberResponse;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/projects")
+@RequestMapping(ApiVersion.V1 + "/projects")
 @RequiredArgsConstructor
 public class ProjectController {
 
