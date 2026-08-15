@@ -1,0 +1,110 @@
+name: Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  sonarqube:
+    name: SonarQube analysis and quality gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21.0.11+10.0.LTS"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Build backend and produce JaCoCo report
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22.23.2
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Use the repository npm version
+        run: npm install --global npm@11.9.0
+
+      - name: Install frontend dependencies and produce coverage report
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run test:coverage
+
+      - name: Start ephemeral local SonarQube Community Build
+        run: docker compose -f infra/sonarqube/docker-compose.yml up -d
+
+      - name: Bootstrap SonarQube admin credentials, project and token
+        shell: pwsh
+        run: ./scripts/sonarqube/bootstrap.ps1 -SonarUrl http://localhost:9000
+
+      - name: Run SonarQube analysis
+        run: |
+          set -a
+          . infra/sonarqube/.env.local
+          set +a
+          docker run --rm \
+            --network host \
+            -v "$PWD:/usr/src" \
+            -w /usr/src \
+            -e SONAR_HOST_URL="http://localhost:9000" \
+            -e SONAR_TOKEN="$SONAR_TOKEN" \
+            sonarsource/sonar-scanner-cli@sha256:23ca0f137965d9dff2198074043fd48d386280bc5d0ccac8c8349cea4cf096a9
+
+      - name: Enforce the Quality Gate
+        run: |
+          set -a
+          . infra/sonarqube/.env.local
+          set +a
+          status=$(curl -sf -u "$SONAR_TOKEN:" "http://localhost:9000/api/qualitygates/project_status?projectKey=taskira" | jq -r '.projectStatus.status')
+          echo "Quality Gate status: $status"
+          if [ "$status" != "OK" ]; then
+            echo "SonarQube Quality Gate failed." >&2
+            exit 1
+          fi
+
+      - name: Collect SonarQube diagnostics
+        if: always()
+        run: docker compose -f infra/sonarqube/docker-compose.yml logs --no-color > sonarqube.log 2>&1 || true
+
+      - name: Upload SonarQube diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonarqube-diagnostics
+          path: sonarqube.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Remove the ephemeral SonarQube stack
+        if: always()
+        run: docker compose -f infra/sonarqube/docker-compose.yml down --volumes --remove-orphans

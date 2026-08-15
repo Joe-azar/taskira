@@ -18,5 +18,6 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0012](0012-observability-stack.md) | Prometheus/Grafana | Proposed | P10 |
 | [0013](0013-versioning-strategy.md) | Semantic Versioning | Proposed | P15 |
 | [0014](0014-incremental-test-first-migration.md) | Migration incrémentale test-first | Accepted | Appliquée depuis P2 |
+| [0015](0015-sonarqube-quality-gate.md) | SonarQube Community Build local et éphémère | Accepted | Validée localement P4 |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.
