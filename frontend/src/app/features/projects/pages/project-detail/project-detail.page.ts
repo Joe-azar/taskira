@@ -6,6 +6,7 @@ import { BehaviorSubject, combineLatest, finalize, forkJoin, map } from 'rxjs';
 
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
 import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
+import { extractErrorMessage } from '../../../../core/http/extract-error-message';
 import { UserOption } from '../../../../core/models/user.models';
 import { UserService } from '../../../../core/services/user.service';
 import { TicketService } from '../../../tickets/services/ticket.service';
@@ -163,9 +164,7 @@ export class ProjectDetailPage {
           this.availableUsersSubject.next(users.filter((u) => !memberIds.has(u.id)));
         },
         error: (error) => {
-          this.errorSubject.next(
-            error?.error?.message || error?.message || 'Impossible de charger le projet.'
-          );
+          this.errorSubject.next(extractErrorMessage(error, 'Impossible de charger le projet.'));
         },
       });
   }
@@ -220,10 +219,7 @@ export class ProjectDetailPage {
           });
         },
         error: (error) => {
-          this.addMemberErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible d’ajouter le membre.';
+          this.addMemberErrorMessage = extractErrorMessage(error, 'Impossible d’ajouter le membre.');
         },
       });
   }
@@ -284,10 +280,7 @@ export class ProjectDetailPage {
           }
         },
         error: (error) => {
-          this.removeMemberErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de retirer le membre.';
+          this.removeMemberErrorMessage = extractErrorMessage(error, 'Impossible de retirer le membre.');
         },
       });
   }
@@ -348,10 +341,7 @@ export class ProjectDetailPage {
           });
         },
         error: (error) => {
-          this.createTicketErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de créer le ticket.';
+          this.createTicketErrorMessage = extractErrorMessage(error, 'Impossible de créer le ticket.');
         },
       });
   }
@@ -410,10 +400,7 @@ export class ProjectDetailPage {
           this.isEditMode = false;
         },
         error: (error) => {
-          this.editErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de modifier le projet.';
+          this.editErrorMessage = extractErrorMessage(error, 'Impossible de modifier le projet.');
         },
       });
   }
@@ -445,10 +432,7 @@ export class ProjectDetailPage {
           this.archiveSuccessMessage = 'Projet archivé avec succès.';
         },
         error: (error) => {
-          this.archiveErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible d\'archiver le projet.';
+          this.archiveErrorMessage = extractErrorMessage(error, 'Impossible d\'archiver le projet.');
         },
       });
   }

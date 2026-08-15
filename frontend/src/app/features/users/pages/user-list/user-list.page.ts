@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { BehaviorSubject, combineLatest, finalize, map } from 'rxjs';
 
+import { extractErrorMessage } from '../../../../core/http/extract-error-message';
 import {
   CreateUserRequest,
   UpdateUserRequest,
@@ -70,7 +71,7 @@ export class UserListPage {
         next: (users) => this.usersSubject.next(users),
         error: (error) =>
           this.errorSubject.next(
-            error?.error?.message || error?.message || 'Impossible de charger les utilisateurs.'
+            extractErrorMessage(error, 'Impossible de charger les utilisateurs.')
           ),
       });
   }
@@ -92,7 +93,7 @@ export class UserListPage {
         });
       },
       error: (error) => {
-        this.apiErrorMessage = error?.error?.message || error?.message || 'Impossible de récupérer l’utilisateur.';
+        this.apiErrorMessage = extractErrorMessage(error, 'Impossible de récupérer l’utilisateur.');
       },
     });
   }
@@ -153,8 +154,7 @@ export class UserListPage {
             });
           },
           error: (error) => {
-            this.apiErrorMessage =
-              error?.error?.message || error?.message || 'Impossible de mettre à jour l’utilisateur.';
+            this.apiErrorMessage = extractErrorMessage(error, 'Impossible de mettre à jour l’utilisateur.');
           },
         });
     } else {
@@ -181,8 +181,7 @@ export class UserListPage {
             this.resetForm();
           },
           error: (error) => {
-            this.apiErrorMessage =
-              error?.error?.message || error?.message || 'Impossible de créer l’utilisateur.';
+            this.apiErrorMessage = extractErrorMessage(error, 'Impossible de créer l’utilisateur.');
           },
         });
     }
@@ -203,8 +202,7 @@ export class UserListPage {
           );
         },
         error: (error) => {
-          this.apiErrorMessage =
-            error?.error?.message || error?.message || 'Impossible de mettre à jour le statut.';
+          this.apiErrorMessage = extractErrorMessage(error, 'Impossible de mettre à jour le statut.');
         },
       });
   }

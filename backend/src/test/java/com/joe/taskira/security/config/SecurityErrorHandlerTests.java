@@ -21,7 +21,7 @@ class SecurityErrorHandlerTests {
     private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     @Test
-    void authenticationEntryPointReturnsJsonWithTimestamp() throws Exception {
+    void authenticationEntryPointReturnsAProblemDetailBody() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/projects");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -33,14 +33,14 @@ class SecurityErrorHandlerTests {
 
         JsonNode body = objectMapper.readTree(response.getContentAsString());
         assertThat(response.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED.value());
-        assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_JSON_VALUE);
-        assertThat(body.path("timestamp").asText()).isNotBlank();
+        assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         assertThat(body.path("status").asInt()).isEqualTo(HttpStatus.UNAUTHORIZED.value());
-        assertThat(body.path("path").asText()).isEqualTo("/api/v1/projects");
+        assertThat(body.path("detail").asText()).isEqualTo("Unauthorized");
+        assertThat(body.path("instance").asText()).isEqualTo("/api/v1/projects");
     }
 
     @Test
-    void accessDeniedHandlerReturnsJsonWithTimestamp() throws Exception {
+    void accessDeniedHandlerReturnsAProblemDetailBody() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", USERS_URL);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -52,10 +52,10 @@ class SecurityErrorHandlerTests {
 
         JsonNode body = objectMapper.readTree(response.getContentAsString());
         assertThat(response.getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
-        assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_JSON_VALUE);
-        assertThat(body.path("timestamp").asText()).isNotBlank();
+        assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         assertThat(body.path("status").asInt()).isEqualTo(HttpStatus.FORBIDDEN.value());
-        assertThat(body.path("path").asText()).isEqualTo(USERS_URL);
+        assertThat(body.path("detail").asText()).isEqualTo("Access denied");
+        assertThat(body.path("instance").asText()).isEqualTo(USERS_URL);
     }
 
     @Test

@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 
 import { AuthService } from '../../../../core/auth/auth.service';
+import { extractErrorMessage } from '../../../../core/http/extract-error-message';
 
 @Component({
   selector: 'app-login-page',
@@ -47,11 +48,7 @@ export class LoginPage {
           this.router.navigateByUrl(redirectTo);
         },
         error: (error) => {
-          this.errorMessage.set(
-            error?.error?.message ||
-            error?.message ||
-            'Connexion impossible.'
-          );
+          this.errorMessage.set(extractErrorMessage(error, 'Connexion impossible.'));
         },
       });
   }

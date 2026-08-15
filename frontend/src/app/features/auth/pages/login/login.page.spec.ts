@@ -58,7 +58,7 @@ describe('LoginPage', () => {
     expect(button.disabled).toBe(true);
     expect(button.textContent).toContain('Connexion...');
 
-    loginResult.error({ error: { message: 'Invalid credentials' } });
+    loginResult.error({ error: { detail: 'Invalid credentials' } });
     await fixture.whenStable();
 
     const alert = fixture.nativeElement.querySelector('.alert') as HTMLElement;

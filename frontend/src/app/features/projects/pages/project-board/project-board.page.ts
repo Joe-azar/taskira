@@ -16,6 +16,7 @@ import {
 
 import { StatusBadgeComponent } from '../../../../core/components/status-badge/status-badge.component';
 import { PriorityBadgeComponent } from '../../../../core/components/priority-badge/priority-badge.component';
+import { extractErrorMessage } from '../../../../core/http/extract-error-message';
 import { TicketSummary } from '../../../tickets/models/ticket.models';
 import { TicketService } from '../../../tickets/services/ticket.service';
 import { ProjectDetail } from '../../models/project.models';
@@ -101,10 +102,7 @@ export class ProjectBoardPage {
             project: null,
             columns: this.buildColumns([]),
             totalTickets: 0,
-            errorMessage:
-              error?.error?.message ||
-              error?.message ||
-              'Impossible de charger le board du projet.',
+            errorMessage: extractErrorMessage(error, 'Impossible de charger le board du projet.'),
           } as ProjectBoardVm)
         )
       );
@@ -149,10 +147,7 @@ export class ProjectBoardPage {
           this.reloadSubject.next();
         },
         error: (error) => {
-          this.moveErrorMessage =
-            error?.error?.message ||
-            error?.message ||
-            'Impossible de déplacer ce ticket.';
+          this.moveErrorMessage = extractErrorMessage(error, 'Impossible de déplacer ce ticket.');
 
           ticket.status = previousStatus;
           this.reloadSubject.next();

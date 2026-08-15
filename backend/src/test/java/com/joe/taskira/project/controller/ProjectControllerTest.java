@@ -63,10 +63,10 @@ class ProjectControllerTest {
     void listProjectsRequiresAuthentication() throws Exception {
         mockMvc.perform(get(PROJECTS_URL))
                 .andExpect(status().isUnauthorized())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.message").value("Unauthorized"))
-                .andExpect(jsonPath("$.path").value(PROJECTS_URL));
+                .andExpect(jsonPath("$.detail").value("Unauthorized"))
+                .andExpect(jsonPath("$.instance").value(PROJECTS_URL));
 
         verifyNoInteractions(projectService);
     }
@@ -108,10 +108,10 @@ class ProjectControllerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.message").value("Project code must contain between 2 and 20 characters"))
-                .andExpect(jsonPath("$.path").value(PROJECTS_URL));
+                .andExpect(jsonPath("$.detail").value("Project code must contain between 2 and 20 characters"))
+                .andExpect(jsonPath("$.instance").value(PROJECTS_URL));
 
         verifyNoInteractions(projectService);
     }
@@ -124,10 +124,10 @@ class ProjectControllerTest {
 
         mockMvc.perform(patch(PROJECTS_URL + "/42/archive"))
                 .andExpect(status().isForbidden())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("You are not allowed to manage this project"))
-                .andExpect(jsonPath("$.path").value(PROJECTS_URL + "/42/archive"));
+                .andExpect(jsonPath("$.detail").value("You are not allowed to manage this project"))
+                .andExpect(jsonPath("$.instance").value(PROJECTS_URL + "/42/archive"));
     }
 
     private ProjectResponse projectResponse() {
