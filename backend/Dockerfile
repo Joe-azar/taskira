@@ -26,13 +26,14 @@ RUN groupadd --gid 10001 taskira \
 
 COPY --from=build --chown=taskira:taskira /app/target/*.jar app.jar
 
-# Pre-created (not left to LocalFileSystemStorage's @PostConstruct) so a named volume
-# later mounted at this path inherits taskira:taskira ownership via Docker's volume
-# copy-up behavior - mounting an empty named volume over an image directory copies that
-# directory's existing content and permissions into the volume on first use, but only if
-# it already exists with the right owner at image build time.
-RUN mkdir -p /var/lib/taskira/attachments \
-    && chown -R taskira:taskira /var/lib/taskira
+# Matches application.yaml's default app.attachments.storage-path (./data/attachments,
+# relative to WORKDIR /app). Pre-created (not left to LocalFileSystemStorage's
+# @PostConstruct) so a named volume later mounted at this path inherits taskira:taskira
+# ownership via Docker's volume copy-up behavior - mounting an empty named volume over an
+# image directory copies that directory's existing content and permissions into the
+# volume on first use, but only if it already exists with the right owner at build time.
+RUN mkdir -p /app/data/attachments \
+    && chown -R taskira:taskira /app/data
 
 USER taskira
 

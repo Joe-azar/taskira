@@ -61,7 +61,7 @@ services:
       # production must NOT set this variable - it must keep the Secure default.
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
     volumes:
-      - taskira_attachments_data_prodlike:/var/lib/taskira/attachments
+      - taskira_attachments_data_prodlike:/app/data/attachments
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9091/actuator/health/readiness"]
       interval: 10s

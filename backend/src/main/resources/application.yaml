@@ -74,9 +74,15 @@ app:
   notifications:
     from-address: ${APP_NOTIFICATIONS_FROM_ADDRESS:noreply@taskira.test}
   attachments:
-    # Outside any web-servable directory by construction - files are only ever reached
-    # through AttachmentController's streamed download, never served directly.
-    storage-path: ${APP_ATTACHMENTS_STORAGE_PATH:/var/lib/taskira/attachments}
+    # Relative to the JVM's working directory, not an absolute system path: this default
+    # must be writable with zero provisioning wherever the app boots directly - a bare CI
+    # runner running `mvn verify`, a developer's machine, any *Test/*IT that starts the
+    # full context - not only inside this repo's own Docker image, which happens to
+    # pre-create and chown a directory for it (see backend/Dockerfile and the
+    # docker-compose volume mounts, which point at wherever this default resolves to
+    # under the image's WORKDIR). Never served directly - files are only ever reached
+    # through AttachmentController's streamed download.
+    storage-path: ${APP_ATTACHMENTS_STORAGE_PATH:./data/attachments}
     max-size-bytes: ${APP_ATTACHMENTS_MAX_SIZE_BYTES:20971520}
 
 management:

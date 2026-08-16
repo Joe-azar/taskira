@@ -4,6 +4,10 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# app.attachments.storage-path default (./data/attachments) - created when the app or a
+# *Test/*IT boots directly on this machine, outside Docker.
+/data/
+
 ### STS ###
 .apt_generated
 .classpath

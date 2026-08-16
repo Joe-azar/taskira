@@ -37,7 +37,7 @@ services:
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: 1025
     volumes:
-      - taskira_attachments_data:/var/lib/taskira/attachments
+      - taskira_attachments_data:/app/data/attachments
     ports:
       - "8080:8080"
       # 9091 (Actuator/Prometheus) is intentionally not published here - only reachable
