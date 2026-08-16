@@ -13,6 +13,7 @@ import com.joe.taskira.security.model.AuthenticatedUser;
 import com.joe.taskira.user.entity.User;
 import com.joe.taskira.user.enums.GlobalRole;
 import com.joe.taskira.user.repository.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,6 +33,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final AuditService auditService;
+    private final MeterRegistry meterRegistry;
 
     public MeResponse register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
@@ -75,6 +77,7 @@ public class AuthService {
             );
         } catch (AuthenticationException ex) {
             auditService.record(null, email, AuditEntityType.AUTH, null, AuditAction.LOGIN_FAILURE, null);
+            meterRegistry.counter("taskira.auth.login.attempts", "result", "failure").increment();
             throw ex;
         }
 
@@ -94,6 +97,7 @@ public class AuthService {
                 AuditAction.LOGIN_SUCCESS,
                 null
         );
+        meterRegistry.counter("taskira.auth.login.attempts", "result", "success").increment();
 
         return MeResponse.from(authenticatedUser.getUser());
     }

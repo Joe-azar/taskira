@@ -587,7 +587,19 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 9 — Audit, request ID et logs
 
-Terminée localement sur `feat/phase9-audit-logging`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
+
+Pull Request :
+
+```text
+#32
+```
+
+Commit de fusion :
+
+```text
+1e6170b
+```
 
 Module `audit` (Spring Modulith, fermé par défaut, dépend uniquement de `common`/`security`) :
 
@@ -611,7 +623,7 @@ Logs structurés JSON en profil `prod` (`logging.structured.format.console: logs
 
 Voir [ADR-0018](docs/adr/0018-audit-request-correlation.md) pour le détail complet des décisions.
 
-Validation locale :
+Validation historique à la sortie de phase :
 
 ```text
 65 tests backend (29 rapides + 36 intégration)
@@ -623,14 +635,51 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ---
 
-## Phases 10 à 20
+## Phase 10 — Observabilité (Actuator, Micrometer, Prometheus, Grafana)
+
+Terminée localement, pas encore fusionnée dans `main`.
+
+Branche :
+
+```text
+feat/phase10-observability
+```
+
+Actuator exposé sur un port de gestion isolé, jamais publié à l'hôte :
+
+```text
+management.server.port = 9091 (surchargeable via MANAGEMENT_SERVER_PORT)
+management.endpoints.web.exposure.include = health,info,prometheus
+groupe readiness (readinessState, db) et liveness (livenessState)
+```
+
+`EndpointRequest.toAnyEndpoint().permitAll()` dans `SecurityConfig` autorise ce port anonymement : la séparation de port ne suffit pas seule, la correspondance de Spring Security est fondée sur le chemin et non sur le port, donc une requête sur le port de gestion traverse la même chaîne de filtres que le port applicatif principal.
+
+Métriques métier (`config.BusinessMetricsBinder`, `MeterBinder`) : `taskira_tickets`/`taskira_projects` (jauges par statut), `taskira_users_active` (jauge par rôle), `taskira_auth_login_attempts_total` (compteur par résultat, incrémenté dans `AuthService`).
+
+Prometheus (`v3.13.2`, épinglé par digest) scrute `backend:9091/actuator/prometheus` toutes les 15 s. Grafana (`13.1.3`, épinglé par digest) provisionne automatiquement la datasource Prometheus et deux dashboards (`taskira-runtime`, `taskira-business`).
+
+Voir [ADR-0012](docs/adr/0012-observability-stack.md) pour le détail complet des décisions et découvertes.
+
+Validation locale à ce stade :
+
+```text
+76 tests backend (33 rapides + 43 intégration)
+25 tests Vitest (inchangé, aucun fichier frontend modifié)
+10/10 Playwright
+```
+
+Ces nombres sont historiques et augmenteront normalement avec les futures phases.
+
+---
+
+## Phases 11 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 
 Roadmap générale :
 
 ```text
-Phase 10  Actuator + Micrometer + Prometheus + Grafana
 Phase 11  Nginx + Docker production + production-like
 Phase 12  Notifications + Mailpit
 Phase 13  Attachments + Tika + storage + sécurité uploads

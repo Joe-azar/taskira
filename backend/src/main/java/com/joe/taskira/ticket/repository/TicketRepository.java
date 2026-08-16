@@ -1,6 +1,7 @@
 package com.joe.taskira.ticket.repository;
 
 import com.joe.taskira.ticket.entity.Ticket;
+import com.joe.taskira.ticket.enums.TicketStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -45,4 +46,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long>, JpaSpecif
     Page<Ticket> findAll(Specification<Ticket> spec, Pageable pageable);
 
     long countByProjectIdAndAssigneeId(Long projectId, Long assigneeId);
+
+    long countByStatus(TicketStatus status);
 }
