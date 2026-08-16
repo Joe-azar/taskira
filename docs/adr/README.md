@@ -25,6 +25,6 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0019](0019-production-runtime.md) | Runtime production-like Nginx/non-root | Accepted | Terminée et fusionnée P11 (PR #34) |
 | [0020](0020-notifications-mailpit.md) | Module notifications avec Mailpit | Accepted | Terminée et fusionnée P12 (PR #35) |
 | [0021](0021-attachments-storage.md) | Module attachments : port `DocumentStorage`, filesystem, Tika | Accepted | Terminée et fusionnée P13 (PR #36) |
-| [0022](0022-exports-batch.md) | Module exports : POI, OpenHTMLtoPDF, PDFBox, ZXing, Spring Batch | Accepted | Terminée localement P14, pas encore fusionnée |
+| [0022](0022-exports-batch.md) | Module exports : POI, OpenHTMLtoPDF, PDFBox, ZXing, Spring Batch | Accepted | Terminée et fusionnée P14 (PR #37) |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.

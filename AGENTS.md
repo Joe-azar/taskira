@@ -822,7 +822,19 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 14 — Exports (POI, OpenHTMLtoPDF, PDFBox, ZXing, Spring Batch)
 
-Terminée localement sur `feat/phase14-exports`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
+
+Pull Request :
+
+```text
+#37
+```
+
+Commit de fusion :
+
+```text
+2f84d5b
+```
 
 Module `exports` (Spring Modulith, fermé par défaut) couvre trois cas réels distincts, pas une simple vitrine technologique — voir [ADR-0022](docs/adr/0022-exports-batch.md) pour le détail complet des décisions.
 
