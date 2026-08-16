@@ -724,12 +724,18 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 12 — Notifications et Mailpit
 
-Terminée localement, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
 
-Branche :
+Pull Request :
 
 ```text
-feat/phase12-notifications
+#35
+```
+
+Commit de fusion :
+
+```text
+40e791e
 ```
 
 Deux déclencheurs seulement (`TicketAssignedEvent`, `CommentCreatedEvent`) : ceux qui ont un destinataire non ambigu et un effet direct sur ce que la personne doit faire ensuite. Voir [ADR-0020](docs/adr/0020-notifications-mailpit.md) — premiers événements métier réels du projet (Spring Application Events, anticipés sans usage concret depuis AGENTS.md §36).
