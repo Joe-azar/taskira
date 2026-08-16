@@ -1,0 +1,146 @@
+services:
+  postgres:
+    image: postgres:18.6-alpine3.23@sha256:f65cfc1a73466fc0807f4a33496e1c438b19269091c8f998faec871874df8e5e
+    container_name: taskira-postgres-prodlike
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskira
+      POSTGRES_USER: taskira
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set - see infra/.env.prodlike.example}
+    networks:
+      - db_net
+    volumes:
+      - taskira_postgres_data_prodlike:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskira -d taskira"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No published port: only backend, on db_net, can ever reach this service.
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: taskira-backend-prodlike
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - db_net
+      - app_net
+      - observability_net
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taskira
+      SPRING_DATASOURCE_USERNAME: taskira
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set - see infra/.env.prodlike.example}
+      SERVER_PORT: 8080
+      MANAGEMENT_SERVER_PORT: 9091
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_HTTP_PORT:-8080}
+      # application-prod.yaml sets server.servlet.session.cookie.secure=true - correct
+      # for real HTTPS production, wrong here: this runtime is plain HTTP on a local
+      # port (no certificate; real TLS termination is P15+). A Secure cookie is never
+      # sent by the browser over HTTP, so without this override session auth breaks
+      # silently. OS environment variables outrank a profile-specific application-
+      # {profile}.yaml packaged in the jar in Spring Boot's property resolution order,
+      # so this wins over the file's default without touching it. See ADR-0019. Real
+      # production must NOT set this variable - it must keep the Secure default.
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9091/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # No published ports (neither 8080 nor 9091): reachable only over app_net (by
+    # frontend) and observability_net (by prometheus). Real production would still
+    # terminate TLS in front rather than expose these directly.
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.prod
+    container_name: taskira-frontend-prodlike
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - app_net
+    ports:
+      - "${FRONTEND_HTTP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    # The only service in this file that publishes a host port - the single entry
+    # point, exactly like a real reverse-proxy-fronted deployment.
+
+  prometheus:
+    image: prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
+    container_name: taskira-prometheus-prodlike
+    restart: unless-stopped
+    profiles: ["observability"]
+    depends_on:
+      - backend
+    networks:
+      - observability_net
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - taskira_prometheus_data_prodlike:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Behind the optional "observability" profile (docker compose ... --profile
+    # observability up) and never published to the host, unlike the dev stack which
+    # publishes 9090 for local convenience - here it's reachable only from backend.
+
+  grafana:
+    image: grafana/grafana:13.1.3@sha256:ab5cb380e3ff3172d6c8bd2e7cfd31cce977d2881b260e1f5bc089bf0b759b43
+    container_name: taskira-grafana-prodlike
+    restart: unless-stopped
+    profiles: ["observability"]
+    depends_on:
+      - prometheus
+    networks:
+      - observability_net
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set - see infra/.env.prodlike.example}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - taskira_grafana_data_prodlike:/var/lib/grafana
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Also behind "observability" and never published - reachable only via
+    # `docker exec` for now; a reverse-proxied path is a later-phase concern.
+
+networks:
+  # Three networks, not one, unlike infra/docker-compose.yml: frontend can reach
+  # backend but never postgres or prometheus/grafana, even if Nginx were misconfigured
+  # to try - the segmentation is the guard-rail, not just the absence of an app route.
+  app_net:
+    name: taskira_prodlike_app_net
+  db_net:
+    name: taskira_prodlike_db_net
+  observability_net:
+    name: taskira_prodlike_observability_net
+
+volumes:
+  # Separate from infra/docker-compose.yml's volumes on purpose - this stack is a
+  # fully independent local environment, not sharing data with the dev stack.
+  taskira_postgres_data_prodlike:
+    name: taskira_postgres_data_prodlike
+  taskira_prometheus_data_prodlike:
+    name: taskira_prometheus_data_prodlike
+  taskira_grafana_data_prodlike:
+    name: taskira_grafana_data_prodlike
