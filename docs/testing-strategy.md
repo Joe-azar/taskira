@@ -40,6 +40,7 @@ H2 n'est pas utilisé pour simuler PostgreSQL. Les tests d'intégration démarre
 - Un service ou état Angular : test Vitest; ajouter un test de composant si le rendu ou l'interaction change.
 - Un parcours critique : test Playwright stable avec données `.test` contrôlées dans la stack isolée du runner racine. Ne pas simuler un endpoint absent.
 - Un défaut corrigé : test de régression reproductible avant le correctif.
+- Un en-tête ou une préoccupation d'observabilité (ex. `X-Request-Id`, phase 9) : assertion structurelle uniquement (présence, format, unicité) au niveau backend et, si pertinent, E2E; jamais une assertion qui dépend de lire les lignes de log — la stack Playwright isolée n'a pas d'infrastructure de récupération de logs.
 
 ## Isolation et données
 

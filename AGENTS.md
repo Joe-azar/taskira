@@ -587,22 +587,39 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 9 — Audit, request ID et logs
 
-Phase active suivante.
+Terminée localement sur `feat/phase9-audit-logging`, pas encore fusionnée dans `main`.
 
-Objectifs principaux :
+Module `audit` (Spring Modulith, fermé par défaut, dépend uniquement de `common`/`security`) :
 
 ```text
-audit métier
-audit_events
-request/correlation ID
-X-Request-ID
-MDC
-SLF4J
-Logback
-logs structurés
+AuditEvent (table audit_events, Flyway V8)
+AuditService.record(actorId, actorEmail, entityType, entityId, action, detail)
+GET /api/v1/audit/events (ADMIN uniquement, paginé)
 ```
 
-Cette phase doit être réalisée sur une branche dédiée et validée avant fusion dans `main`.
+Déclencheurs réels : connexion réussie/échouée, déconnexion, création de ticket et changement de statut, création/archivage de projet, ajout/retrait de membre, création d'utilisateur, changement de rôle et de statut actif. Rien sur les commentaires (déjà couverts par `ticket_history`).
+
+Corrélation des requêtes :
+
+```text
+X-Request-ID (accepté si sûr, sinon UUID généré)
+MDC (clé requestId)
+ProblemDetails.of(...) — point unique de construction des erreurs, propriété requestId
+```
+
+Logs structurés JSON en profil `prod` (`logging.structured.format.console: logstash`, natif Spring Boot 4.1, aucune dépendance ajoutée); pattern lisible avec `%X{requestId}` en `dev`/`test`.
+
+Voir [ADR-0018](docs/adr/0018-audit-request-correlation.md) pour le détail complet des décisions.
+
+Validation locale :
+
+```text
+65 tests backend (29 rapides + 36 intégration)
+25 tests Vitest
+10/10 Playwright
+```
+
+Ces nombres sont historiques et augmenteront normalement avec les futures phases.
 
 ---
 

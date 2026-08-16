@@ -1,6 +1,6 @@
 # Feuille de route de migration enterprise
 
-Dernière mise à jour : 2026-08-15.
+Dernière mise à jour : 2026-08-16.
 
 Cette feuille de route suit les phases 0 à 20 du référentiel. La [matrice racine](../MIGRATION_MATRIX.md) suit séparément les capacités métier.
 
@@ -17,7 +17,7 @@ Statuts : `Terminée`, `Terminée localement`, `Partielle`, `Planifiée`. Une ph
 | 6 | Montées technologiques | Haute | Terminée et fusionnée | Java 21 conservé; Spring Boot 4.1.0/Spring 7.0.8, Angular 22.1.2, Node 24.19.0, Material 22.1.2 et PostgreSQL 18.6. 18 tests backend, 20 Vitest, 9/9 Playwright; `CI Gate`, Quality Gate SonarQube, CodeQL et Trivy tous vérifiés verts sur GitHub avant fusion (PR #28, commit `a7463af`). |
 | 7 | API et robustesse applicative | Haute | Terminée | `/api/v1` versionne les six contrôleurs; profils Spring `dev`/`test`/`prod` avec différences réelles (logs, springdoc désactivé en `prod`, vérifié par test); erreurs migrées vers `ProblemDetail` RFC 7807 (backend et ~25 sites frontend); `AuthService`/`UserService`/`DashboardService` couverts par `@Transactional`; verrouillage optimiste (`@Version`, Flyway `V7`) avec 409 sur conflit, prouvé contre PostgreSQL réel. 22 tests backend, 20 Vitest, 9/9 Playwright verts sur `feat/phase7-api-concurrency`. |
 | 8 | Authentification sécurisée | Haute | Terminée localement | Session `HttpOnly`/`SameSite=Lax`/`Secure` (`prod`), CSRF double-soumission Angular/Spring, CORS credentials, logout serveur et bootstrap admin dev idempotent (profil `dev` uniquement) sont testés; JWT et `localStorage`/`sessionStorage` retirés. 39 tests backend, 25 Vitest, 9/9 Playwright sur `feat/phase8-session-security`, pas encore fusionnée. |
-| 9 | Audit et journalisation | Haute | Planifiée | Module audit/Flyway, request ID, MDC et logs structurés sans secrets sont validés. |
+| 9 | Audit et journalisation | Haute | Terminée localement | Module `audit`/`audit_events` (Flyway `V8`), `RequestIdFilter`/MDC/`ProblemDetails.of(...)` et logs structurés (JSON en `prod`) sont validés; aucun secret dans `audit_events` ni dans les logs. 29 tests backend rapides, 36 intégration, 10/10 Playwright sur `feat/phase9-audit-logging`, pas encore fusionnée. |
 | 10 | Observabilité | Haute | Planifiée | Actuator/Micrometer, Prometheus target UP, Grafana provisionné et métriques techniques/métier vérifiées. |
 | 11 | Runtime production-like | Haute | Planifiée | Nginx sert Angular compilé et proxifie l'API; images durcies et Compose production-like passent les smoke tests. |
 | 12 | Notifications | Moyenne | Planifiée | Module notifications et Mailpit fournissent un cas métier réel sans envoi externe en développement. |
