@@ -4,6 +4,7 @@
 .env
 .env.*
 !.env.example
+!.env.prodlike.example
 
 # Local database backups (may contain real data, never commit)
 /backups/

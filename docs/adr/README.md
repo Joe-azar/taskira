@@ -15,11 +15,13 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0009](0009-local-filesystem-first.md) | Filesystem avant stockage objet | Proposed | P13 |
 | [0010](0010-no-kafka-rabbitmq-main-runtime.md) | Pas de Kafka/RabbitMQ principal | Accepted | Contrainte active |
 | [0011](0011-kubernetes-training-only.md) | Kubernetes réservé au lab | Accepted | Lab P17 |
-| [0012](0012-observability-stack.md) | Prometheus/Grafana | Accepted | Terminée localement P10, PR pas encore ouverte |
+| [0012](0012-observability-stack.md) | Prometheus/Grafana | Accepted | Terminée et fusionnée P10 (PR #33) |
 | [0013](0013-versioning-strategy.md) | Semantic Versioning | Proposed | P15 |
 | [0014](0014-incremental-test-first-migration.md) | Migration incrémentale test-first | Accepted | Appliquée depuis P2 |
 | [0015](0015-sonarqube-quality-gate.md) | SonarQube Community Build local et éphémère | Accepted | Validée localement P4 |
 | [0016](0016-spring-modulith-boundaries.md) | Spring Modulith pour la vérification des frontières | Accepted | Validée localement P5; cycle project/ticket détecté et corrigé |
 | [0017](0017-postgresql-18-migration.md) | Migration PostgreSQL 16 vers 18 | Accepted | Validée localement P6 : Flyway, restauration et Hibernate testés avant bascule |
+| [0018](0018-audit-request-correlation.md) | Module `audit`, `audit_events` et corrélation par request id | Accepted | Terminée et fusionnée P9 (PR #32) |
+| [0019](0019-production-runtime.md) | Runtime production-like Nginx/non-root | Accepted | Terminée localement P11, PR pas encore ouverte |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.

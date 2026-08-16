@@ -1,6 +1,6 @@
 # Architecture d'observabilité
 
-Statut : P9 (corrélation et logs) terminée; P10 (Actuator/Prometheus/Grafana) terminée localement sur `feat/phase10-observability`, pas encore fusionnée dans `main`.
+Statut : P9 (corrélation et logs) et P10 (Actuator/Prometheus/Grafana) terminées et fusionnées dans `main` (PR #33, commit de fusion `8f560fe`).
 
 ## P9 — Corrélation et logs (terminée)
 
@@ -13,7 +13,7 @@ Statut : P9 (corrélation et logs) terminée; P10 (Actuator/Prometheus/Grafana) 
 
 Voir [ADR-0018](adr/0018-audit-request-correlation.md) pour le détail complet (module `audit`, table `audit_events`, décision de conception).
 
-## P10 — Métriques (terminée localement)
+## P10 — Métriques (terminée et fusionnée)
 
 ```text
 Spring Boot Actuator / Micrometer  (port de gestion isolé 9091)
