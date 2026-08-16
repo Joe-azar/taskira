@@ -1,5 +1,8 @@
 package com.joe.taskira.ticket.service;
 
+import com.joe.taskira.audit.enums.AuditAction;
+import com.joe.taskira.audit.enums.AuditEntityType;
+import com.joe.taskira.audit.service.AuditService;
 import com.joe.taskira.common.exception.ConflictException;
 import com.joe.taskira.common.exception.ForbiddenException;
 import com.joe.taskira.common.exception.ResourceNotFoundException;
@@ -39,6 +42,7 @@ public class TicketService {
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
     private final TicketHistoryService ticketHistoryService;
+    private final AuditService auditService;
 
     public TicketResponse createTicket(CreateTicketRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -92,6 +96,15 @@ public class TicketService {
                 currentUser,
                 "CREATED",
                 null,
+                ticket.getReference()
+        );
+
+        auditService.record(
+                currentUser.getId(),
+                currentUser.getEmail(),
+                AuditEntityType.TICKET,
+                ticket.getId(),
+                AuditAction.TICKET_CREATED,
                 ticket.getReference()
         );
 
@@ -229,6 +242,15 @@ public class TicketService {
                 "STATUS",
                 oldStatus,
                 newStatus
+        );
+
+        auditService.record(
+                currentUser.getId(),
+                currentUser.getEmail(),
+                AuditEntityType.TICKET,
+                ticket.getId(),
+                AuditAction.TICKET_STATUS_CHANGED,
+                oldStatus + " -> " + newStatus
         );
 
         return TicketResponse.from(ticket);

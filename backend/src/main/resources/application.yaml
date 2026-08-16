@@ -1,3 +1,10 @@
+logging:
+  pattern:
+    # Base/dev/test default: human-readable console output, with the per-request
+    # correlation id (set by RequestIdFilter) bracketed so log lines for one request are
+    # easy to grep together. Overridden to structured JSON in application-prod.yaml.
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId:-no-request-id}] %logger{36} - %msg%n"
+
 spring:
   application:
     name: taskira-api

@@ -1,5 +1,8 @@
 package com.joe.taskira.user.service;
 
+import com.joe.taskira.audit.enums.AuditAction;
+import com.joe.taskira.audit.enums.AuditEntityType;
+import com.joe.taskira.audit.service.AuditService;
 import com.joe.taskira.common.exception.ConflictException;
 import com.joe.taskira.common.exception.ForbiddenException;
 import com.joe.taskira.common.exception.ResourceNotFoundException;
@@ -27,6 +30,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     public UserResponse getCurrentUser() {
         return UserResponse.from(SecurityUtils.getCurrentUser().getUser());
@@ -71,6 +75,7 @@ public class UserService {
 
     public UserResponse createUser(CreateUserRequest request) {
         ensureAdmin();
+        AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
         String normalizedEmail = normalizeEmail(request.email());
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
@@ -87,6 +92,16 @@ public class UserService {
                 .build();
 
         User saved = userRepository.save(user);
+
+        auditService.record(
+                currentUser.getId(),
+                currentUser.getUser().getEmail(),
+                AuditEntityType.USER,
+                saved.getId(),
+                AuditAction.USER_CREATED,
+                saved.getEmail() + " (" + saved.getGlobalRole() + ")"
+        );
+
         return UserResponse.from(saved);
     }
 
@@ -128,6 +143,9 @@ public class UserService {
             throw new ConflictException("Cannot deactivate the last active admin");
         }
 
+        GlobalRole oldRole = existing.getGlobalRole();
+        boolean oldActive = existing.isActive();
+
         existing.setFirstName(request.firstName().trim());
         existing.setLastName(request.lastName().trim());
         existing.setEmail(normalizedEmail);
@@ -139,7 +157,32 @@ public class UserService {
         }
 
         User saved = userRepository.save(existing);
+
+        recordUpdateUserAudit(currentUser, saved, oldRole, oldActive, request);
+
         return UserResponse.from(saved);
+    }
+
+    private void recordUpdateUserAudit(
+            AuthenticatedUser currentUser,
+            User saved,
+            GlobalRole oldRole,
+            boolean oldActive,
+            UpdateUserRequest request
+    ) {
+        if (request.globalRole() != null && request.globalRole() != oldRole) {
+            auditService.record(
+                    currentUser.getId(),
+                    currentUser.getUser().getEmail(),
+                    AuditEntityType.USER,
+                    saved.getId(),
+                    AuditAction.USER_ROLE_CHANGED,
+                    oldRole + " -> " + saved.getGlobalRole()
+            );
+        }
+        if (request.active() != null && request.active() != oldActive) {
+            recordActivationChange(currentUser, saved);
+        }
     }
 
     public UserResponse updateUserStatus(Long id, UpdateUserStatusRequest request) {
@@ -160,9 +203,26 @@ public class UserService {
             throw new ConflictException("Cannot deactivate the last active admin");
         }
 
+        boolean oldActive = existing.isActive();
         existing.setActive(request.active());
         User saved = userRepository.save(existing);
+
+        if (request.active() != oldActive) {
+            recordActivationChange(currentUser, saved);
+        }
+
         return UserResponse.from(saved);
+    }
+
+    private void recordActivationChange(AuthenticatedUser currentUser, User target) {
+        auditService.record(
+                currentUser.getId(),
+                currentUser.getUser().getEmail(),
+                AuditEntityType.USER,
+                target.getId(),
+                target.isActive() ? AuditAction.USER_ACTIVATED : AuditAction.USER_DEACTIVATED,
+                null
+        );
     }
 
     private void ensureAdmin() {

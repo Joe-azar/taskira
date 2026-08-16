@@ -85,4 +85,16 @@ test.describe('authentication and authorization', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Users' })).toHaveCount(0);
   });
+
+  test('every response carries a distinct X-Request-Id header for correlation', async ({ request }) => {
+    const first = await request.get(`${apiBaseUrl}/auth/me`);
+    const second = await request.get(`${apiBaseUrl}/auth/me`);
+
+    const firstRequestId = first.headers()['x-request-id'];
+    const secondRequestId = second.headers()['x-request-id'];
+
+    expect(firstRequestId).toBeTruthy();
+    expect(secondRequestId).toBeTruthy();
+    expect(firstRequestId).not.toBe(secondRequestId);
+  });
 });

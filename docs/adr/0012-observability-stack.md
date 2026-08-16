@@ -11,7 +11,7 @@ La baseline ne fournit ni endpoint métriques ni collecte/dashboard versionné.
 
 En P10, exposer de façon sécurisée health/info/prometheus via Actuator/Micrometer, collecter avec Prometheus et provisionner Grafana. Mesurer disponibilité, débit, latence, erreurs, JVM, CPU, mémoire, HikariCP et quelques métriques métier.
 
-Les request IDs et logs structurés sont préparés en P9. Loki reste optionnel en P20.
+Les request IDs et logs structurés sont préparés en P9 (terminé — voir [ADR-0018](0018-audit-request-correlation.md)). Loki reste optionnel en P20.
 
 ## Critères d'acceptation
 

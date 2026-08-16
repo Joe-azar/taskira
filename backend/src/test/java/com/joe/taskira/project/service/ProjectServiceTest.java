@@ -1,5 +1,6 @@
 package com.joe.taskira.project.service;
 
+import com.joe.taskira.audit.service.AuditService;
 import com.joe.taskira.common.exception.ConflictException;
 import com.joe.taskira.common.exception.ForbiddenException;
 import com.joe.taskira.project.dto.CreateProjectRequest;
@@ -48,6 +49,9 @@ class ProjectServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private AuditService auditService;
 
     @InjectMocks
     private ProjectService projectService;

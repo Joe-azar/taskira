@@ -1,3 +1,10 @@
+logging:
+  structured:
+    # Boot's built-in Logstash JSON encoder - no extra dependency needed. MDC entries
+    # (requestId, set by RequestIdFilter) are included automatically.
+    format:
+      console: logstash
+
 springdoc:
   api-docs:
     enabled: false

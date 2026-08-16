@@ -1,5 +1,8 @@
 package com.joe.taskira.auth.service;
 
+import com.joe.taskira.audit.enums.AuditAction;
+import com.joe.taskira.audit.enums.AuditEntityType;
+import com.joe.taskira.audit.service.AuditService;
 import com.joe.taskira.auth.dto.LoginRequest;
 import com.joe.taskira.auth.dto.MeResponse;
 import com.joe.taskira.auth.dto.RegisterRequest;
@@ -15,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,6 +31,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final AuditService auditService;
 
     public MeResponse register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
@@ -61,12 +66,17 @@ public class AuthService {
     }
 
     public MeResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        normalizeEmail(request.email()),
-                        request.password()
-                )
-        );
+        String email = normalizeEmail(request.email());
+
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, request.password())
+            );
+        } catch (AuthenticationException ex) {
+            auditService.record(null, email, AuditEntityType.AUTH, null, AuditAction.LOGIN_FAILURE, null);
+            throw ex;
+        }
 
         Object principal = authentication.getPrincipal();
 
@@ -75,6 +85,15 @@ public class AuthService {
         }
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        auditService.record(
+                authenticatedUser.getId(),
+                authenticatedUser.getUser().getEmail(),
+                AuditEntityType.AUTH,
+                null,
+                AuditAction.LOGIN_SUCCESS,
+                null
+        );
 
         return MeResponse.from(authenticatedUser.getUser());
     }
