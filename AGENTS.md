@@ -679,14 +679,50 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ---
 
-## Phases 11 à 20
+## Phase 11 — Nginx et runtime production-like
+
+Terminée localement, pas encore fusionnée dans `main`.
+
+Branche :
+
+```text
+feat/phase11-production-runtime
+```
+
+Runtime `production-like` séparé du développement, pas une vraie production (HTTP local, pas de certificat — TLS réel en P15+) :
+
+```text
+Client -> Nginx :8080 (non-root, publié) -> /api/* -> Spring Boot (non-root, interne) -> PostgreSQL (interne)
+```
+
+`infra/docker-compose.prodlike.yml`, fichier séparé de `infra/docker-compose.yml` avec un nom de projet Compose explicite (`name: taskira-prodlike`) — trois réseaux Docker (`app_net`, `db_net`, `observability_net`) au lieu d'un seul : le frontend ne peut jamais joindre PostgreSQL même en cas de mauvaise configuration Nginx. Seul `frontend` publie un port hôte. Prometheus/Grafana restent derrière un profil Compose optionnel `observability`, jamais publiés même actifs.
+
+`nginxinc/nginx-unprivileged:1.30.4-alpine3.24` (branche stable, épinglée par digest) sert le build Angular statique et proxifie `/api/*` vers `backend:8080`. `backend/Dockerfile` (partagé avec le développement et l'E2E) tourne désormais en utilisateur explicite non-root (`taskira`, uid/gid 10001).
+
+`application-prod.yaml` fixe `Secure=true` sur le cookie de session, incompatible avec ce runtime HTTP local; résolu par `SERVER_SERVLET_SESSION_COOKIE_SECURE=false` en variable d'environnement uniquement dans `infra/docker-compose.prodlike.yml`, sans toucher au défaut réel de production. Voir [ADR-0019](docs/adr/0019-production-runtime.md) pour le détail complet, y compris plusieurs bugs réels trouvés uniquement en démarrant réellement la stack complète (jamais par simple `docker compose config`) : collision de nom de projet Compose ayant détruit les conteneurs de développement et écrasé son image frontend en cache, résolution DNS Nginx figée au démarrage, écoute IPv6 manquante sur le healthcheck.
+
+Validation historique à la sortie de phase :
+
+```text
+76 tests backend (33 rapides + 43 intégration)
+25 tests Vitest, lint 0 erreur/36 avertissements `any`, build Angular de production réussi
+10/10 Playwright (stack de développement isolée)
+Smoke test Playwright réel supplémentaire contre la stack production-like démarrée pour de vrai :
+inscription, connexion, cookie de session (HttpOnly/SameSite=Lax/Secure=false), navigation
+authentifiée et lien profond SPA, tous via un vrai navigateur à travers le reverse proxy Nginx réel
+```
+
+Ces nombres sont historiques et augmenteront normalement avec les futures phases.
+
+---
+
+## Phases 12 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 
 Roadmap générale :
 
 ```text
-Phase 11  Nginx + Docker production + production-like
 Phase 12  Notifications + Mailpit
 Phase 13  Attachments + Tika + storage + sécurité uploads
 Phase 14  Exports + POI + OpenHTMLtoPDF + PDFBox + ZXing + Spring Batch
