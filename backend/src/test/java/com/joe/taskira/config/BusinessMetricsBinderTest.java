@@ -43,13 +43,13 @@ class BusinessMetricsBinderTest {
 
     @Test
     void ticketGaugeReflectsTheRepositoryCountForEachStatusTag() {
-        assertThat(registry.get("taskira.tickets.total").tag("status", "OPEN").gauge().value()).isEqualTo(3.0);
-        assertThat(registry.get("taskira.tickets.total").tag("status", "DONE").gauge().value()).isEqualTo(5.0);
+        assertThat(registry.get("taskira.tickets").tag("status", "OPEN").gauge().value()).isEqualTo(3.0);
+        assertThat(registry.get("taskira.tickets").tag("status", "DONE").gauge().value()).isEqualTo(5.0);
     }
 
     @Test
     void projectGaugeReflectsTheRepositoryCountForEachStatusTag() {
-        assertThat(registry.get("taskira.projects.total").tag("status", "ACTIVE").gauge().value()).isEqualTo(2.0);
+        assertThat(registry.get("taskira.projects").tag("status", "ACTIVE").gauge().value()).isEqualTo(2.0);
     }
 
     @Test
@@ -59,8 +59,8 @@ class BusinessMetricsBinderTest {
 
     @Test
     void everyTicketStatusProjectStatusAndGlobalRoleIsRegisteredAsItsOwnGauge() {
-        assertThat(registry.find("taskira.tickets.total").gauges()).hasSize(TicketStatus.values().length);
-        assertThat(registry.find("taskira.projects.total").gauges()).hasSize(ProjectStatus.values().length);
+        assertThat(registry.find("taskira.tickets").gauges()).hasSize(TicketStatus.values().length);
+        assertThat(registry.find("taskira.projects").gauges()).hasSize(ProjectStatus.values().length);
         assertThat(registry.find("taskira.users.active").gauges()).hasSize(GlobalRole.values().length);
     }
 }

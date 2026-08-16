@@ -17,6 +17,11 @@ import org.springframework.stereotype.Component;
  * autoconfiguration already binds. Each gauge re-queries its repository (an indexed
  * count, see the tickets/projects status indexes) on every Prometheus scrape rather than
  * caching a snapshot - staleness between scrapes would defeat the point of a dashboard.
+ * <p>
+ * Named without a ".total" suffix on purpose: Micrometer's PrometheusNamingConvention
+ * reserves "_total" for counters and silently strips it from gauge names, so a name here
+ * ending in ".total" would render as "taskira_tickets" anyway - keeping the Java-side name
+ * and the actual scraped metric name identical avoids that mismatch surprising a reader.
  */
 @Component
 @RequiredArgsConstructor
@@ -29,14 +34,14 @@ public class BusinessMetricsBinder implements MeterBinder {
     @Override
     public void bindTo(MeterRegistry registry) {
         for (TicketStatus status : TicketStatus.values()) {
-            Gauge.builder("taskira.tickets.total", ticketRepository, repo -> repo.countByStatus(status))
+            Gauge.builder("taskira.tickets", ticketRepository, repo -> repo.countByStatus(status))
                     .tag("status", status.name())
                     .description("Number of tickets currently in this status")
                     .register(registry);
         }
 
         for (ProjectStatus status : ProjectStatus.values()) {
-            Gauge.builder("taskira.projects.total", projectRepository, repo -> repo.countByStatus(status))
+            Gauge.builder("taskira.projects", projectRepository, repo -> repo.countByStatus(status))
                     .tag("status", status.name())
                     .description("Number of projects currently in this status")
                     .register(registry);
