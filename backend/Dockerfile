@@ -16,7 +16,17 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21.0.11_10-jre@sha256:371da296b8cb74c7e53fbe7083d5374befc0011b493231d97d45fa789915e434
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+# Explicit user/group rather than relying on the incidental "ubuntu" (uid 1000) user
+# present in this base image - an implementation detail of the base image, not a
+# contractual guarantee, that could disappear in a future base image update. 10001 is
+# used (not 1000): confirmed by a real build failure ("GID 1000 already exists") that
+# 1000 is already taken by that same incidental ubuntu group.
+RUN groupadd --gid 10001 taskira \
+    && useradd --uid 10001 --gid taskira --shell /usr/sbin/nologin --no-create-home taskira
+
+COPY --from=build --chown=taskira:taskira /app/target/*.jar app.jar
+
+USER taskira
 
 EXPOSE 8080
 EXPOSE 9091
