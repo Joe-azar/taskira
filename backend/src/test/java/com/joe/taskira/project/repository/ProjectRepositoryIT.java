@@ -75,6 +75,26 @@ class ProjectRepositoryIT extends PostgreSqlIntegrationTest {
                 .containsExactly(ownedProject.getId(), memberProject.getId());
     }
 
+    @Test
+    void countByStatusCountsOnlyProjectsInThatStatus() {
+        // Other integration test classes commit real rows to this same shared Testcontainers
+        // database (unlike this @DataJpaTest, which rolls back), so the table is never empty
+        // here - assert the delta this test itself causes, not an absolute count.
+        long activeBefore = projectRepository.countByStatus(ProjectStatus.ACTIVE);
+        long archivedBefore = projectRepository.countByStatus(ProjectStatus.ARCHIVED);
+
+        User owner = persistUser("owner@taskira.test");
+        persistProject("ACTIVE-1", "Active One", owner);
+        persistProject("ACTIVE-2", "Active Two", owner);
+        Project archived = persistProject("ARCHIVED-1", "Archived One", owner);
+        archived.setStatus(ProjectStatus.ARCHIVED);
+        entityManager.persistAndFlush(archived);
+        entityManager.clear();
+
+        assertThat(projectRepository.countByStatus(ProjectStatus.ACTIVE)).isEqualTo(activeBefore + 2);
+        assertThat(projectRepository.countByStatus(ProjectStatus.ARCHIVED)).isEqualTo(archivedBefore + 1);
+    }
+
     private User persistUser(String email) {
         User user = User.builder()
                 .firstName("Test")
