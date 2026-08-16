@@ -681,12 +681,18 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 11 — Nginx et runtime production-like
 
-Terminée localement, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
 
-Branche :
+Pull Request :
 
 ```text
-feat/phase11-production-runtime
+#34
+```
+
+Commit de fusion :
+
+```text
+ec22ad6
 ```
 
 Runtime `production-like` séparé du développement, pas une vraie production (HTTP local, pas de certificat — TLS réel en P15+) :
