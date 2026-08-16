@@ -12,7 +12,7 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0006](0006-session-cookie-auth.md) | Session cookie sécurisée | Accepted | Terminée et fusionnée P8 (PR #31) |
 | [0007](0007-github-actions.md) | GitHub Actions | Accepted | Run distant vert; protection `main` activée |
 | [0008](0008-docker-compose.md) | Docker Compose runtime principal | Accepted | Dev actuel; profils futurs |
-| [0009](0009-local-filesystem-first.md) | Filesystem avant stockage objet | Accepted | En cours P13 |
+| [0009](0009-local-filesystem-first.md) | Filesystem avant stockage objet | Accepted | Terminée localement P13, pas encore fusionnée |
 | [0010](0010-no-kafka-rabbitmq-main-runtime.md) | Pas de Kafka/RabbitMQ principal | Accepted | Contrainte active |
 | [0011](0011-kubernetes-training-only.md) | Kubernetes réservé au lab | Accepted | Lab P17 |
 | [0012](0012-observability-stack.md) | Prometheus/Grafana | Accepted | Terminée et fusionnée P10 (PR #33) |
@@ -24,6 +24,6 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0018](0018-audit-request-correlation.md) | Module `audit`, `audit_events` et corrélation par request id | Accepted | Terminée et fusionnée P9 (PR #32) |
 | [0019](0019-production-runtime.md) | Runtime production-like Nginx/non-root | Accepted | Terminée et fusionnée P11 (PR #34) |
 | [0020](0020-notifications-mailpit.md) | Module notifications avec Mailpit | Accepted | Terminée et fusionnée P12 (PR #35) |
-| [0021](0021-attachments-storage.md) | Module attachments : port `DocumentStorage`, filesystem, Tika | Accepted | En cours P13 |
+| [0021](0021-attachments-storage.md) | Module attachments : port `DocumentStorage`, filesystem, Tika | Accepted | Terminée localement P13, pas encore fusionnée |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.
