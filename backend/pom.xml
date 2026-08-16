@@ -137,6 +137,57 @@
             <version>3.3.1</version>
         </dependency>
 
+        <!-- Exports: bulk export state (BATCH_* tables come from Flyway V10, not this
+             starter's own schema initializer - see application.yaml). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-batch</artifactId>
+        </dependency>
+
+        <!-- Exports: Excel workbooks (.xlsx) -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.5.1</version>
+        </dependency>
+
+        <!-- Exports: HTML/CSS -> PDF rendering for the single-ticket report -->
+        <dependency>
+            <groupId>com.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-pdfbox</artifactId>
+            <version>1.0.10</version>
+        </dependency>
+        <dependency>
+            <groupId>com.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-slf4j</artifactId>
+            <version>1.0.10</version>
+        </dependency>
+
+        <!-- Exports: openhtmltopdf-pdfbox 1.0.10 transitively pulls pdfbox 2.0.24 (verified
+             against its POM) - pinned forward to the latest 2.0.x patch, same rationale as
+             the PostgreSQL JDBC driver pin in P6. Also used directly: PDDocumentInformation
+             (production, sets PDF metadata after rendering) and PDFTextStripper/PDFRenderer
+             (tests, verify real rendered content). -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.36</version>
+        </dependency>
+
+        <!-- Exports: QR code embedded in the single-ticket PDF report, linking back to the
+             live ticket. javase provides MatrixToImageWriter/BufferedImageLuminanceSource
+             for encoding to and decoding from a BufferedImage. -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -176,6 +227,11 @@
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-docs</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.batch</groupId>
+            <artifactId>spring-batch-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
