@@ -1,3 +1,12 @@
+# Explicit project name: infra/docker-compose.yml and this file live in the same
+# infra/ directory with identical service names (postgres, backend, frontend,
+# prometheus, grafana). Without this, Compose derives the project name from the
+# directory ("infra") for both files, so they collide under the same project
+# namespace despite container_name differing per service - confirmed the hard way:
+# bringing this stack up recreated/removed the dev stack's containers and overwrote
+# its cached infra-frontend:latest image with this file's Nginx production build.
+name: taskira-prodlike
+
 services:
   postgres:
     image: postgres:18.6-alpine3.23@sha256:f65cfc1a73466fc0807f4a33496e1c438b19269091c8f998faec871874df8e5e
@@ -22,6 +31,9 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+    # Explicit image tag, distinct from the dev stack's default-derived infra-backend -
+    # belt and suspenders alongside this file's top-level `name:` isolation.
+    image: taskira-backend-prodlike:local
     container_name: taskira-backend-prodlike
     restart: unless-stopped
     depends_on:
@@ -62,6 +74,10 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile.prod
+    # Explicit image tag, distinct from the dev stack's default-derived infra-frontend
+    # - confirmed the hard way (see the top-level `name:` comment) that without this,
+    # this build silently overwrites the dev stack's cached frontend image.
+    image: taskira-frontend-prodlike:local
     container_name: taskira-frontend-prodlike
     restart: unless-stopped
     depends_on:
