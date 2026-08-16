@@ -23,6 +23,6 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0017](0017-postgresql-18-migration.md) | Migration PostgreSQL 16 vers 18 | Accepted | Validée localement P6 : Flyway, restauration et Hibernate testés avant bascule |
 | [0018](0018-audit-request-correlation.md) | Module `audit`, `audit_events` et corrélation par request id | Accepted | Terminée et fusionnée P9 (PR #32) |
 | [0019](0019-production-runtime.md) | Runtime production-like Nginx/non-root | Accepted | Terminée et fusionnée P11 (PR #34) |
-| [0020](0020-notifications-mailpit.md) | Module notifications avec Mailpit | Accepted | En cours P12 |
+| [0020](0020-notifications-mailpit.md) | Module notifications avec Mailpit | Accepted | Terminée localement P12, PR pas encore ouverte |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.

@@ -41,3 +41,11 @@ Un test unitaire (`JavaMailSender` simulé) ne prouve que la construction du mes
 - Deux nouveaux types d'événement (`TicketAssignedEvent`, `CommentCreatedEvent`) sont les premiers événements métier réels du projet — leur usage doit rester justifié par un besoin de notification concret, pas étendu par défaut à chaque futur changement.
 - Un relais SMTP réel pour une vraie production reste à décider en P15+; Mailpit ne doit jamais être présenté comme une solution de production.
 - Pas de préférences de notification par utilisateur ni de désactivation dans cette première version — si un besoin réel apparaît, une évolution ultérieure documentée en ADR.
+
+## État d'implémentation
+
+Terminée localement sur `feat/phase12-notifications`, pas encore fusionnée dans `main`. Détail complet dans [ENTERPRISE_MIGRATION_REPORT.md](../../ENTERPRISE_MIGRATION_REPORT.md) (section « Résultats de la phase 12 »).
+
+Un bug réel trouvé par la suite de tests complète, pas supposé : ajouter `spring-boot-starter-mail` active automatiquement un indicateur de santé Actuator pour le courrier qui fait passer l'endpoint agrégé `/actuator/health` à `503` dès que le serveur SMTP n'est pas joignable — révélé par un échec inattendu d'`ActuatorSecurityIT` (phase 10), directement contraire à la philosophie best-effort ci-dessus. Corrigé avec `management.health.mail.enabled: false`.
+
+Vérifié réellement, de bout en bout, à deux niveaux : `NotificationWiringIT` (vrai conteneur Mailpit via Testcontainers, vraies requêtes HTTP, email réellement lu depuis l'API Mailpit) et un smoke test manuel contre la vraie stack de développement reconstruite (inscription, projet, ticket, assignation via l'API réelle, email reçu dans la vraie instance Mailpit avec le sujet attendu).

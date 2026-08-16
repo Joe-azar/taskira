@@ -722,14 +722,46 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ---
 
-## Phases 12 à 20
+## Phase 12 — Notifications et Mailpit
+
+Terminée localement, pas encore fusionnée dans `main`.
+
+Branche :
+
+```text
+feat/phase12-notifications
+```
+
+Deux déclencheurs seulement (`TicketAssignedEvent`, `CommentCreatedEvent`) : ceux qui ont un destinataire non ambigu et un effet direct sur ce que la personne doit faire ensuite. Voir [ADR-0020](docs/adr/0020-notifications-mailpit.md) — premiers événements métier réels du projet (Spring Application Events, anticipés sans usage concret depuis AGENTS.md §36).
+
+`ticket`/`comment` publient les événements (types exposés via `@NamedInterface`), le module `notifications` (fermé par défaut) les écoute via `@TransactionalEventListener(phase = AFTER_COMMIT)` — jamais un `@EventListener` simple, pour qu'une transaction annulée ne déclenche jamais un email pour une assignation qui n'a in fine pas eu lieu. Envoi best-effort : toute `MailException` est loguée et jamais propagée, un Mailpit indisponible ne doit jamais faire échouer l'opération métier qui a déclenché la notification.
+
+Bug réel trouvé par la suite de tests complète, pas supposé : ajouter `spring-boot-starter-mail` active automatiquement un indicateur de santé Actuator pour le courrier, qui fait passer `/actuator/health` à 503 dès que le serveur SMTP n'est pas joignable — directement contraire à la philosophie « best-effort » de ce module. Corrigé avec `management.health.mail.enabled: false`.
+
+`axllent/mailpit:v1.30.7`, épinglé par digest, uniquement dans `infra/docker-compose.yml` (développement) — jamais dans le runtime production-like de P11, qui n'a pas vocation à simuler l'envoi d'email.
+
+Validation historique à la sortie de phase :
+
+```text
+83 tests backend (38 rapides + 45 intégration, dont NotificationWiringIT : un vrai conteneur
+Mailpit via Testcontainers, un vrai contexte Spring, l'API HTTP réelle de Mailpit pour lire
+l'email réellement reçu)
+25 Vitest, lint et build Angular inchangés (aucun fichier frontend modifié)
+Vérifié en plus contre la vraie stack de développement : inscription, création de projet/ticket,
+assignation via l'API réelle, email réellement reçu dans Mailpit avec le bon sujet
+```
+
+Ces nombres sont historiques et augmenteront normalement avec les futures phases.
+
+---
+
+## Phases 13 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 
 Roadmap générale :
 
 ```text
-Phase 12  Notifications + Mailpit
 Phase 13  Attachments + Tika + storage + sécurité uploads
 Phase 14  Exports + POI + OpenHTMLtoPDF + PDFBox + ZXing + Spring Batch
 Phase 15  GHCR + release + staging + rollback
