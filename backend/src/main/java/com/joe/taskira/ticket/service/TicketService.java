@@ -19,9 +19,11 @@ import com.joe.taskira.ticket.entity.Ticket;
 import com.joe.taskira.ticket.enums.TicketPriority;
 import com.joe.taskira.ticket.enums.TicketStatus;
 import com.joe.taskira.ticket.enums.TicketType;
+import com.joe.taskira.ticket.event.TicketAssignedEvent;
 import com.joe.taskira.ticket.repository.TicketRepository;
 import com.joe.taskira.ticket.specification.TicketSpecifications;
 import com.joe.taskira.user.entity.User;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import com.joe.taskira.user.enums.GlobalRole;
@@ -43,6 +45,7 @@ public class TicketService {
     private final UserRepository userRepository;
     private final TicketHistoryService ticketHistoryService;
     private final AuditService auditService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public TicketResponse createTicket(CreateTicketRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -301,6 +304,14 @@ public class TicketService {
                 oldAssignee,
                 assignee.getEmail()
         );
+
+        eventPublisher.publishEvent(new TicketAssignedEvent(
+                ticket.getId(),
+                ticket.getReference(),
+                ticket.getTitle(),
+                assignee.getId(),
+                currentUser.getId()
+        ));
 
         return TicketResponse.from(ticket);
     }
