@@ -5,8 +5,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.client.ExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
+
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -85,5 +88,38 @@ class ActuatorSecurityIT extends PostgreSqlIntegrationTest {
         assertThat(appPort).isNotEqualTo(managementPort);
         assertThat(appClient().get().uri("/actuator/health").exchange().returnResult().getStatus().value())
                 .isEqualTo(401);
+    }
+
+    // Caught only by live manual verification against the running dev stack the first
+    // time around: Micrometer's PrometheusNamingConvention reserves the "_total" suffix
+    // for counters and silently strips a literal ".total" from gauge names, so
+    // BusinessMetricsBinder's gauges scrape as "taskira_tickets"/"taskira_projects", not
+    // "..._total" as their Java-side names might suggest. Asserting the exact scraped
+    // names - not just that some metric exists - guards against that mismatch
+    // resurfacing unnoticed.
+    @Test
+    void businessGaugesAndTheLoginCounterExposeTheirRealPrometheusNames() {
+        String csrfToken = appClient().get().uri("/api/v1/auth/me").exchange().returnResult()
+                .getResponseCookies().getFirst("XSRF-TOKEN").getValue();
+
+        appClient().post().uri("/api/v1/auth/login")
+                .cookie("XSRF-TOKEN", csrfToken)
+                .header("X-XSRF-TOKEN", csrfToken)
+                .header(HttpHeaders.CONTENT_TYPE, "application/json")
+                .body("""
+                        {"email":"nobody-%s@taskira.test","password":"wrong"}
+                        """.formatted(UUID.randomUUID()))
+                .exchange();
+
+        String body = new String(
+                managementClient().get().uri("/actuator/prometheus").exchange().returnResult().getResponseBodyContent()
+        );
+
+        assertThat(body).contains("taskira_tickets{");
+        assertThat(body).contains("taskira_projects{");
+        assertThat(body).contains("taskira_users_active{");
+        assertThat(body).contains("taskira_auth_login_attempts_total{");
+        assertThat(body).doesNotContain("taskira_tickets_total");
+        assertThat(body).doesNotContain("taskira_projects_total");
     }
 }
