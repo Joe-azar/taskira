@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -65,6 +66,13 @@ public class SecurityConfig {
                 .securityContext(context -> context.securityContextRepository(securityContextRepository()))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
+                        // Actuator runs on its own port (management.server.port), never
+                        // published to the host - see infra/docker-compose.yml. That's the
+                        // real boundary; without this matcher, requests on the management
+                        // port still flow through this same filter chain (Spring Security's
+                        // matching is path-based, not port-based) and anyRequest().authenticated()
+                        // below would 401 even the isolated port's health/prometheus endpoints.
+                        .requestMatchers(EndpointRequest.toAnyEndpoint()).permitAll()
                         .requestMatchers(
                                 ApiVersion.V1 + "/auth/**",
                                 "/v3/api-docs/**",
