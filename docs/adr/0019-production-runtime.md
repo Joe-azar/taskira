@@ -58,7 +58,7 @@ Utilisateur/groupe `taskira` créés explicitement dans le stage runtime de `bac
 
 ## État d'implémentation
 
-Terminée localement sur `feat/phase11-production-runtime`, pas encore fusionnée dans `main`. Détail complet dans [ENTERPRISE_MIGRATION_REPORT.md](../../ENTERPRISE_MIGRATION_REPORT.md) (section « Résultats de la phase 11 »).
+Terminée et fusionnée dans `main` (PR #34, commit de fusion `ec22ad6703fda3bed413523f8bb0ad5af3b9cb2d`), branche `feat/phase11-production-runtime` supprimée après fusion. Détail complet dans [ENTERPRISE_MIGRATION_REPORT.md](../../ENTERPRISE_MIGRATION_REPORT.md) (section « Résultats de la phase 11 »).
 
 Six bugs réels trouvés uniquement en exécutant réellement chaque étape, jamais par simple lecture de configuration ou `docker compose config` : la version nginx-unprivileged initialement prise pour stable était en réalité la branche mainline (corrigé en vérifiant le digest contre le tag flottant `stable-alpine`); un quantificateur regex non protégé par des guillemets faisait échouer le parseur de configuration Nginx; un `proxy_pass` statique refusait de démarrer Nginx tant que `backend` n'était pas résolu en DNS (corrigé par résolution différée); une collision d'uid/gid 1000 avec l'utilisateur `ubuntu` accidentel de l'image de base backend; une collision de nom de projet Compose ayant réellement détruit les conteneurs de développement et écrasé son image frontend en cache; une absence d'écoute IPv6 bloquant indéfiniment le healthcheck Nginx.
 

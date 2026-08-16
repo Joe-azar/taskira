@@ -4,6 +4,7 @@ import com.joe.taskira.comment.dto.CommentResponse;
 import com.joe.taskira.comment.dto.CreateCommentRequest;
 import com.joe.taskira.comment.dto.UpdateCommentRequest;
 import com.joe.taskira.comment.entity.Comment;
+import com.joe.taskira.comment.event.CommentCreatedEvent;
 import com.joe.taskira.comment.repository.CommentRepository;
 import com.joe.taskira.common.exception.ConflictException;
 import com.joe.taskira.common.exception.ForbiddenException;
@@ -23,9 +24,12 @@ import com.joe.taskira.user.enums.GlobalRole;
 import com.joe.taskira.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +41,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final TicketHistoryService ticketHistoryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CommentResponse createComment(Long ticketId, CreateCommentRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -68,6 +73,26 @@ public class CommentService {
                 null,
                 comment.getContent()
         );
+
+        Set<Long> recipientUserIds = new LinkedHashSet<>();
+        if (ticket.getCreator() != null) {
+            recipientUserIds.add(ticket.getCreator().getId());
+        }
+        if (ticket.getAssignee() != null) {
+            recipientUserIds.add(ticket.getAssignee().getId());
+        }
+        recipientUserIds.remove(currentUser.getId());
+
+        if (!recipientUserIds.isEmpty()) {
+            eventPublisher.publishEvent(new CommentCreatedEvent(
+                    comment.getId(),
+                    ticket.getId(),
+                    ticket.getReference(),
+                    ticket.getTitle(),
+                    currentUser.getId(),
+                    recipientUserIds
+            ));
+        }
 
         return CommentResponse.from(commentRepository.findByIdWithRelations(comment.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found after creation")));

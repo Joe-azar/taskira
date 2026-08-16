@@ -1,6 +1,6 @@
 # Architecture de déploiement
 
-Statut : développement Compose opérationnel; P11 (production-like) terminée localement, pas encore fusionnée; staging et labs planifiés.
+Statut : développement Compose opérationnel; P11 (production-like) terminée et fusionnée; staging et labs planifiés.
 
 ## Développement actuel
 
@@ -12,7 +12,7 @@ PostgreSQL        :5432
 
 Docker Compose reste l'environnement de référence. Angular conserve le hot reload; le backend utilise une image multi-stage Java 21.
 
-## Production-like P11 (terminée localement)
+## Production-like P11 (terminée et fusionnée)
 
 ```text
 Client
