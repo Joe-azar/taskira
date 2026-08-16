@@ -24,7 +24,7 @@ Isolation retenue : un port de gestion séparé (`management.server.port`, jamai
 
 ## État d'implémentation
 
-Terminée localement sur `feat/phase10-observability`, pas encore fusionnée dans `main`. Détail complet dans [ENTERPRISE_MIGRATION_REPORT.md](../../ENTERPRISE_MIGRATION_REPORT.md) (section « Résultats de la phase 10 »).
+Terminée et fusionnée dans `main` (PR #33, commit de fusion `8f560fe110f71e211ff5db14dc9dbcb4cb0337b6`), branche `feat/phase10-observability` supprimée après fusion. Détail complet dans [ENTERPRISE_MIGRATION_REPORT.md](../../ENTERPRISE_MIGRATION_REPORT.md) (section « Résultats de la phase 10 »).
 
 Vérifié réellement, pas seulement configuré : `docker exec taskira-backend wget -qO- http://localhost:9091/actuator/health` répond `UP` depuis l'intérieur du conteneur alors que le même port refuse la connexion depuis l'hôte; Prometheus (`v3.13.2`, épinglé par digest) affiche la cible `taskira-backend` à l'état `up` via `/api/v1/targets`; Grafana (`13.1.3`, épinglé par digest) provisionne la datasource Prometheus et les deux dashboards (`taskira-runtime`, `taskira-business`), confirmés via `/api/datasources` et `/api/search`. `management.endpoints.web.exposure.include` est une liste explicite (`health,info,prometheus`) — `env`/`beans`/`heapdump`/`configprops`/`mappings`/`threaddump`/`shutdown` restent non mappés même sur le port isolé.
 

@@ -637,12 +637,18 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 10 — Observabilité (Actuator, Micrometer, Prometheus, Grafana)
 
-Terminée localement, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
 
-Branche :
+Pull Request :
 
 ```text
-feat/phase10-observability
+#33
+```
+
+Commit de fusion :
+
+```text
+8f560fe
 ```
 
 Actuator exposé sur un port de gestion isolé, jamais publié à l'hôte :
@@ -661,7 +667,7 @@ Prometheus (`v3.13.2`, épinglé par digest) scrute `backend:9091/actuator/prome
 
 Voir [ADR-0012](docs/adr/0012-observability-stack.md) pour le détail complet des décisions et découvertes.
 
-Validation locale à ce stade :
+Validation historique à la sortie de phase :
 
 ```text
 76 tests backend (33 rapides + 43 intégration)
