@@ -587,7 +587,19 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 9 — Audit, request ID et logs
 
-Terminée localement sur `feat/phase9-audit-logging`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
+
+Pull Request :
+
+```text
+#32
+```
+
+Commit de fusion :
+
+```text
+1e6170b
+```
 
 Module `audit` (Spring Modulith, fermé par défaut, dépend uniquement de `common`/`security`) :
 
@@ -611,7 +623,7 @@ Logs structurés JSON en profil `prod` (`logging.structured.format.console: logs
 
 Voir [ADR-0018](docs/adr/0018-audit-request-correlation.md) pour le détail complet des décisions.
 
-Validation locale :
+Validation historique à la sortie de phase :
 
 ```text
 65 tests backend (29 rapides + 36 intégration)
