@@ -41,6 +41,14 @@ spring:
           starttls:
             enable: false
 
+  servlet:
+    multipart:
+      # Rejected before the request body is even fully read, not just at the service
+      # layer - app.attachments.max-size-bytes below is the same limit enforced again
+      # once the real (Tika-detected) content type is known, defense in depth.
+      max-file-size: 20MB
+      max-request-size: 20MB
+
 springdoc:
   api-docs:
     path: /v3/api-docs
@@ -65,6 +73,17 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
   notifications:
     from-address: ${APP_NOTIFICATIONS_FROM_ADDRESS:noreply@taskira.test}
+  attachments:
+    # Relative to the JVM's working directory, not an absolute system path: this default
+    # must be writable with zero provisioning wherever the app boots directly - a bare CI
+    # runner running `mvn verify`, a developer's machine, any *Test/*IT that starts the
+    # full context - not only inside this repo's own Docker image, which happens to
+    # pre-create and chown a directory for it (see backend/Dockerfile and the
+    # docker-compose volume mounts, which point at wherever this default resolves to
+    # under the image's WORKDIR). Never served directly - files are only ever reached
+    # through AttachmentController's streamed download.
+    storage-path: ${APP_ATTACHMENTS_STORAGE_PATH:./data/attachments}
+    max-size-bytes: ${APP_ATTACHMENTS_MAX_SIZE_BYTES:20971520}
 
 management:
   server:

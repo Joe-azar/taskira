@@ -724,12 +724,18 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 12 — Notifications et Mailpit
 
-Terminée localement, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
 
-Branche :
+Pull Request :
 
 ```text
-feat/phase12-notifications
+#35
+```
+
+Commit de fusion :
+
+```text
+40e791e
 ```
 
 Deux déclencheurs seulement (`TicketAssignedEvent`, `CommentCreatedEvent`) : ceux qui ont un destinataire non ambigu et un effet direct sur ce que la personne doit faire ensuite. Voir [ADR-0020](docs/adr/0020-notifications-mailpit.md) — premiers événements métier réels du projet (Spring Application Events, anticipés sans usage concret depuis AGENTS.md §36).
@@ -755,7 +761,50 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ---
 
-## Phases 13 à 20
+## Phase 13 — Pièces jointes (Tika, stockage local, sécurité upload)
+
+Terminée localement sur `feat/phase13-attachments`, pas encore fusionnée dans `main`.
+
+Module `attachments` (Spring Modulith, fermé par défaut, aucune autre partie du code ne le consomme) : entité `Attachment` (`AuditableEntity`, liée à `Ticket` et à l'utilisateur uploadeur), table `attachments` (Flyway `V9`), port `DocumentStorage` avec une seule implémentation `LocalFileSystemStorage` — exactement ce qu'annonçait ADR-0009, désormais livré et promu `Accepted`. Voir [ADR-0021](docs/adr/0021-attachments-storage.md) pour le détail complet des décisions de sécurité.
+
+Aucune entrée client n'est jamais approuvée directement :
+
+```text
+type MIME réel détecté par Apache Tika (tika-core 3.3.1), jamais le Content-Type déclaré ni l'extension
+liste blanche explicite de types autorisés, tout le reste rejeté (409)
+clé de stockage = UUID généré côté serveur, jamais dérivé du nom de fichier client
+chemin résolu re-vérifié contre le répertoire de stockage (défense en profondeur, pas seulement le regex du UUID)
+taille limitée à la fois par Spring (multipart.max-file-size) et par le service
+SHA-256 calculé et stocké pour chaque fichier
+Content-Disposition: attachment (jamais inline), nom de fichier encodé RFC 6266
+```
+
+`GET/POST /api/v1/tickets/{id}/attachments`, `GET /api/v1/attachments/{id}/content` (téléchargement en streaming), `DELETE /api/v1/attachments/{id}`. Mêmes règles d'accès que les commentaires/tickets (membre du projet, upload/suppression bloqués sur un projet archivé). Chaque upload et suppression est audité (`ATTACHMENT_CREATED`, `ATTACHMENT_DELETED`).
+
+Deux bugs réels trouvés et corrigés pendant l'écriture des tests, pas supposés :
+
+1. Le SHA-256 était calculé en enveloppant le flux passé à `DocumentStorage.store(...)` dans un `DigestInputStream` — un mock qui ne lit jamais réellement le flux (cas d'un test unitaire) laisse alors le digest dans son état initial et produit silencieusement le hash d'un contenu vide. Corrigé en lisant le fichier une seule fois en mémoire et en calculant le SHA-256 directement sur ce tableau d'octets, indépendamment de ce que fait l'adaptateur de stockage.
+2. Le service résolvait l'utilisateur courant avant de vérifier le type MIME réel, ce qui remontait une erreur trompeuse (« utilisateur introuvable ») sur un test qui n'avait volontairement pas stubé cette dépendance pour un fichier de toute façon destiné au rejet. Corrigé en vérifiant le type de contenu avant de résoudre l'utilisateur — plus correct aussi bien pour le test que pour la conception : un fichier refusé ne doit pas payer le coût d'une résolution utilisateur inutile.
+
+Un troisième bug, découvert uniquement en démarrant réellement la stack de développement (pas par les tests automatisés) : le backend non-root introduit en P11 n'a pas la permission d'écrire dans `/var/lib/taskira`, répertoire jamais créé ni monté par un volume. `LocalFileSystemStorage` échouait au démarrage avec `AccessDeniedException`. Corrigé en pré-créant et chownant le répertoire dans `backend/Dockerfile` avant de basculer vers `USER taskira`, et en montant un volume nommé à ce chemin dans `infra/docker-compose.yml` et `infra/docker-compose.prodlike.yml` — le mécanisme de copy-up de Docker sur un volume nommé préserve alors la propriété déjà posée dans l'image.
+
+Vérifié réellement contre la vraie stack de développement après ce correctif, pas seulement en test automatisé : upload d'un vrai PNG (201, SHA-256 correct), téléchargement identique octet pour octet avec les bons en-têtes, rejet réel d'un script shell déguisé en `.png` (409, type détecté `application/x-sh`), suppression (204) avec disparition confirmée du fichier physique sur disque et de la ligne en base, et les deux événements d'audit correctement enregistrés.
+
+Validation historique à la sortie de phase :
+
+```text
+100 tests backend (51 rapides + 49 intégration, dont AttachmentWiringIT : upload/téléchargement/
+suppression réels via HTTP et PostgreSQL, pas AttachmentService appelé directement)
+25 Vitest, lint et build Angular inchangés (aucun fichier frontend modifié - P13 est backend uniquement)
+10/10 Playwright (stack de développement isolée, aucun nouveau scénario - aucune UI d'attachments
+n'existe encore côté frontend)
+```
+
+Ces nombres sont historiques et augmenteront normalement avec les futures phases.
+
+---
+
+## Phases 14 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 

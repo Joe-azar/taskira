@@ -44,7 +44,7 @@ Un test unitaire (`JavaMailSender` simulé) ne prouve que la construction du mes
 
 ## État d'implémentation
 
-Terminée localement sur `feat/phase12-notifications`, pas encore fusionnée dans `main`. Détail complet dans [ENTERPRISE_MIGRATION_REPORT.md](../../ENTERPRISE_MIGRATION_REPORT.md) (section « Résultats de la phase 12 »).
+Terminée et fusionnée dans `main` (PR #35, commit de fusion `40e791ed30cdd5bb0bb84bbadd7be7a91924907a`), branche `feat/phase12-notifications` supprimée après fusion. Détail complet dans [ENTERPRISE_MIGRATION_REPORT.md](../../ENTERPRISE_MIGRATION_REPORT.md) (section « Résultats de la phase 12 »).
 
 Un bug réel trouvé par la suite de tests complète, pas supposé : ajouter `spring-boot-starter-mail` active automatiquement un indicateur de santé Actuator pour le courrier qui fait passer l'endpoint agrégé `/actuator/health` à `503` dès que le serveur SMTP n'est pas joignable — révélé par un échec inattendu d'`ActuatorSecurityIT` (phase 10), directement contraire à la philosophie best-effort ci-dessus. Corrigé avec `management.health.mail.enabled: false`.
 
