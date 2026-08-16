@@ -251,6 +251,32 @@ class AuditWiringIT extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    void anAdminCreatingAUserWritesAUserCreatedAuditEvent() {
+        Actor admin = loginAsPersistedAdmin("audit-create-admin-" + UUID.randomUUID() + "@taskira.test");
+        String newUserEmail = "audit-created-" + UUID.randomUUID() + "@taskira.test";
+
+        ExchangeResult result = authenticatedPost(admin, "/api/v1/users", """
+                {
+                  "firstName": "Audit",
+                  "lastName": "Created",
+                  "email": "%s",
+                  "password": "Taskira-Audit-IT-42!",
+                  "globalRole": "USER",
+                  "active": true
+                }
+                """.formatted(newUserEmail));
+        // Unlike /projects and /tickets, UserController#createUser has no @ResponseStatus
+        // override, so it returns Spring MVC's default 200 for a POST, not 201.
+        assertThat(result.getStatus().value()).isEqualTo(200);
+        long newUserId = extractId(result);
+
+        AuditEvent event = latestAuditEventFor(AuditAction.USER_CREATED);
+        assertThat(event.getEntityId()).isEqualTo(newUserId);
+        assertThat(event.getActorId()).isEqualTo(admin.userId());
+        assertThat(event.getDetail()).contains(newUserEmail);
+    }
+
+    @Test
     void changingAUsersGlobalRoleWritesAUserRoleChangedAuditEvent() {
         Actor admin = loginAsPersistedAdmin("audit-role-admin-" + UUID.randomUUID() + "@taskira.test");
         Actor target = register("audit-role-target");

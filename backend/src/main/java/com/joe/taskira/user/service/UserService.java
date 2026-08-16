@@ -75,6 +75,7 @@ public class UserService {
 
     public UserResponse createUser(CreateUserRequest request) {
         ensureAdmin();
+        AuthenticatedUser currentUser = SecurityUtils.getCurrentUser();
 
         String normalizedEmail = normalizeEmail(request.email());
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
@@ -91,6 +92,16 @@ public class UserService {
                 .build();
 
         User saved = userRepository.save(user);
+
+        auditService.record(
+                currentUser.getId(),
+                currentUser.getUser().getEmail(),
+                AuditEntityType.USER,
+                saved.getId(),
+                AuditAction.USER_CREATED,
+                saved.getEmail() + " (" + saved.getGlobalRole() + ")"
+        );
+
         return UserResponse.from(saved);
     }
 
