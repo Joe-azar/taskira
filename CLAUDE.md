@@ -9,7 +9,7 @@ Before making substantial changes, also read:
 
 For the long-term migration roadmap, consult:
 
-@docs/enterprise-roadmap.md
+@docs/migration-matrix.md
 
 Rules:
 
