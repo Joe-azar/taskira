@@ -763,7 +763,19 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 13 — Pièces jointes (Tika, stockage local, sécurité upload)
 
-Terminée localement sur `feat/phase13-attachments`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
+
+Pull Request :
+
+```text
+#36
+```
+
+Commit de fusion :
+
+```text
+0e535d2
+```
 
 Module `attachments` (Spring Modulith, fermé par défaut, aucune autre partie du code ne le consomme) : entité `Attachment` (`AuditableEntity`, liée à `Ticket` et à l'utilisateur uploadeur), table `attachments` (Flyway `V9`), port `DocumentStorage` avec une seule implémentation `LocalFileSystemStorage` — exactement ce qu'annonçait ADR-0009, désormais livré et promu `Accepted`. Voir [ADR-0021](docs/adr/0021-attachments-storage.md) pour le détail complet des décisions de sécurité.
 
@@ -790,6 +802,10 @@ Un troisième bug, découvert uniquement en démarrant réellement la stack de d
 
 Vérifié réellement contre la vraie stack de développement après ce correctif, pas seulement en test automatisé : upload d'un vrai PNG (201, SHA-256 correct), téléchargement identique octet pour octet avec les bons en-têtes, rejet réel d'un script shell déguisé en `.png` (409, type détecté `application/x-sh`), suppression (204) avec disparition confirmée du fichier physique sur disque et de la ligne en base, et les deux événements d'audit correctement enregistrés.
 
+Un quatrième bug, trouvé uniquement par le vrai run GitHub Actions de la Pull Request (jamais reproduit localement avant cela) : le `mvn verify` local avait toujours été exécuté dans un conteneur Maven générique tournant en `root`, qui peut écrire n'importe où — masquant que la valeur par défaut de `app.attachments.storage-path` (`/var/lib/taskira/attachments`) n'est réellement écrivable que grâce au `chown` explicite de l'image Docker de ce dépôt, pas par défaut sur une machine quelconque. Sur le runner GitHub Actions (utilisateur non privilégié), `ProdProfileTest` (le seul test Surefire à démarrer un contexte Spring complet) échouait avec `BeanCreationException` → `AccessDeniedException`, faisant aussi échouer le check `SonarQube analysis and quality gate` qui exécute le même `mvn verify` avant l'analyse. Corrigé en changeant la valeur par défaut vers un chemin relatif au répertoire de travail (`./data/attachments`) — écrivable sans provisioning particulier partout où l'application démarre directement (CI, poste de développement, tout `*Test`/`*IT`) — et en alignant `backend/Dockerfile` et les deux fichiers Compose sur `/app/data/attachments` (sous le `WORKDIR` de l'image) pour préserver le comportement de persistance Docker. Revérifié par un `mvn verify` propre (100 tests toujours verts), un nouveau smoke test réel contre la stack de développement reconstruite, et un nouveau 10/10 Playwright, avant repush.
+
+PR [#36](https://github.com/Joe-azar/taskira/pull/36) vérifiée verte sur GitHub avant fusion — `CI Gate`, `Backend`, `SonarQube analysis and quality gate`, `Containers and E2E`, CodeQL et Trivy tous passés après ce correctif.
+
 Validation historique à la sortie de phase :
 
 ```text
@@ -804,7 +820,56 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ---
 
-## Phases 14 à 20
+## Phase 14 — Exports (POI, OpenHTMLtoPDF, PDFBox, ZXing, Spring Batch)
+
+Terminée localement sur `feat/phase14-exports`, pas encore fusionnée dans `main`.
+
+Module `exports` (Spring Modulith, fermé par défaut) couvre trois cas réels distincts, pas une simple vitrine technologique — voir [ADR-0022](docs/adr/0022-exports-batch.md) pour le détail complet des décisions.
+
+Deux exports synchrones, bornés par construction, mêmes règles d'accès que les endpoints JSON qu'ils reflètent :
+
+```text
+GET /api/v1/projects/{id}/tickets/export.xlsx  Apache POI (poi-ooxml 5.5.1), un seul projet
+GET /api/v1/tickets/{id}/export.pdf            OpenHTMLtoPDF (1.0.10), un seul ticket,
+                                                QR code ZXing intégré (lien vers le ticket web),
+                                                métadonnées PDF posées par PDFBox après rendu
+```
+
+Un export en masse asynchrone, seul cas qui justifie réellement Spring Batch (volume non borné, tous projets confondus) :
+
+```text
+POST /api/v1/exports/tickets/batch              ADMIN uniquement, lance ticketsBulkExportJob
+GET  /api/v1/exports/tickets/batch/{id}          état du job (STARTING/STARTED/COMPLETED/FAILED)
+GET  /api/v1/exports/tickets/batch/{id}/download téléchargement une fois COMPLETED
+```
+
+`ticketsBulkExportJob` pagine tous les tickets (`ItemReader` maison, pas de dépendance `spring-batch-data` supplémentaire) dans un `SXSSFWorkbook` streaming partagé sur toute la durée du job, un onglet par code de projet. Le fichier fini est stocké via le port `DocumentStorage` déjà défini par `attachments` (P13, désormais exposé via `@NamedInterface`) plutôt qu'un second mécanisme de stockage. Schéma `BATCH_*` de Spring Batch 6.0.4 (résolu par le BOM Spring Boot 4.1.0) créé par Flyway `V10`, jamais par l'initialiseur intégré de Spring Boot (`spring.batch.jdbc.initialize-schema: never`, même règle que `ddl-auto: validate` pour Hibernate); `spring.batch.job.enabled: false` empêche tout lancement automatique au démarrage.
+
+Trois bugs réels trouvés et corrigés, tous par des tests qui vérifient de vrais états, pas des suppositions :
+
+1. **Entité XML non déclarée** : `&middot;` (entité HTML nommée) fait échouer le rendu OpenHTMLtoPDF, qui exige du XHTML strict (seules `amp`/`lt`/`gt`/`quot`/`apos` sont valides sans DTD). Corrigé avec la référence numérique `&#183;`.
+2. **`Specification.where(null)`** : cette version de Spring Data JPA lève `IllegalArgumentException` plutôt que de traiter `null` comme « aucune restriction » (ambiguïté de surcharge entre `Specification<T>` et `PredicateSpecification<T>` en plus). Corrigé avec une spécification explicitement toujours vraie (`(root, query, cb) -> cb.conjunction()`).
+3. **Persistance de l'`ExecutionContext` après complétion du job** : Spring Batch 6.0 `StepBuilder.chunk(int)` bascule silencieusement vers un `ResourcelessTransactionManager` si aucun n'est fourni explicitement (vérifié dans le code source du framework) — corrigé en câblant le vrai `PlatformTransactionManager` JPA. Plus sérieux : `JobRepository.update(JobExecution)` — le seul appel de persistance qu'`AbstractJob` effectue autour de la complétion d'un job — ne persiste jamais l'`ExecutionContext` (vérifié dans le code source : il n'appelle que le DAO d'exécution de job). La logique de finalisation vivait initialement dans un `JobExecutionListener.afterJob(...)`, qui s'exécute en plus *après* que le statut terminal du job soit déjà visible depuis l'extérieur — un appelant qui sonde uniquement le statut pouvait observer `COMPLETED` avant même que le listener ait fini. Déplacée vers un `StepExecutionListener.afterStep(...)` (s'exécute dans le cadre de la complétion du step lui-même, strictement avant la détermination du statut global du job) avec un appel explicite à `jobRepository.updateExecutionContext(...)`, que rien d'autre dans le framework n'effectue sur ce chemin.
+
+Vérifié réellement contre la vraie stack de développement reconstruite, pas seulement en test automatisé : export Excel synchrone (`.xlsx` réel, ouvrable), export PDF synchrone (`.pdf` réel, 1 page), lancement du job en masse par l'admin dev bootstrapé (`202`, `jobExecutionId`), sondage jusqu'à `COMPLETED` (quasi instantané sur ce volume de données), téléchargement du classeur réel — les onglets couvrent bien tous les projets existants de la base réelle, y compris ceux créés par d'autres sessions de test — événement d'audit `EXPORT_GENERATED` confirmé en base, et un utilisateur non-admin refusé (`403`) sur le lancement.
+
+Validation historique à la sortie de phase :
+
+```text
+115 tests backend (59 rapides + 56 intégration, dont BulkExportJobIT — vrais états de job
+Spring Batch via le vrai JobLauncher asynchrone de l'application — et BulkExportWiringIT/
+ExportWiringIT — flux HTTP complets, fichiers réels relus avec POI/PDFBox, QR code
+redécodé avec ZXing depuis la page PDF rendue)
+25 Vitest, lint et build Angular inchangés (aucun fichier frontend modifié - P14 est
+backend uniquement, comme P12 et P13)
+10/10 Playwright (stack de développement isolée, aucun nouveau scénario)
+```
+
+Ces nombres sont historiques et augmenteront normalement avec les futures phases.
+
+---
+
+## Phases 15 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 

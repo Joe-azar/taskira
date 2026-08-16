@@ -6,5 +6,6 @@ public enum AuditEntityType {
     PROJECT,
     PROJECT_MEMBER,
     USER,
-    ATTACHMENT
+    ATTACHMENT,
+    EXPORT
 }
