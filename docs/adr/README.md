@@ -21,5 +21,7 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0015](0015-sonarqube-quality-gate.md) | SonarQube Community Build local et éphémère | Accepted | Validée localement P4 |
 | [0016](0016-spring-modulith-boundaries.md) | Spring Modulith pour la vérification des frontières | Accepted | Validée localement P5; cycle project/ticket détecté et corrigé |
 | [0017](0017-postgresql-18-migration.md) | Migration PostgreSQL 16 vers 18 | Accepted | Validée localement P6 : Flyway, restauration et Hibernate testés avant bascule |
+| [0018](0018-audit-request-correlation.md) | Module `audit`, `audit_events` et corrélation par request id | Accepted | Terminée et fusionnée P9 (PR #32) |
+| [0019](0019-production-runtime.md) | Runtime production-like Nginx/non-root | Accepted | En cours P11 |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.
