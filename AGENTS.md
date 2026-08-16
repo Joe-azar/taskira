@@ -763,7 +763,19 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 13 — Pièces jointes (Tika, stockage local, sécurité upload)
 
-Terminée localement sur `feat/phase13-attachments`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
+
+Pull Request :
+
+```text
+#36
+```
+
+Commit de fusion :
+
+```text
+0e535d2
+```
 
 Module `attachments` (Spring Modulith, fermé par défaut, aucune autre partie du code ne le consomme) : entité `Attachment` (`AuditableEntity`, liée à `Ticket` et à l'utilisateur uploadeur), table `attachments` (Flyway `V9`), port `DocumentStorage` avec une seule implémentation `LocalFileSystemStorage` — exactement ce qu'annonçait ADR-0009, désormais livré et promu `Accepted`. Voir [ADR-0021](docs/adr/0021-attachments-storage.md) pour le détail complet des décisions de sécurité.
 
@@ -789,6 +801,10 @@ Deux bugs réels trouvés et corrigés pendant l'écriture des tests, pas suppos
 Un troisième bug, découvert uniquement en démarrant réellement la stack de développement (pas par les tests automatisés) : le backend non-root introduit en P11 n'a pas la permission d'écrire dans `/var/lib/taskira`, répertoire jamais créé ni monté par un volume. `LocalFileSystemStorage` échouait au démarrage avec `AccessDeniedException`. Corrigé en pré-créant et chownant le répertoire dans `backend/Dockerfile` avant de basculer vers `USER taskira`, et en montant un volume nommé à ce chemin dans `infra/docker-compose.yml` et `infra/docker-compose.prodlike.yml` — le mécanisme de copy-up de Docker sur un volume nommé préserve alors la propriété déjà posée dans l'image.
 
 Vérifié réellement contre la vraie stack de développement après ce correctif, pas seulement en test automatisé : upload d'un vrai PNG (201, SHA-256 correct), téléchargement identique octet pour octet avec les bons en-têtes, rejet réel d'un script shell déguisé en `.png` (409, type détecté `application/x-sh`), suppression (204) avec disparition confirmée du fichier physique sur disque et de la ligne en base, et les deux événements d'audit correctement enregistrés.
+
+Un quatrième bug, trouvé uniquement par le vrai run GitHub Actions de la Pull Request (jamais reproduit localement avant cela) : le `mvn verify` local avait toujours été exécuté dans un conteneur Maven générique tournant en `root`, qui peut écrire n'importe où — masquant que la valeur par défaut de `app.attachments.storage-path` (`/var/lib/taskira/attachments`) n'est réellement écrivable que grâce au `chown` explicite de l'image Docker de ce dépôt, pas par défaut sur une machine quelconque. Sur le runner GitHub Actions (utilisateur non privilégié), `ProdProfileTest` (le seul test Surefire à démarrer un contexte Spring complet) échouait avec `BeanCreationException` → `AccessDeniedException`, faisant aussi échouer le check `SonarQube analysis and quality gate` qui exécute le même `mvn verify` avant l'analyse. Corrigé en changeant la valeur par défaut vers un chemin relatif au répertoire de travail (`./data/attachments`) — écrivable sans provisioning particulier partout où l'application démarre directement (CI, poste de développement, tout `*Test`/`*IT`) — et en alignant `backend/Dockerfile` et les deux fichiers Compose sur `/app/data/attachments` (sous le `WORKDIR` de l'image) pour préserver le comportement de persistance Docker. Revérifié par un `mvn verify` propre (100 tests toujours verts), un nouveau smoke test réel contre la stack de développement reconstruite, et un nouveau 10/10 Playwright, avant repush.
+
+PR [#36](https://github.com/Joe-azar/taskira/pull/36) vérifiée verte sur GitHub avant fusion — `CI Gate`, `Backend`, `SonarQube analysis and quality gate`, `Containers and E2E`, CodeQL et Trivy tous passés après ce correctif.
 
 Validation historique à la sortie de phase :
 
