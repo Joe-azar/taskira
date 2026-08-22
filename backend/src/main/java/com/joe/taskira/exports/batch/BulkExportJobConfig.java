@@ -41,6 +41,15 @@ public class BulkExportJobConfig {
         executor.setCorePoolSize(1);
         executor.setMaxPoolSize(2);
         executor.setThreadNamePrefix("bulk-export-");
+        // ThreadPoolTaskExecutor threads are non-daemon by default, and Spring's test-
+        // context cache doesn't guarantee this bean's owning context gets closed (and
+        // the pool shut down) before a Surefire/Failsafe fork tries to exit - a real,
+        // contributing cause of the "Surefire is going to kill self fork JVM" message
+        // this project's test forks log (not the only one; some residual delay remains
+        // even with this set, not chased further - no test failure, ~30-60s overhead).
+        // Daemon threads are the correct default regardless for a background worker
+        // pool that should never be the reason the JVM stays alive.
+        executor.setDaemon(true);
         executor.initialize();
         return executor;
     }
