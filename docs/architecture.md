@@ -13,6 +13,7 @@ Ce fichier conserve un point d'entrée stable vers l'arborescence d'architecture
 - [Observabilité](architecture/observability.md)
 - [Déploiement](architecture/deployment.md)
 - [Sauvegarde et restauration](architecture/backup.md)
+- [Lab Kubernetes](architecture/kubernetes-lab.md)
 
 Documents transversaux :
 

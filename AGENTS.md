@@ -939,7 +939,24 @@ Validation locale réelle avant fusion : cycle complet semer → sauvegarder →
 
 ---
 
-## Phases 17 à 20
+## Phase 17 — Kubernetes Lab
+
+Terminée localement dans `labs/kubernetes/` (ADR-0024), pas fusionnée dans `main` sans révision préalable des changements avant l'ouverture de la PR de suivi.
+
+Lab jetable, séparé du runtime principal (AGENTS.md §38, §8) : `kind` fait tourner ses nœuds comme des conteneurs Docker ordinaires, sur le même moteur Docker que tout le reste du dépôt — aucun réglage Docker Desktop à activer. Les images backend/frontend déployées sont les vraies images publiées sur GHCR par la release `v0.1.0` de P15, pas des images reconstruites pour l'occasion. `postgres` utilise un `Deployment` (`strategy: Recreate`, pas un `StatefulSet` — une seule replica, exactement comme dans `infra/docker-compose*.yml`) avec un PVC (`StorageClass` par défaut de `kind`, provisioning dynamique).
+
+Deux bugs réels trouvés uniquement en démarrant réellement le cluster et en envoyant une vraie requête à travers l'Ingress — aucune relecture de manifeste ne les aurait révélés :
+
+1. **`resolver 127.0.0.11 valid=10s;`** dans `frontend/nginx/default.conf` (l'image GHCR réelle) est le DNS intégré de Docker, absent d'un pod Kubernetes — `502` sur toute requête `/api/`.
+2. **Le nom court `backend` reste irrésolu** même après avoir corrigé le résolveur : le résolveur intégré de Nginx interroge le DNS avec le nom littéral configuré, sans jamais appliquer la liste `search` de `/etc/resolv.conf` du pod (contrairement à `wget`/`curl`/la JVM).
+
+Corrigés sans jamais toucher `frontend/nginx/default.conf` (partagé par trois runtimes Compose déjà validés) : `labs/kubernetes/manifests/05-frontend.yaml` monte un `ConfigMap` qui remplace `/etc/nginx/conf.d/default.conf` à l'intérieur du pod, identique au fichier réel à deux lignes près (`resolver kube-dns.kube-system.svc.cluster.local`, `proxy_pass` vers le nom pleinement qualifié `backend.taskira.svc.cluster.local`).
+
+Vérifié réellement de bout en bout : cluster créé, ingress-nginx (`controller-v1.15.1`, vendu et épinglé), PostgreSQL/backend/frontend déployés, `curl http://localhost/` (200), `/healthz` (200), `/api/v1/auth/me` anonyme (401, vrai `ProblemDetail` avec `requestId`), et une vraie inscription via l'API réelle (201, jusqu'à PostgreSQL). `scripts/demo-rollout.ps1` a ensuite démontré réellement : scaling (2 → 3 replicas frontend), rolling update (image locale reconstruite depuis la source courante, chargée via `kind load docker-image`, jamais publiée sur GHCR — le pipeline de release réel de P15 n'est jamais touché), et rollback (`kubectl rollout undo`, retour confirmé à `ghcr.io/joe-azar/taskira-backend:v0.1.0`). `scripts/down.ps1` a détruit le cluster proprement.
+
+---
+
+## Phases 18 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 
