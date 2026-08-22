@@ -1,6 +1,6 @@
 # Lab Kubernetes local
 
-Voir [ADR-0024](adr/0024-kubernetes-lab.md) pour les décisions complètes. Ce document est la référence
+Voir [ADR-0024](../adr/0024-kubernetes-lab.md) pour les décisions complètes. Ce document est la référence
 opérationnelle : comment démarrer le lab, ce qu'il démontre, comment le détruire.
 
 Ce lab est pédagogique et jetable — voir AGENTS.md §38 : il ne remplace pas le runtime Docker Compose
