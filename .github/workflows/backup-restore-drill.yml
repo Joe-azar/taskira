@@ -1,0 +1,113 @@
+name: Backup and restore drill
+
+on:
+  schedule:
+    # Weekly, not daily: this drill doesn't protect any real persistent data (there is
+    # no always-on production database for a GitHub-hosted runner to reach - see
+    # docs/architecture/backup.md) - its job is to keep proving that
+    # scripts/backup/backup-postgres.ps1 and scripts/restore/restore-postgres.ps1 still
+    # work as the schema evolves, which doesn't need daily cadence.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-restore-drill
+  cancel-in-progress: true
+
+jobs:
+  drill:
+    name: Real backup and restore drill
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      # Just postgres + backend, not the full dev stack (frontend/mailpit/prometheus/
+      # grafana add nothing here) - a real Postgres container and a real backend that
+      # applies every Flyway migration for real, exactly like a developer's machine.
+      - name: Start postgres and backend
+        working-directory: infra
+        run: docker compose up -d postgres backend
+
+      - name: Wait for the backend to become healthy
+        run: |
+          for _ in $(seq 1 30); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' taskira-backend 2>/dev/null || echo "starting")
+            echo "backend=$status"
+            if [ "$status" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Backend never became healthy." >&2
+          docker compose -f infra/docker-compose.yml logs backend
+          exit 1
+
+      # Real relational data, not an empty schema - registering through the real HTTP
+      # API is the same path AttachmentWiringIT/ExportWiringIT/etc. use, just via curl
+      # here since this step only needs three calls.
+      - name: Seed real data through the real API
+        run: |
+          set -e
+          BASE="http://localhost:8080/api/v1"
+          curl -sf -c /tmp/cookies.txt "$BASE/auth/me" -o /dev/null || true
+          CSRF=$(grep XSRF-TOKEN /tmp/cookies.txt | awk '{print $7}')
+          EMAIL="backup-drill-$(date +%s)@taskira.test"
+          curl -sf -b /tmp/cookies.txt -c /tmp/cookies.txt -X POST "$BASE/auth/register" \
+            -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $CSRF" \
+            -d "{\"firstName\":\"Backup\",\"lastName\":\"Drill\",\"email\":\"$EMAIL\",\"password\":\"Backup-Drill-42!\",\"confirmPassword\":\"Backup-Drill-42!\"}" \
+            -o /tmp/register.json
+          PROJECT_ID=$(curl -sf -b /tmp/cookies.txt -c /tmp/cookies.txt -X POST "$BASE/projects" \
+            -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $CSRF" \
+            -d '{"code":"DRL","name":"Backup drill project","description":""}' \
+            | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
+          curl -sf -b /tmp/cookies.txt -c /tmp/cookies.txt -X POST "$BASE/tickets" \
+            -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $CSRF" \
+            -d "{\"projectId\": $PROJECT_ID, \"title\": \"Backup drill ticket\", \"type\": \"TASK\"}" \
+            -o /tmp/ticket.json
+          cat /tmp/register.json /tmp/ticket.json
+
+      - name: Back up the seeded database
+        id: backup
+        shell: pwsh
+        run: |
+          $result = & ./scripts/backup/backup-postgres.ps1
+          $result | Write-Host
+          $dumpPath = ($result | Select-String -Pattern 'Backup written to (\S+) ').Matches[0].Groups[1].Value
+          "dump_path=$dumpPath" >> $env:GITHUB_OUTPUT
+
+      - name: Restore the backup into a disposable container
+        shell: pwsh
+        run: |
+          & ./scripts/restore/restore-postgres.ps1 -DumpFile "${{ steps.backup.outputs.dump_path }}"
+
+      # The restore script itself only prints row counts for a human to eyeball - a
+      # scheduled drill needs a real pass/fail, so assert here that the data seeded
+      # above actually came back, not just that pg_restore exited zero.
+      - name: Assert the seeded data actually came back
+        run: |
+          set -e
+          user_count=$(docker exec taskira-postgres-restore-check psql -U taskira -d taskira -tAc "SELECT count(*) FROM users")
+          project_count=$(docker exec taskira-postgres-restore-check psql -U taskira -d taskira -tAc "SELECT count(*) FROM projects WHERE code = 'DRL'")
+          ticket_count=$(docker exec taskira-postgres-restore-check psql -U taskira -d taskira -tAc "SELECT count(*) FROM tickets")
+          echo "users=$user_count projects(DRL)=$project_count tickets=$ticket_count"
+          if [ "$user_count" -lt 1 ] || [ "$project_count" -lt 1 ] || [ "$ticket_count" -lt 1 ]; then
+            echo "Restored database is missing data seeded before the backup." >&2
+            exit 1
+          fi
+
+      - name: Remove the restore-check container
+        if: always()
+        run: docker rm -f taskira-postgres-restore-check || true
+
+      - name: Tear down postgres and backend
+        if: always()
+        working-directory: infra
+        run: docker compose down --volumes --remove-orphans
