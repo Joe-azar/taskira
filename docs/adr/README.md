@@ -29,5 +29,6 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0023](0023-backup-restore-strategy.md) | Sauvegarde PostgreSQL et restauration réellement testée | Accepted | Terminée et fusionnée P16 (PR #47/#48) |
 | [0024](0024-kubernetes-lab.md) | Lab Kubernetes local, séparé du runtime principal | Accepted | Terminée localement P17 |
 | [0025](0025-helm-lab.md) | Chart Helm construit après les manifestes bruts | Accepted | Terminée localement P18 |
+| [0026](0026-azure-lab.md) | Lab Azure : architecture et Terraform, jamais déployé automatiquement | Accepted | Terminée localement P19 (architecture/Terraform validés, jamais déployé) |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.

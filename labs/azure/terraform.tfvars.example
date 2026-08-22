@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (gitignored) and fill in real values before ever running
+# `terraform plan`/`terraform apply` against a real Azure subscription - never commit
+# the copy. See ADR-0026: this repo does not run either command automatically.
+
+postgres_password = "REPLACE_ME"
+ghcr_username      = "REPLACE_ME"
+ghcr_pull_token    = "REPLACE_ME"
