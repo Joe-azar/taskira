@@ -11,7 +11,7 @@ Statut : P9 (corrélation et logs) et P10 (Actuator/Prometheus/Grafana) terminé
 - `ProblemDetails.of(...)` (`common.web`) est le point unique de construction des réponses d'erreur (`GlobalExceptionHandler`, `RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`, trois sites auparavant indépendants) et ajoute `requestId` comme propriété d'extension, alignée sur l'en-tête `X-Request-Id`.
 - Aucun mot de passe, cookie, token ou secret : `AuditService.record(...)` n'accepte que des identifiants/enums/chaînes courtes en paramètre, jamais une entité, une exception ou un corps de requête brut — un mot de passe ne peut structurellement pas fuiter dans une ligne de log ou une ligne `audit_events`.
 
-Voir [ADR-0018](adr/0018-audit-request-correlation.md) pour le détail complet (module `audit`, table `audit_events`, décision de conception).
+Voir [ADR-0018](../adr/0018-audit-request-correlation.md) pour le détail complet (module `audit`, table `audit_events`, décision de conception).
 
 ## P10 — Métriques (terminée et fusionnée)
 

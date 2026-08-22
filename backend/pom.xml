@@ -22,7 +22,6 @@
         <jacoco.version>0.8.13</jacoco.version>
         <spring-modulith.version>2.1.0</spring-modulith.version>
         <testcontainers.version>1.21.4</testcontainers.version>
-        <mapstruct.version>1.6.3</mapstruct.version>
         <surefireArgLine></surefireArgLine>
         <failsafeArgLine></failsafeArgLine>
     </properties>
@@ -239,13 +238,6 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>3.1.0</version>
         </dependency>
-
-        <!-- MapStruct -->
-        <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>
-            <version>${mapstruct.version}</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -258,16 +250,6 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                        </path>
-                        <path>
-                            <groupId>org.mapstruct</groupId>
-                            <artifactId>mapstruct-processor</artifactId>
-                            <version>${mapstruct.version}</version>
-                        </path>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok-mapstruct-binding</artifactId>
-                            <version>0.2.0</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

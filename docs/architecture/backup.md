@@ -1,6 +1,6 @@
 # Sauvegarde et restauration PostgreSQL
 
-Voir [ADR-0023](adr/0023-backup-restore-strategy.md) pour les décisions complètes. Ce document est la référence opérationnelle : comment sauvegarder, comment restaurer et vérifier, comment planifier localement.
+Voir [ADR-0023](../adr/0023-backup-restore-strategy.md) pour les décisions complètes. Ce document est la référence opérationnelle : comment sauvegarder, comment restaurer et vérifier, comment planifier localement.
 
 ## Deux mécanismes, deux besoins différents
 

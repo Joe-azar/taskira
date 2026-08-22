@@ -1,6 +1,6 @@
 # Taskira
 
-Taskira est une plateforme web de gestion de tickets, tâches et anomalies, conçue comme un projet full-stack avec Angular, Spring Boot, PostgreSQL, Flyway et JWT.
+Taskira est une plateforme web de gestion de tickets, tâches et anomalies, conçue comme un projet full-stack avec Angular, Spring Boot, PostgreSQL et Flyway. L'authentification repose sur une session côté serveur (cookie `HttpOnly`) et une protection CSRF, pas sur un jeton JWT (voir [ADR-0006](docs/adr/0006-session-cookie-auth.md)).
 
 ## Structure du projet
 
@@ -66,7 +66,9 @@ docker compose -f infra/docker-compose.yml logs -f
 
 ### Premier compte
 
-Une base neuve ne contient aucun utilisateur. Le premier compte peut être créé avec `POST /api/v1/auth/register` depuis Swagger. L'inscription crée un utilisateur actif avec le rôle `USER`; aucun administrateur n'est initialisé automatiquement.
+Une base neuve ne contient aucun utilisateur créé par l'application elle-même, mais le profil `dev` (celui utilisé par `infra/docker-compose.yml`) crée automatiquement un compte administrateur au démarrage s'il n'existe pas déjà : `admin@taskira.test` / `Taskira-Admin-42!` par défaut, surchargeable via les variables d'environnement `APP_DEV_ADMIN_EMAIL`/`APP_DEV_ADMIN_PASSWORD`. Ce bootstrap est strictement réservé au profil `dev` et n'existe jamais en profil `prod`.
+
+Un compte supplémentaire (rôle `USER`) peut être créé avec `POST /api/v1/auth/register` depuis Swagger.
 
 ### Arrêter
 

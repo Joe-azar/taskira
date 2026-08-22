@@ -1,6 +1,6 @@
 # Lab Helm
 
-Voir [ADR-0025](adr/0025-helm-lab.md) pour les décisions complètes. Ce document est la référence
+Voir [ADR-0025](../adr/0025-helm-lab.md) pour les décisions complètes. Ce document est la référence
 opérationnelle. Construit après les manifestes bruts de [P17](kubernetes-lab.md) — voir ce document pour
 le lab Kubernetes de base et les deux bugs DNS Nginx déjà corrigés là et repris tels quels ici.
 

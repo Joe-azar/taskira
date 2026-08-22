@@ -8,7 +8,7 @@ Ce fichier conserve un point d'entrée stable vers l'arborescence d'architecture
 - [Base de données](architecture/database.md)
 - [Sécurité](architecture/security.md)
 - [Stockage documentaire](architecture/storage.md)
-- [Tests](architecture/testing.md)
+- [Tests](testing-strategy.md)
 - [CI/CD](architecture/ci-cd.md)
 - [Observabilité](architecture/observability.md)
 - [Déploiement](architecture/deployment.md)

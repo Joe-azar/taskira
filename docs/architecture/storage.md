@@ -1,34 +1,38 @@
 # Architecture de stockage documentaire
 
-Statut : proposition pour la phase 13; aucun module de pièces jointes n'est actuellement implémenté.
+Statut : implémenté et fusionné dans `main` depuis la phase 13 ([ADR-0009](../adr/0009-local-filesystem-first.md), promu `Accepted`; [ADR-0021](../adr/0021-attachments-storage.md)). Module Spring Modulith `attachments`, fermé par défaut.
 
-## Port proposé
+## Port implémenté
 
 ```java
 public interface DocumentStorage {
-    StoredDocument store(...);
-    InputStream read(...);
-    void delete(...);
-    boolean exists(...);
+    String store(InputStream content) throws IOException;
+    InputStream retrieve(String storageKey) throws IOException;
+    void delete(String storageKey) throws IOException;
 }
 ```
 
-La première implémentation proposée est `LocalFileSystemStorage`, conformément à [ADR-0009](../adr/0009-local-filesystem-first.md). Un adapter MinIO ou Azure Blob ne sera ajouté qu'après stabilisation du port et besoin réel.
+Une seule implémentation aujourd'hui : `LocalFileSystemStorage` (`attachments/adapter/`). Un adapter MinIO ou Azure Blob remplacerait cette implémentation sans changer aucun appelant — non ajouté faute de besoin réel, conformément à ADR-0009.
 
-## Métadonnées prévues
+## Entité et métadonnées réelles
 
-- UUID et nom technique;
-- nom original;
-- MIME détecté et extension;
-- taille et SHA-256;
-- auteur, date, ticket/projet et statut.
+`Attachment` (`AuditableEntity`, table `attachments`, Flyway `V9`) : clé de stockage UUID générée côté serveur (jamais dérivée du nom client), nom original conservé comme métadonnée d'affichage uniquement, type MIME réel détecté par Apache Tika, taille, SHA-256, ticket lié, utilisateur uploadeur, horodatage.
 
-## Sécurité prévue
+## Sécurité réellement appliquée
 
-- Taille, extension, double extension et MIME réel détecté avec Tika.
-- Protection path traversal et noms techniques générés.
-- Autorisation backend selon projet/ticket.
-- Aucun contenu ou secret dans les logs.
-- ClamAV optionnel derrière une abstraction, jamais requis pour le profil dev minimal.
+- Type MIME réel détecté par Apache Tika (`tika-core`), jamais le `Content-Type` déclaré par le client ni l'extension du fichier — liste blanche explicite de types autorisés.
+- Clé de stockage UUID générée côté serveur; `LocalFileSystemStorage` revérifie en plus que le chemin résolu reste sous le répertoire de stockage (défense en profondeur, pas seulement la forme de la clé).
+- Taille limitée à la fois par Spring (`multipart.max-file-size`) et par le service.
+- SHA-256 calculé et stocké pour chaque fichier.
+- `Content-Disposition: attachment` (jamais `inline`), nom de fichier encodé RFC 6266.
+- Autorisation backend selon l'appartenance au projet du ticket (mêmes règles que les commentaires); upload/suppression bloqués sur un projet archivé.
+- Chaque upload et suppression est audité (`ATTACHMENT_CREATED`, `ATTACHMENT_DELETED`).
+- ClamAV n'est pas intégré (décision assumée, pas un oubli — voir [ADR-0021](../adr/0021-attachments-storage.md)); aucun quota par projet/utilisateur.
 
-Les migrations, adapters et tests correspondants n'existent pas encore; ils relèvent de P13.
+## Endpoints
+
+`GET/POST /api/v1/tickets/{id}/attachments`, `GET /api/v1/attachments/{id}/content` (téléchargement en streaming), `DELETE /api/v1/attachments/{id}`.
+
+## Ce qui reste hors périmètre
+
+Aucune UI frontend pour les pièces jointes (P13 est backend uniquement); l'API existe et est testée mais rien ne la consomme encore dans Angular — voir `ENTERPRISE_MIGRATION_REPORT.md`, section « Problèmes et dettes ouverts ».

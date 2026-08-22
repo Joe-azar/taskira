@@ -1,6 +1,6 @@
 # Lab Azure
 
-Voir [ADR-0026](adr/0026-azure-lab.md) pour les décisions complètes.
+Voir [ADR-0026](../adr/0026-azure-lab.md) pour les décisions complètes.
 
 **Ce lab n'a jamais déployé de ressource Azure réelle.** Aucune commande créant une ressource
 (`terraform apply`, `terraform plan` contre un abonnement réel) n'a été exécutée — seules

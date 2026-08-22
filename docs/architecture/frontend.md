@@ -1,19 +1,19 @@
 # Architecture frontend
 
-Statut : Angular 21 opérationnel; upgrade et design system planifiés en phase 6.
+Statut : Angular 22.1.2 (P6), authentification session/cookie sans jeton client (P8). Design system Angular Material intégré progressivement depuis P6.
 
 ## État actuel
 
-Le frontend utilise Angular 21, TypeScript 5.9, RxJS, Reactive Forms, HttpClient, des composants standalone et des routes lazy-loaded.
+Le frontend utilise Angular 22.1.2, TypeScript 6.0.3, RxJS, Reactive Forms, HttpClient, des composants standalone et des routes lazy-loaded.
 
 ```text
 frontend/src/app/
-├── core/       auth, guards, intercepteur, services et composants globaux
+├── core/       auth (session, pas de jeton), guards, intercepteur, services et composants globaux
 ├── layout/     coque applicative
 └── features/   auth, comments, dashboard, projects, tickets, users
 ```
 
-Le JWT est actuellement stocké dans `localStorage`; ce comportement doit rester décrit comme transitoire jusqu'à la phase sécurité.
+Aucun jeton d'authentification n'est stocké côté client (`localStorage`/`sessionStorage`) : l'intercepteur HTTP lit le cookie CSRF (`document.cookie`) et attache `X-XSRF-TOKEN` sur les requêtes mutantes; la session elle-même est un cookie `HttpOnly` que le JavaScript ne peut pas lire — voir [security.md](security.md) et [ADR-0006](../adr/0006-session-cookie-auth.md).
 
 ## Règles cible
 
@@ -25,15 +25,12 @@ Le JWT est actuellement stocké dans `localStorage`; ce comportement doit rester
 - Lazy loading pour les capacités principales.
 - Les guards améliorent l'UX mais ne remplacent aucune autorisation backend.
 
-## Tests actuels
+## Tests
 
-Vingt tests Vitest couvrent l'authentification, les guards, l'intercepteur et le rendu asynchrone du login. Les 9 tests Playwright couvrent login/logout, login invalide, guard anonyme, refus admin pour `USER`, projet create/update/archive, membre add/remove, ticket create/update/status/assign et commentaire create/update/delete. La couverture unitaire des autres features reste à renforcer.
+Vitest couvre l'authentification (session, pas de jeton), les guards, l'intercepteur et le rendu asynchrone du login; Playwright couvre les parcours critiques (auth, projets, membres, tickets, commentaires) sur la stack E2E isolée. Voir [testing-strategy.md](../testing-strategy.md) pour la stratégie et `ENTERPRISE_MIGRATION_REPORT.md` pour les nombres du run le plus récent — ne jamais réutiliser un ancien chiffre ici.
 
-Le lint repose sur `angular-eslint` 21.4.0, ESLint 10.3.0 et `typescript-eslint` 8.59.2. Le run distant validé passe avec 0 erreur et 41 avertissements `any`; cette dette reste visible et doit diminuer progressivement.
+Le lint repose sur `angular-eslint`/ESLint/`typescript-eslint` (versions dans `frontend/package.json`); une dette de typage `any` reste visible et diminue progressivement sans désactiver la règle.
 
-## Évolutions planifiées
+## Runtime de production
 
-- P3 : lint, tests, couverture, build et E2E sont verts dans GitHub Actions; protéger `main` par les checks requis.
-- P6 : Angular 22, Node 24, TypeScript compatible et Angular Material progressif.
-- P8 : cookies/session, XSRF et suppression du stockage JWT après migration validée.
-- P11 : build statique servi par Nginx; `ng serve` reste réservé au développement.
+Depuis P11, le build Angular de production est servi par un Nginx non-root dédié (`frontend/Dockerfile.prod`, `frontend/nginx/default.conf`) qui proxifie `/api/*` vers le backend sur la même origine — `ng serve` reste réservé au développement local.
