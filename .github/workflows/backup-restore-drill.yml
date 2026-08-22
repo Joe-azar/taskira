@@ -78,13 +78,13 @@ jobs:
         id: backup
         shell: pwsh
         run: |
-          $result = & ./scripts/backup/backup-postgres.ps1
-          $result | Write-Host
-          # \S+ (stops at the first space) looked right until tested against this very
-          # repo's own path locally ("...ALL DATA\Taskira...") - real proof that a path
-          # can legitimately contain spaces. .+ backtracks correctly to the " (N bytes)."
-          # suffix instead of assuming no whitespace.
-          $dumpPath = ($result | Select-String -Pattern 'Backup written to (.+) \(\d+ bytes\)\.').Matches[0].Groups[1].Value
+          # A real bug, not assumed: backup-postgres.ps1 reports its progress with
+          # Write-Host, which writes straight to the console and never reaches the
+          # success output stream - regex-parsing that text (an earlier version of this
+          # step) captured nothing and threw "Cannot index into a null array" on the
+          # real GitHub Actions run. The script's actual return value (its final bare
+          # expression) is the dump path; that's what's worth capturing here.
+          $dumpPath = & ./scripts/backup/backup-postgres.ps1 | Select-Object -Last 1
           "dump_path=$dumpPath" >> $env:GITHUB_OUTPUT
 
       - name: Restore the backup into a disposable container
