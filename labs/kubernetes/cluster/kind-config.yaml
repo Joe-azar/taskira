@@ -1,0 +1,28 @@
+# kind cluster config for the Taskira Kubernetes lab (ADR-0024). A single control-plane
+# node is enough - this lab exercises Deployments/Services/Ingress/ConfigMaps/Secrets/PVC
+# and a real scale/update/rollback cycle, none of which need multi-node scheduling.
+#
+# extraPortMappings forwards the host's 80/443 straight to the node's hostPort, which
+# ingress-nginx (deployed with hostPort in vendor/ingress-nginx-kind-deploy.yaml) binds to
+# directly - this is the officially documented kind + ingress-nginx pattern
+# (kind.sigs.k8s.io/docs/user/ingress), not a Taskira-specific invention. Without the
+# matching "ingress-ready=true" node label, ingress-nginx's own nodeSelector in that
+# manifest would never schedule its controller pod at all.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: taskira-lab
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
