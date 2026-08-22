@@ -80,7 +80,11 @@ jobs:
         run: |
           $result = & ./scripts/backup/backup-postgres.ps1
           $result | Write-Host
-          $dumpPath = ($result | Select-String -Pattern 'Backup written to (\S+) ').Matches[0].Groups[1].Value
+          # \S+ (stops at the first space) looked right until tested against this very
+          # repo's own path locally ("...ALL DATA\Taskira...") - real proof that a path
+          # can legitimately contain spaces. .+ backtracks correctly to the " (N bytes)."
+          # suffix instead of assuming no whitespace.
+          $dumpPath = ($result | Select-String -Pattern 'Backup written to (.+) \(\d+ bytes\)\.').Matches[0].Groups[1].Value
           "dump_path=$dumpPath" >> $env:GITHUB_OUTPUT
 
       - name: Restore the backup into a disposable container
