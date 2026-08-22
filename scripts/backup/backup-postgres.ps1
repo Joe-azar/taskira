@@ -54,3 +54,12 @@ docker exec $ContainerName rm -f $containerPath
 $size = (Get-Item $hostPath).Length
 Write-Host "Backup written to $hostPath ($size bytes)."
 Write-Host "Restore and verify it with: & .\scripts\restore\restore-postgres.ps1 -DumpFile `"$hostPath`""
+
+# Write-Host above is for a human watching the console - it never reaches the success
+# output stream, so `$result = & backup-postgres.ps1` would otherwise capture nothing.
+# A real bug, not assumed: the backup-restore-drill workflow used to regex-parse the
+# Write-Host text above to recover this path, which threw "Cannot index into a null
+# array" on the real GitHub Actions run, because $result was empty. This bare
+# expression is the script's actual return value - the one thing a caller should rely
+# on programmatically.
+$hostPath
