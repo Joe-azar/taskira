@@ -10,6 +10,15 @@
 # Local database backups (may contain real data, never commit)
 /backups/
 
+# Terraform (labs/azure/, ADR-0026): never commit real values, state, or the provider
+# cache. .terraform.lock.hcl IS committed on purpose (pins exact provider versions).
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+labs/azure/*.tfvars
+!labs/azure/terraform.tfvars.example
+
 # Logs and temporary files
 *.log
 *.tmp
