@@ -1,0 +1,99 @@
+# kind ships a default StorageClass ("standard", dynamic local-path provisioning) - no
+# PersistentVolume to write by hand, just the claim.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: taskira
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: taskira
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  # RollingUpdate (the default) would start a second pod before stopping the first, and
+  # that second pod would sit forever unable to mount a ReadWriteOnce PVC still held by
+  # the pod being replaced. Recreate stops the old pod first - the only strategy that
+  # works for a single-instance workload on RWO storage without a StatefulSet
+  # (ADR-0024: a StatefulSet's stable-identity/ordered-scaling guarantees aren't needed
+  # for a single PostgreSQL replica that Compose already runs the same way).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          # Same pinned digest already used by infra/docker-compose*.yml (P6/P11/P15).
+          image: postgres:18.6-alpine3.23@sha256:f65cfc1a73466fc0807f4a33496e1c438b19269091c8f998faec871874df8e5e
+          ports:
+            - containerPort: 5432
+              name: postgres
+          envFrom:
+            - configMapRef:
+                name: postgres-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          volumeMounts:
+            # PostgreSQL 18's official image expects a single mount point directly on
+            # /var/lib/postgresql (not .../data) - see ADR-0017, the same lesson learned
+            # migrating infra/docker-compose.yml to Postgres 18 in P6.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "taskira", "-d", "taskira"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "taskira", "-d", "taskira"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
+---
+# Named "postgres" to match backend-config's SPRING_DATASOURCE_URL above - Kubernetes
+# resolves bare Service names within the same namespace exactly like Docker Compose
+# resolves service names on a user-defined network.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: taskira
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

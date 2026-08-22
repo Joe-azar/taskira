@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: taskira
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          # The real image published to GHCR by P15's release workflow, not a locally
+          # rebuilt one (ADR-0024) - pulling an already-tested, already-versioned image
+          # from a registry is what a real cluster does. scripts/demo-rollout.ps1 swaps
+          # this out for a locally built image purely to demonstrate a rolling update,
+          # without touching the real release process.
+          image: ghcr.io/joe-azar/taskira-backend:v0.1.0
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9091
+              name: management
+          envFrom:
+            - configMapRef:
+                name: backend-config
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          # Reuses the exact endpoints Actuator already exposes on the isolated
+          # management port since P10 (management.endpoints.web.exposure.include:
+          # health,info,prometheus; EndpointRequest.toAnyEndpoint().permitAll() in
+          # SecurityConfig) - no new health surface invented for this lab.
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 9091
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9091
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+---
+# Named "backend" on purpose: frontend/nginx/default.conf's proxy_pass resolves this
+# exact hostname at request time (ADR-0024) - the production Nginx image runs here
+# completely unmodified.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: taskira
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
