@@ -916,7 +916,7 @@ Validé localement avant tout push : `actionlint 1.7.12` (0 problème), `docker 
 
 ## Phase 16 — Sauvegarde et restauration testée
 
-Terminée localement sur `feat/phase16-backup-restore`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main` (PR #47, commit de fusion `3eacaaf`; correctif de suivi PR #48, commit de fusion `e03c51f`).
 
 Deux mécanismes distincts (ADR-0023, [`docs/architecture/backup.md`](docs/architecture/backup.md)), pas un seul mal défini :
 
@@ -928,12 +928,14 @@ scripts/restore/restore-postgres.ps1   restauration + vérification, jamais sur 
 
 Aucune base de données de production persistante n'existe encore pour qu'un job planifié la sauvegarde réellement (le staging de P15 est déployé et détruit à la demande, la vraie production reste hors périmètre avant P19) — l'ADR le dit explicitement plutôt que de prétendre le contraire. Le rôle du workflow planifié n'est donc pas de protéger des données réelles, mais de démarrer un vrai PostgreSQL et le vrai backend (toutes les migrations Flyway réellement appliquées), semer de vraies données via l'API HTTP réelle, sauvegarder, restaurer dans un conteneur jetable, puis vérifier que ces données sont réellement revenues — pas seulement que `pg_restore` a rendu un code de sortie zéro.
 
-Deux bugs réels trouvés en exécutant réellement le cycle complet, pas supposés :
+Deux bugs réels trouvés en exécutant réellement le cycle complet avant fusion, pas supposés :
 
 1. **`FATAL: the database system is shutting down`** : le point d'entrée officiel de l'image PostgreSQL démarre un serveur temporaire (socket Unix seulement) pour les scripts d'initialisation, l'arrête, puis démarre le serveur réel — `pg_isready` seul pouvait réussir contre ce serveur temporaire juste avant son arrêt. Corrigé en remplaçant la vérification par une boucle de nouvelle tentative autour d'une vraie requête `psql -c "SELECT 1"`, plus une redirection `stderr` retirée (PowerShell 5.1 la transforme en erreur bloquante sous `$ErrorActionPreference = "Stop"`).
 2. **Extraction du chemin de sauvegarde cassée par un chemin contenant des espaces** : trouvé en répétant localement les étapes du workflow avant fusion (`workflow_dispatch` ne peut pas tester un tout nouveau fichier de workflow avant qu'il n'existe sur la branche par défaut) — le chemin de ce dépôt lui-même (« ...ALL DATA\France\Taskira... ») contient un espace, cassant une regex `\S+`. Corrigé avec une regex gourmande ancrée sur le suffixe fixe du message.
 
 Validation locale réelle avant fusion : cycle complet semer → sauvegarder → restaurer → vérifier exécuté à la main contre la base de développement réelle (10 migrations, données accumulées réelles), y compris les requêtes de vérification exactes utilisées par le workflow.
+
+**Un troisième bug réel, trouvé uniquement par le tout premier run réel du workflow sur GitHub Actions**, après fusion : `workflow_dispatch` ne pouvait littéralement pas être testé avant que le fichier n'existe sur `main`, donc ce run était la première exécution jamais faite dans le vrai environnement GitHub Actions. Il a échoué à l'étape « Back up the seeded database » avec `Cannot index into a null array` — `backup-postgres.ps1` ne rapporte son chemin de sauvegarde que via `Write-Host`, qui écrit directement sur la console et n'atteint jamais le flux de sortie de succès de PowerShell; `$result = & backup-postgres.ps1` capturait donc `$null`, et la répétition locale avant fusion avait testé la regex contre du texte synthétique, pas contre cette sémantique de capture réelle. Corrigé à la racine (PR #48) : le script se termine désormais par une expression nue (`$hostPath`) qui devient sa vraie valeur de retour, capturable directement (`$dumpPath = & backup-postgres.ps1 | Select-Object -Last 1`) sans plus jamais analyser du texte de log. Un second run réel déclenché après ce correctif ([32567218685](https://github.com/Joe-azar/taskira/actions/runs/32567218685)) est passé intégralement au vert, confirmant le mécanisme sur GitHub Actions et pas seulement en local.
 
 ---
 
