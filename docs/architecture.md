@@ -12,6 +12,7 @@ Ce fichier conserve un point d'entrée stable vers l'arborescence d'architecture
 - [CI/CD](architecture/ci-cd.md)
 - [Observabilité](architecture/observability.md)
 - [Déploiement](architecture/deployment.md)
+- [Sauvegarde et restauration](architecture/backup.md)
 
 Documents transversaux :
 
