@@ -883,7 +883,19 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 15 — Registry, release et staging (GHCR, SemVer, rollback)
 
-Terminée localement sur `feat/phase15-registry-staging`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
+
+Pull Request :
+
+```text
+#46
+```
+
+Commit de fusion :
+
+```text
+e2072bc
+```
 
 `.github/workflows/release.yml` (déclenché sur `push` d'un tag `v*.*.*`) publie `ghcr.io/joe-azar/taskira-{backend,frontend}` sous deux tags à chaque fois — la version et le SHA du commit, jamais `latest` seul (ADR-0013) — puis déploie réellement la version tout juste publiée via `infra/docker-compose.staging.yml` (le seul fichier Compose du dépôt qui ne construit jamais d'image localement : `image: ghcr.io/...:${VERSION:?...}`) et exécute la suite Playwright complète contre ce déploiement réel avant de publier une `GitHub Release` formelle (notes auto-générées) — la release n'apparaît que si le déploiement et les tests ont réellement réussi, jamais sur la seule force d'un build vert.
 

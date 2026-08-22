@@ -1,6 +1,6 @@
 # Architecture de déploiement
 
-Statut : développement Compose opérationnel; P11 (production-like) terminée et fusionnée; P15 (registry GHCR, release, staging, rollback) terminée localement, pas encore fusionnée; labs planifiés.
+Statut : développement Compose opérationnel; P11 (production-like) terminée et fusionnée; P15 (registry GHCR, release, staging, rollback) terminée et fusionnée; labs planifiés.
 
 ## Développement actuel
 
@@ -38,7 +38,7 @@ Prometheus/Grafana : profil Compose optionnel "observability", réseau observabi
 
 Secrets requis (`POSTGRES_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`) via `${VAR:?message}` — le Compose refuse de démarrer sans eux plutôt que d'utiliser un mot de passe faible par défaut. Aucun secret réel commité; `infra/.env.prodlike.example` documente les variables.
 
-## Registry et staging P15 (terminée localement, pas encore fusionnée)
+## Registry et staging P15 (terminée et fusionnée)
 
 ```text
 git push origin vX.Y.Z
