@@ -16,7 +16,7 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0010](0010-no-kafka-rabbitmq-main-runtime.md) | Pas de Kafka/RabbitMQ principal | Accepted | Contrainte active |
 | [0011](0011-kubernetes-training-only.md) | Kubernetes réservé au lab | Accepted | Lab P17 |
 | [0012](0012-observability-stack.md) | Prometheus/Grafana | Accepted | Terminée et fusionnée P10 (PR #33) |
-| [0013](0013-versioning-strategy.md) | Semantic Versioning | Proposed | P15 |
+| [0013](0013-versioning-strategy.md) | Semantic Versioning et images immuables | Accepted | Terminée localement P15, pas encore fusionnée |
 | [0014](0014-incremental-test-first-migration.md) | Migration incrémentale test-first | Accepted | Appliquée depuis P2 |
 | [0015](0015-sonarqube-quality-gate.md) | SonarQube Community Build local et éphémère | Accepted | Validée localement P4 |
 | [0016](0016-spring-modulith-boundaries.md) | Spring Modulith pour la vérification des frontières | Accepted | Validée localement P5; cycle project/ticket détecté et corrigé |

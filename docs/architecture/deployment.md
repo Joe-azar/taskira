@@ -1,6 +1,6 @@
 # Architecture de déploiement
 
-Statut : développement Compose opérationnel; P11 (production-like) terminée et fusionnée; staging et labs planifiés.
+Statut : développement Compose opérationnel; P11 (production-like) terminée et fusionnée; P15 (registry GHCR, release, staging, rollback) terminée localement, pas encore fusionnée; labs planifiés.
 
 ## Développement actuel
 
@@ -38,11 +38,43 @@ Prometheus/Grafana : profil Compose optionnel "observability", réseau observabi
 
 Secrets requis (`POSTGRES_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`) via `${VAR:?message}` — le Compose refuse de démarrer sans eux plutôt que d'utiliser un mot de passe faible par défaut. Aucun secret réel commité; `infra/.env.prodlike.example` documente les variables.
 
-## Livraison P15/P16
+## Registry et staging P15 (terminée localement, pas encore fusionnée)
 
-- Images GHCR versionnées par SemVer/SHA.
-- Staging Ubuntu/Compose/Nginx et Playwright post-déploiement.
-- Production manuelle, versionnée et rollbackable.
+```text
+git push origin vX.Y.Z
+  |
+  v .github/workflows/release.yml
+Build + push ghcr.io/joe-azar/taskira-{backend,frontend}:vX.Y.Z et :<SHA>
+  |
+  v
+Déploiement réel sur runner Ubuntu via infra/docker-compose.staging.yml
+(pull direct depuis GHCR, jamais un build local)
+  |
+  v
+Suite Playwright complète (e2e/playwright/tests/) exécutée contre le staging réel
+  |
+  v (seulement si tout précède réussit réellement)
+GitHub Release publiée (notes auto-générées)
+```
+
+`infra/docker-compose.staging.yml` reprend la topologie à trois réseaux de `docker-compose.prodlike.yml` (P11) — `db_net`/`app_net`, seul `frontend` publie un port — sans Prometheus/Grafana (déjà validés en P10/P11, staging se concentre sur la vérification de déploiement, pas la duplication de l'observabilité). Seule différence structurelle : chaque service backend/frontend référence `image: ghcr.io/joe-azar/taskira-{backend,frontend}:${VERSION:?...}` au lieu d'un bloc `build:` — c'est le seul fichier Compose de ce dépôt qui ne construit jamais d'image localement. `VERSION` (tag ou SHA publié) et `POSTGRES_PASSWORD` sont requis via `${VAR:?message}`, `infra/.env.staging.example` documente les variables (jamais de secret réel commité, même convention que `.env.prodlike.example`). Voir [ADR-0013](adr/0013-versioning-strategy.md) pour les décisions complètes de versionnage.
+
+### Rollback
+
+Redéployer une version antérieure ne rejoue jamais une migration Flyway en sens inverse (`AGENTS.md` §13, migrations forward-only) : il s'agit uniquement de redéployer une image applicative antérieure, déjà compatible avec le schéma en place.
+
+```powershell
+# Rollback local ou sur tout hôte Docker atteignable :
+# 1. Éditer infra/.env.staging (VERSION=<tag ou SHA antérieur))
+# 2. Redéployer :
+docker compose -p taskira-staging -f infra/docker-compose.staging.yml --env-file infra/.env.staging up -d
+```
+
+Le mécanisme complet (pull d'une image immuable référencée par tag, healthcheck, resservi derrière le même Nginx) est exactement celui déjà exercé par le workflow de release lui-même à chaque publication — rollback et déploiement normal empruntent le même chemin de code, pas une procédure séparée et non testée.
+
+## Livraison P16+
+
+- Production manuelle, versionnée et rollbackable (au-delà du staging local/CI de P15 — un vrai hôte de production reste hors périmètre tant qu'aucune décision d'hébergement n'est prise).
 - Backups PostgreSQL avec restauration testée, pas seulement `pg_dump` produit.
 
 ## Labs
