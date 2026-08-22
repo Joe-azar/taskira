@@ -1,0 +1,62 @@
+# Overrides /etc/nginx/conf.d/default.conf inside the frontend pod - the published image
+# (ghcr.io/joe-azar/taskira-frontend) bakes in frontend/nginx/default.conf as-is, which
+# hardcodes Docker Compose's embedded DNS resolver (127.0.0.11) and proxies to the bare
+# Service name "backend". Neither works inside a Kubernetes pod: 127.0.0.11 doesn't
+# exist there, and Nginx's own built-in resolver never applies the pod's
+# /etc/resolv.conf search-domain list the way wget/curl/the JVM do, so even a corrected
+# resolver still can't resolve a bare short name. Both real bugs were found and fixed in
+# P17 (ADR-0024) against the raw-manifest lab; this template is the same fix, made
+# namespace-aware via .Release.Namespace instead of the hardcoded "taskira" used there.
+# frontend/nginx/default.conf itself stays untouched - shared and already validated by
+# three Docker Compose runtimes (dev/prodlike/staging).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx-config
+  namespace: {{ .Release.Namespace }}
+data:
+  default.conf: |
+    server {
+        listen 8080;
+        listen [::]:8080;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        resolver kube-dns.kube-system.svc.cluster.local valid=10s;
+
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        gzip on;
+        gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+        location = /healthz {
+            default_type text/plain;
+            return 200 "ok\n";
+        }
+
+        location ^~ /api/ {
+            set $backend_upstream http://backend.{{ .Release.Namespace }}.svc.cluster.local:8080;
+            proxy_pass $backend_upstream;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location ~* "-[A-Za-z0-9_]{6,10}\.(js|css)$" {
+            try_files $uri =404;
+            add_header Cache-Control "public, max-age=31536000, immutable" always;
+        }
+
+        location = /index.html {
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }

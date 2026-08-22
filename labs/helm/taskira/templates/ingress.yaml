@@ -1,0 +1,22 @@
+# No host rule: matches any Host header, reachable directly at http://localhost/ through
+# kind's extraPortMappings without editing the operator's hosts file (same choice as
+# labs/kubernetes/manifests/06-ingress.yaml, P17/ADR-0024).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taskira
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress.proxyBodySize | quote }}
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

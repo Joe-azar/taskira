@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      # A real bug found by actually running `helm upgrade --install --wait`, not
+      # assumed: unlike labs/kubernetes/scripts/up.ps1 (P17), which explicitly applies
+      # postgres and waits for its rollout before applying backend, Helm submits every
+      # template in the chart to the API server together and only waits for readiness at
+      # the end - nothing serializes postgres before backend. The first real install
+      # crash-looped backend twice (`FlywaySqlUnableToConnectToDbException: Connection
+      # to postgres:5432 refused`) before Kubernetes' normal restart backoff let it
+      # eventually succeed once postgres came up. Reusing the exact same postgres image
+      # already pinned above (no new image introduced) and the same pg_isready already
+      # used for postgres's own probes, this initContainer blocks backend from starting
+      # at all until postgres is actually accepting connections - the standard
+      # Kubernetes-native way to express this ordering dependency, and eliminates the
+      # crash-loop noise entirely rather than just tolerating it.
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image }}
+          command:
+            - sh
+            - -c
+            - until pg_isready -h postgres -p 5432 -U "$POSTGRES_USER"; do echo "waiting for postgres..."; sleep 2; done
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_USER
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9091
+              name: management
+          envFrom:
+            - configMapRef:
+                name: backend-config
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 9091
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9091
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+---
+# Named "backend" on purpose: frontend/nginx/default.conf's proxy_pass resolves this
+# exact hostname at request time (ADR-0024/0025).
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

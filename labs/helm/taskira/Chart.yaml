@@ -1,0 +1,11 @@
+apiVersion: v2
+name: taskira
+description: >-
+  Taskira Kubernetes lab chart (P18, ADR-0025) - packages the same manifests already
+  validated as raw YAML in labs/kubernetes/ (P17). Deploys the real GHCR v0.1.0 images
+  published by P15. Requires ingress-nginx already installed on the target cluster (see
+  docs/architecture/kubernetes-lab.md) - not bundled as a chart dependency, since it is
+  cluster infrastructure, not part of the Taskira application itself.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
