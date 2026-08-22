@@ -14,6 +14,7 @@ Ce fichier conserve un point d'entrée stable vers l'arborescence d'architecture
 - [Déploiement](architecture/deployment.md)
 - [Sauvegarde et restauration](architecture/backup.md)
 - [Lab Kubernetes](architecture/kubernetes-lab.md)
+- [Lab Helm](architecture/helm-lab.md)
 
 Documents transversaux :
 

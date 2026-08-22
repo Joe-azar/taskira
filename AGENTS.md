@@ -954,9 +954,26 @@ Corrigés sans jamais toucher `frontend/nginx/default.conf` (partagé par trois 
 
 Vérifié réellement de bout en bout : cluster créé, ingress-nginx (`controller-v1.15.1`, vendu et épinglé), PostgreSQL/backend/frontend déployés, `curl http://localhost/` (200), `/healthz` (200), `/api/v1/auth/me` anonyme (401, vrai `ProblemDetail` avec `requestId`), et une vraie inscription via l'API réelle (201, jusqu'à PostgreSQL). `scripts/demo-rollout.ps1` a ensuite démontré réellement : scaling (2 → 3 replicas frontend), rolling update (image locale reconstruite depuis la source courante, chargée via `kind load docker-image`, jamais publiée sur GHCR — le pipeline de release réel de P15 n'est jamais touché), et rollback (`kubectl rollout undo`, retour confirmé à `ghcr.io/joe-azar/taskira-backend:v0.1.0`). `scripts/down.ps1` a détruit le cluster proprement.
 
+**Deux correctifs de suivi apportés à `scripts/up.ps1` pendant la construction de P18** (bugs latents trouvés en installant réellement le chart Helm, jamais déclenchés par chance lors de la vérification initiale de P17) : `kubectl wait` appelé trop tôt après `kubectl apply` (« no matching resources found », corrigé par une boucle de nouvelle tentative) et le webhook d'admission ingress-nginx pas encore prêt lors de l'application de l'`Ingress` (« connection refused », corrigé par une nouvelle tentative de l'opération réelle). Revérifiés par un run complet réel de ce script après correctif : zéro redémarrage, `curl` à travers l'Ingress confirmant `/` (200) et `/api/v1/auth/me` (401, vrai `ProblemDetail`).
+
 ---
 
-## Phases 18 à 20
+## Phase 18 — Helm Lab
+
+Terminée localement dans `labs/helm/` (ADR-0025), construite après les manifestes bruts de P17 comme l'exige la feuille de route.
+
+Chart applicatif seul (`labs/helm/taskira/`) : namespace, ConfigMaps, Secret (`required` dans le template, échoue au rendu sans mot de passe — jamais de valeur par défaut dans `values.yaml`), PostgreSQL (PVC + Deployment `strategy: Recreate`), backend et frontend — les mêmes vraies images GHCR `v0.1.0` de P15 — et un Ingress. ingress-nginx reste une installation d'infrastructure de cluster préalable (le manifeste vendu de P17), pas une dépendance du chart. Le correctif DNS Nginx de P17 (résolveur Docker absent d'un pod, résolveur intégré de Nginx n'appliquant jamais la liste `search`) devient un template paramétré par `.Release.Namespace` plutôt qu'une valeur codée en dur.
+
+Trois bugs réels trouvés en installant réellement le chart :
+
+1. **Course de démarrage PostgreSQL/backend** : `helm upgrade --install --wait` soumet tous les templates ensemble, contrairement au script raw-manifest de P17 qui sérialise explicitement `postgres` avant `backend` — la première installation a fait crash-looper `backend` deux fois avant que le redémarrage automatique ne réussisse. Corrigé avec un `initContainer` bloquant sur `pg_isready` (réutilisant l'image `postgres` déjà pinnée et le même outil déjà utilisé par les sondes de `postgres`), éliminant le crash-loop plutôt que de le tolérer.
+2. **`kubectl wait` appelé trop tôt**, et 3. **webhook d'admission ingress-nginx pas encore prêt** — les deux mêmes bugs que ceux corrigés en suivi dans `labs/kubernetes/scripts/up.ps1` (P17) ci-dessus, corrigés ici avec le même schéma de nouvelle tentative.
+
+Vérifié réellement de bout en bout, sur une installation entièrement propre après tous les correctifs : `helm lint` (0 échec), `helm template` (12 ressources rendues), cluster créé, `helm upgrade --install --wait` (`STATUS: deployed`, **zéro redémarrage** sur les quatre pods), `curl http://localhost/` (200), `/healthz` (200), `/api/v1/auth/me` anonyme (401, vrai `ProblemDetail`), et une vraie inscription via l'API réelle (201, jusqu'à PostgreSQL). Cluster détruit proprement ensuite.
+
+---
+
+## Phases 19 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 

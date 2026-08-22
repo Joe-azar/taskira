@@ -28,5 +28,6 @@ Un statut `Accepted` signifie que la décision guide le projet; il ne signifie p
 | [0022](0022-exports-batch.md) | Module exports : POI, OpenHTMLtoPDF, PDFBox, ZXing, Spring Batch | Accepted | Terminée et fusionnée P14 (PR #37) |
 | [0023](0023-backup-restore-strategy.md) | Sauvegarde PostgreSQL et restauration réellement testée | Accepted | Terminée et fusionnée P16 (PR #47/#48) |
 | [0024](0024-kubernetes-lab.md) | Lab Kubernetes local, séparé du runtime principal | Accepted | Terminée localement P17 |
+| [0025](0025-helm-lab.md) | Chart Helm construit après les manifestes bruts | Accepted | Terminée localement P18 |
 
 Toute nouvelle décision structurante ou modification substantielle d'un ADR accepté exige un nouvel ADR ou une supersession explicite.
