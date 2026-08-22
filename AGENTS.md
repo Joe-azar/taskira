@@ -973,9 +973,21 @@ Vérifié réellement de bout en bout, sur une installation entièrement propre 
 
 ---
 
-## Phases 19 à 20
+## Phase 19 — Azure Lab
 
-Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
+Terminée localement dans `labs/azure/` (ADR-0026) : architecture et Terraform validés syntaxiquement, **jamais déployés**. Aucune commande créant une ressource Azure réelle (`terraform apply`, `terraform plan` contre un abonnement réel) n'a été exécutée — un abonnement Azure réel et un accord explicite du propriétaire du dépôt restent nécessaires avant tout déploiement (AGENTS.md §38).
+
+Architecture : Application Gateway v2 (point d'entrée public unique, routage par chemin `/api/*` → backend, `/*` → frontend) devant deux Container Apps en ingress interne uniquement, PostgreSQL Flexible Server 18 en accès privé exclusif — trois sous-réseaux VNet dédiés, même principe de segmentation que les trois réseaux Docker de `infra/docker-compose.prodlike.yml` (P11). Un seul nom d'hôte public n'est pas une préférence : le cookie de session `SameSite=Lax` de Taskira (P8, [ADR-0006](docs/adr/0006-session-cookie-auth.md)) n'est jamais envoyé sur une requête `fetch`/XHR cross-origin, donc frontend et backend ne peuvent pas vivre sur deux noms d'hôte distincts sans casser l'authentification sur toute requête mutante. Images backend/frontend réutilisées telles quelles depuis GHCR (`v0.1.0`, P15) — les mêmes déjà déployées dans les labs Kubernetes (P17) et Helm (P18). Azure Container Apps, pas AKS : cohérent avec Taskira restant un monolithe modulaire, les labs P17/P18 restant les environnements dédiés à l'apprentissage de Kubernetes lui-même.
+
+Une vraie découverte documentaire trouvée avant d'écrire le moindre Terraform : contrairement à d'autres registres, Azure Container Apps exige des identifiants explicites pour tirer une image depuis GHCR même si l'image est publique (confirmé via Microsoft Learn) — modélisé comme la variable Terraform sensible `ghcr_pull_token`, sans valeur par défaut, jamais commitée.
+
+`terraform init` (télécharge le provider public, aucun identifiant Azure requis), `terraform fmt` et `terraform validate` ont réellement tourné, entièrement hors ligne. Un vrai bug de schéma trouvé et corrigé au passage : `azurerm_private_dns_zone_virtual_network_link` sur le provider `azurerm` 5.2.0 exige `private_dns_zone_id`, pas la paire `resource_group_name`/`private_dns_zone_name` supposée à tort au premier jet. `terraform validate` confirme 0 erreur, 0 avertissement.
+
+---
+
+## Phase 20 — Technologies conditionnelles / labs
+
+Planifiée, non considérée comme terminée tant que son implémentation et sa validation ne sont pas réellement présentes.
 
 Roadmap générale :
 
