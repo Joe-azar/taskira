@@ -1,0 +1,142 @@
+# Two real bugs, found only by actually curling the deployed lab, not assumed - both in
+# the published frontend image's baked-in frontend/nginx/default.conf, which was never
+# written with Kubernetes in mind:
+#
+# 1. `resolver 127.0.0.11 valid=10s;` is Docker's embedded DNS server, correct for
+#    infra/docker-compose*.yml but absent entirely inside a Kubernetes pod's network
+#    namespace - nginx logged "send() failed (111: Connection refused) ... resolver:
+#    127.0.0.11:53". Fixed below by pointing at the cluster's real DNS Service
+#    (kube-dns.kube-system.svc.cluster.local, confirmed against this cluster's own
+#    /etc/resolv.conf and `kubectl get svc -n kube-system`).
+# 2. Even after that fix, proxy_pass to the bare name "backend" still failed with
+#    "backend could not be resolved (2: Server failure)". Root cause: nginx's built-in
+#    resolver issues a raw DNS query for exactly the literal hostname configured - it
+#    does NOT read /etc/resolv.conf's `search` list the way libc-based tools (wget,
+#    curl, the JVM) do. `wget http://backend:8080` from inside the very same pod
+#    succeeded because glibc/musl expands "backend" against the pod's ndots:5 search
+#    domains (taskira.svc.cluster.local first) before ever querying DNS; nginx's
+#    resolver never performs that expansion, so CoreDNS receives a bare unqualified
+#    query and returns SERVFAIL. Fixed by using the fully-qualified in-cluster name
+#    (backend.taskira.svc.cluster.local) in proxy_pass instead of the bare Service name.
+#
+# Fixing frontend/nginx/default.conf itself was rejected for both (ADR-0024): it's
+# shared by three already-validated Compose runtimes (dev/prodlike/staging), and this
+# lab must not become a reason to touch the primary runtime. This ConfigMap overrides
+# just /etc/nginx/conf.d/default.conf inside the pod - identical to the real file except
+# these two lines.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx-config
+  namespace: taskira
+data:
+  default.conf: |
+    server {
+        listen 8080;
+        listen [::]:8080;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        resolver kube-dns.kube-system.svc.cluster.local valid=10s;
+
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        gzip on;
+        gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+        location = /healthz {
+            default_type text/plain;
+            return 200 "ok\n";
+        }
+
+        location ^~ /api/ {
+            set $backend_upstream http://backend.taskira.svc.cluster.local:8080;
+            proxy_pass $backend_upstream;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location ~* "-[A-Za-z0-9_]{6,10}\.(js|css)$" {
+            try_files $uri =404;
+            add_header Cache-Control "public, max-age=31536000, immutable" always;
+        }
+
+        location = /index.html {
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: taskira
+  labels:
+    app: frontend
+spec:
+  # 2 replicas so scripts/demo-rollout.ps1's `kubectl scale` has something real to show,
+  # not a 0->1 no-op.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/joe-azar/taskira-frontend:v0.1.0
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: frontend-nginx-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: taskira
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 8080

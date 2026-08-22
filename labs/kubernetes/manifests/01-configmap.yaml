@@ -1,0 +1,31 @@
+# Two ConfigMaps, not one shared blob: postgres-config only carries what the postgres
+# container itself reads (POSTGRES_DB/POSTGRES_USER); backend-config only carries what
+# the Spring Boot process reads. Sharing a single ConfigMap via envFrom on both
+# containers would work too, but would leak irrelevant variables into each one for no
+# real benefit.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: taskira
+data:
+  POSTGRES_DB: "taskira"
+  POSTGRES_USER: "taskira"
+---
+# Mirrors infra/docker-compose.prodlike.yml's backend environment (ADR-0019/ADR-0024):
+# same profile, same relative datasource URL (the Service below is named "postgres",
+# exactly like the Compose service it replaces), same HTTP-only session cookie override
+# (this lab has no TLS termination, just like the prodlike Compose runtime).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: taskira
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/taskira"
+  SPRING_DATASOURCE_USERNAME: "taskira"
+  SERVER_PORT: "8080"
+  MANAGEMENT_SERVER_PORT: "9091"
+  APP_CORS_ALLOWED_ORIGINS: "http://localhost"
+  SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"

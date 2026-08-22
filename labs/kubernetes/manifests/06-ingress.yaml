@@ -1,0 +1,25 @@
+# No host rule: matches any Host header, reachable directly at http://localhost/ through
+# kind's extraPortMappings (cluster/kind-config.yaml) without editing the operator's
+# hosts file - this repo never edits host state silently (AGENTS.md, and the same
+# discipline already applied to local backup scheduling in docs/architecture/backup.md).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taskira
+  namespace: taskira
+  annotations:
+    # Default ingress-nginx body size (1m) is too small for a real attachment upload
+    # (P13) - generous headroom, not tuned to an exact figure.
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
