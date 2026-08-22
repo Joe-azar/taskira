@@ -75,6 +75,15 @@ jobs:
     permissions:
       contents: read
       packages: read
+    # Job-level, not step-level: every docker compose -f docker-compose.staging.yml
+    # invocation re-interpolates the whole file (including its ${VERSION:?...}/
+    # ${POSTGRES_PASSWORD:?...} image references) regardless of subcommand - a real
+    # bug found here first-hand: the teardown step failed on a missing POSTGRES_PASSWORD
+    # because these were only set as env: on the "up" step, not the job.
+    env:
+      VERSION: ${{ github.ref_name }}
+      POSTGRES_PASSWORD: staging-ci-only-${{ github.run_id }}
+      FRONTEND_HTTP_PORT: "8081"
 
     steps:
       - name: Check out repository
@@ -89,10 +98,6 @@ jobs:
       # this workflow) - proves the real release artifact deploys, not a local build.
       - name: Deploy the staging stack from the just-published images
         working-directory: infra
-        env:
-          VERSION: ${{ github.ref_name }}
-          POSTGRES_PASSWORD: staging-ci-only-${{ github.run_id }}
-          FRONTEND_HTTP_PORT: "8081"
         run: docker compose -p taskira-staging -f docker-compose.staging.yml up -d
 
       - name: Wait for the staging stack to become healthy
@@ -119,14 +124,18 @@ jobs:
       - name: Use the repository npm version
         run: npm install --global npm@12.0.2
 
-      # frontend/package.json is where @playwright/test lives (see e2e/playwright/
-      # Dockerfile, which reuses it the same way) - no separate e2e/package.json exists.
-      - name: Install locked frontend dependencies
-        working-directory: frontend
-        run: npm ci
+      # Installed at the repo root, not inside frontend/ - mirrors e2e/playwright/
+      # Dockerfile exactly. A real bug found here first-hand: installing into
+      # frontend/node_modules left @playwright/test unreachable from
+      # e2e/playwright/playwright.config.ts's own module resolution, which walks up
+      # from e2e/playwright/ (a sibling of frontend/, never an ancestor) - "Cannot
+      # find module '@playwright/test'" even though npx itself resolved fine.
+      - name: Install locked frontend dependencies at the repo root
+        run: |
+          cp frontend/package.json frontend/package-lock.json .
+          npm ci
 
       - name: Install Playwright browsers
-        working-directory: frontend
         run: npx playwright install --with-deps chromium
 
       # Same base URL for both: staging's frontend container is the only published
@@ -137,8 +146,7 @@ jobs:
           CI: "true"
           PLAYWRIGHT_BASE_URL: http://localhost:8081
           TASKIRA_API_BASE_URL: http://localhost:8081/api/v1
-        run: npx playwright test --config=../e2e/playwright/playwright.config.ts
-        working-directory: frontend
+        run: npx playwright test --config=e2e/playwright/playwright.config.ts
 
       - name: Upload staging smoke test report
         if: always()
