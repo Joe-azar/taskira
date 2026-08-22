@@ -51,9 +51,23 @@ docker run -d --name $ContainerName `
     $Image | Out-Null
 
 Write-Host "Waiting for PostgreSQL to accept connections ..."
+# A real bug, not assumed: the official Postgres image's first-boot entrypoint starts a
+# *temporary* server (Unix socket only) to run init scripts (create the database/role),
+# stops it, then starts the real one. pg_isready alone can report success against that
+# temporary server, moments before it shuts down - pg_restore then hit "the database
+# system is shutting down" despite the readiness check having just passed. A single
+# psql query against the actual target database is the functional check that matters;
+# retrying it (not just pg_isready once) rides out the temporary-server window instead
+# of racing it.
 $deadline = (Get-Date).AddMinutes(2)
 do {
-    $ready = docker exec $ContainerName pg_isready -U $User 2>$null
+    # Stdout only, deliberately not stderr: PowerShell 5.1 wraps a native command's
+    # stderr output in a terminating NativeCommandError under
+    # $ErrorActionPreference = "Stop" (set above), which would abort this retry loop on
+    # its very first expected failure instead of letting it wait out the temporary-server
+    # window described above. The occasional "connection refused" line printing to the
+    # console while this loop retries is expected and harmless.
+    docker exec $ContainerName psql -U $User -d $Database -c "SELECT 1" | Out-Null
     if ($LASTEXITCODE -eq 0) { break }
     if ((Get-Date) -gt $deadline) {
         throw "PostgreSQL did not become ready within 2 minutes."

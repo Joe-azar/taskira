@@ -883,7 +883,19 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 15 — Registry, release et staging (GHCR, SemVer, rollback)
 
-Terminée localement sur `feat/phase15-registry-staging`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
+
+Pull Request :
+
+```text
+#46
+```
+
+Commit de fusion :
+
+```text
+e2072bc
+```
 
 `.github/workflows/release.yml` (déclenché sur `push` d'un tag `v*.*.*`) publie `ghcr.io/joe-azar/taskira-{backend,frontend}` sous deux tags à chaque fois — la version et le SHA du commit, jamais `latest` seul (ADR-0013) — puis déploie réellement la version tout juste publiée via `infra/docker-compose.staging.yml` (le seul fichier Compose du dépôt qui ne construit jamais d'image localement : `image: ghcr.io/...:${VERSION:?...}`) et exécute la suite Playwright complète contre ce déploiement réel avant de publier une `GitHub Release` formelle (notes auto-générées) — la release n'apparaît que si le déploiement et les tests ont réellement réussi, jamais sur la seule force d'un build vert.
 
@@ -902,7 +914,30 @@ Validé localement avant tout push : `actionlint 1.7.12` (0 problème), `docker 
 
 ---
 
-## Phases 16 à 20
+## Phase 16 — Sauvegarde et restauration testée
+
+Terminée localement sur `feat/phase16-backup-restore`, pas encore fusionnée dans `main`.
+
+Deux mécanismes distincts (ADR-0023, [`docs/architecture/backup.md`](docs/architecture/backup.md)), pas un seul mal défini :
+
+```text
+scripts/backup/backup-postgres.ps1     à la demande, contre n'importe quelle base réelle
+scripts/restore/restore-postgres.ps1   restauration + vérification, jamais sur la base active
+.github/workflows/backup-restore-drill.yml   hebdomadaire, prouve que le mécanisme fonctionne toujours
+```
+
+Aucune base de données de production persistante n'existe encore pour qu'un job planifié la sauvegarde réellement (le staging de P15 est déployé et détruit à la demande, la vraie production reste hors périmètre avant P19) — l'ADR le dit explicitement plutôt que de prétendre le contraire. Le rôle du workflow planifié n'est donc pas de protéger des données réelles, mais de démarrer un vrai PostgreSQL et le vrai backend (toutes les migrations Flyway réellement appliquées), semer de vraies données via l'API HTTP réelle, sauvegarder, restaurer dans un conteneur jetable, puis vérifier que ces données sont réellement revenues — pas seulement que `pg_restore` a rendu un code de sortie zéro.
+
+Deux bugs réels trouvés en exécutant réellement le cycle complet, pas supposés :
+
+1. **`FATAL: the database system is shutting down`** : le point d'entrée officiel de l'image PostgreSQL démarre un serveur temporaire (socket Unix seulement) pour les scripts d'initialisation, l'arrête, puis démarre le serveur réel — `pg_isready` seul pouvait réussir contre ce serveur temporaire juste avant son arrêt. Corrigé en remplaçant la vérification par une boucle de nouvelle tentative autour d'une vraie requête `psql -c "SELECT 1"`, plus une redirection `stderr` retirée (PowerShell 5.1 la transforme en erreur bloquante sous `$ErrorActionPreference = "Stop"`).
+2. **Extraction du chemin de sauvegarde cassée par un chemin contenant des espaces** : trouvé en répétant localement les étapes du workflow avant fusion (`workflow_dispatch` ne peut pas tester un tout nouveau fichier de workflow avant qu'il n'existe sur la branche par défaut) — le chemin de ce dépôt lui-même (« ...ALL DATA\France\Taskira... ») contient un espace, cassant une regex `\S+`. Corrigé avec une regex gourmande ancrée sur le suffixe fixe du message.
+
+Validation locale réelle avant fusion : cycle complet semer → sauvegarder → restaurer → vérifier exécuté à la main contre la base de développement réelle (10 migrations, données accumulées réelles), y compris les requêtes de vérification exactes utilisées par le workflow.
+
+---
+
+## Phases 17 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 
