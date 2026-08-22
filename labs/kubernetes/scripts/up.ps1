@@ -31,6 +31,30 @@ function Assert-LastExitCodeZero {
     }
 }
 
+# A real bug found while building the Helm lab (P18) that turned out to be latent here
+# too, not assumed: `kubectl wait` called immediately after `kubectl apply` can run
+# before the Deployment controller has even created the Pod object yet - kubectl treats
+# that as "no matching resources found" and exits non-zero right away instead of waiting
+# for a pod to appear. Retrying the whole wait call rides out that window instead of
+# racing it - the same shape of fix already applied to the Postgres temporary-server
+# race in scripts/restore/restore-postgres.ps1 (P16).
+function Wait-ForPodsReady {
+    param(
+        [string]$Namespace,
+        [string]$Selector,
+        [int]$TimeoutSeconds = 180
+    )
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        kubectl wait --namespace $Namespace --for=condition=ready pod --selector=$Selector --timeout=10s
+        if ($LASTEXITCODE -eq 0) { return }
+        if ((Get-Date) -gt $deadline) {
+            throw "Pods matching '$Selector' in namespace '$Namespace' were not ready within $TimeoutSeconds seconds."
+        }
+        Start-Sleep -Seconds 3
+    } while ($true)
+}
+
 Write-Host "=== 1/7: kind cluster ==="
 # Deliberately not redirecting stderr: `kind get clusters` writes "No kind clusters
 # found." to stderr (with exit code 0) when the list is empty, and PowerShell 5.1 wraps
@@ -50,11 +74,7 @@ else {
 Write-Host "=== 2/7: ingress-nginx (vendored, controller-v1.15.1) ==="
 kubectl apply -f (Join-Path $labRoot "vendor/ingress-nginx-kind-deploy.yaml")
 Assert-LastExitCodeZero "kubectl apply ingress-nginx"
-kubectl wait --namespace ingress-nginx `
-    --for=condition=ready pod `
-    --selector=app.kubernetes.io/component=controller `
-    --timeout=180s
-Assert-LastExitCodeZero "waiting for ingress-nginx controller"
+Wait-ForPodsReady -Namespace "ingress-nginx" -Selector "app.kubernetes.io/component=controller" -TimeoutSeconds 180
 
 Write-Host "=== 3/7: namespace + config ==="
 kubectl apply -f (Join-Path $labRoot "manifests/00-namespace.yaml")
@@ -86,8 +106,22 @@ kubectl rollout status deployment/frontend -n taskira --timeout=180s
 Assert-LastExitCodeZero "frontend rollout"
 
 Write-Host "=== 7/7: ingress ==="
-kubectl apply -f (Join-Path $labRoot "manifests/06-ingress.yaml")
-Assert-LastExitCodeZero "kubectl apply ingress"
+# A second real bug found while building the Helm lab (P18), also latent here: even
+# once the ingress-nginx controller pod reports Ready, its admission webhook HTTPS
+# endpoint (ingress-nginx-controller-admission) can take a little longer to actually
+# start accepting connections - applying an Ingress resource too soon after can fail
+# with "dial tcp ...:443: connect: connection refused" against that webhook. Retrying
+# the real apply rides out that short window rather than guessing at a fixed sleep.
+$maxAttempts = 5
+for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    kubectl apply -f (Join-Path $labRoot "manifests/06-ingress.yaml")
+    if ($LASTEXITCODE -eq 0) { break }
+    if ($attempt -eq $maxAttempts) {
+        throw "kubectl apply ingress failed after $maxAttempts attempts (exit code $LASTEXITCODE)"
+    }
+    Write-Host "kubectl apply ingress failed (attempt $attempt/$maxAttempts), retrying in 5s ..."
+    Start-Sleep -Seconds 5
+}
 
 Write-Host ""
 Write-Host "Taskira lab is up: http://localhost/"
