@@ -1,0 +1,93 @@
+# Deploys a specific, already-published release (see ADR-0013 and .github/workflows/
+# release.yml) - the only compose file in this repo that never builds an image locally.
+# Same three-network production-like topology as docker-compose.prodlike.yml (P11); the
+# difference is purely where the images come from: a real GHCR pull here, a local build
+# there. Rolling back means nothing more than re-running this file with an older VERSION.
+name: taskira-staging
+
+services:
+  postgres:
+    image: postgres:18.6-alpine3.23@sha256:f65cfc1a73466fc0807f4a33496e1c438b19269091c8f998faec871874df8e5e
+    container_name: taskira-postgres-staging
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskira
+      POSTGRES_USER: taskira
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set - see infra/.env.staging.example}
+    networks:
+      - db_net
+    volumes:
+      - taskira_postgres_data_staging:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskira -d taskira"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No published port: only backend, on db_net, can ever reach this service.
+
+  backend:
+    image: ghcr.io/joe-azar/taskira-backend:${VERSION:?VERSION must be set to a published release tag or SHA - see infra/.env.staging.example}
+    container_name: taskira-backend-staging
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - db_net
+      - app_net
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taskira
+      SPRING_DATASOURCE_USERNAME: taskira
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set - see infra/.env.staging.example}
+      SERVER_PORT: 8080
+      MANAGEMENT_SERVER_PORT: 9091
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_HTTP_PORT:-8081}
+      # Same rationale as docker-compose.prodlike.yml (ADR-0019): this runtime serves
+      # plain HTTP on a local port, no certificate. Real production must not set this.
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
+    volumes:
+      - taskira_attachments_data_staging:/app/data/attachments
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9091/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # No published ports: reachable only over app_net, by frontend.
+
+  frontend:
+    image: ghcr.io/joe-azar/taskira-frontend:${VERSION:?VERSION must be set to a published release tag or SHA - see infra/.env.staging.example}
+    container_name: taskira-frontend-staging
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - app_net
+    ports:
+      - "${FRONTEND_HTTP_PORT:-8081}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    # The only service in this file that publishes a host port - same single entry
+    # point pattern as docker-compose.prodlike.yml.
+
+networks:
+  # Two networks (not three - no observability_net here, Prometheus/Grafana already
+  # proven in P10/P11's prodlike runtime; staging's job is to prove the published
+  # images work, not to duplicate that): frontend can reach backend but never postgres.
+  app_net:
+    name: taskira_staging_app_net
+  db_net:
+    name: taskira_staging_db_net
+
+volumes:
+  # Separate from docker-compose.yml/docker-compose.prodlike.yml on purpose - staging
+  # is a fully independent environment, not sharing data with either.
+  taskira_postgres_data_staging:
+    name: taskira_postgres_data_staging
+  taskira_attachments_data_staging:
+    name: taskira_attachments_data_staging

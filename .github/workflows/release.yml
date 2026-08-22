@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+# Never cancel a release mid-publish - a half-pushed image tag left behind by a
+# cancelled run would be a real problem, unlike the dev-loop workflows where
+# cancel-in-progress just saves runner time on a superseded push.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    name: Build and push ${{ matrix.service }} image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        include:
+          - service: backend
+            context: backend
+            dockerfile: backend/Dockerfile
+          - service: frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile.prod
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Compute lowercase image owner
+        id: owner
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login "${{ env.REGISTRY }}" -u "${{ github.actor }}" --password-stdin
+
+      # Two tags, never only "latest" (ADR-0013): the version tag is what a human or
+      # infra/docker-compose.staging.yml's VERSION variable references, the commit SHA
+      # tag is what makes any published image traceable back to the exact source that
+      # produced it, independent of what a tag gets moved to later.
+      - name: Build ${{ matrix.service }} image
+        run: >-
+          docker build
+          -f ${{ matrix.dockerfile }}
+          -t ${{ env.REGISTRY }}/${{ steps.owner.outputs.owner }}/taskira-${{ matrix.service }}:${{ github.ref_name }}
+          -t ${{ env.REGISTRY }}/${{ steps.owner.outputs.owner }}/taskira-${{ matrix.service }}:${{ github.sha }}
+          ${{ matrix.context }}
+
+      - name: Push ${{ matrix.service }} images
+        run: |
+          docker push "${{ env.REGISTRY }}/${{ steps.owner.outputs.owner }}/taskira-${{ matrix.service }}:${{ github.ref_name }}"
+          docker push "${{ env.REGISTRY }}/${{ steps.owner.outputs.owner }}/taskira-${{ matrix.service }}:${{ github.sha }}"
+
+  staging-smoke-test:
+    name: Deploy to staging and smoke test
+    needs: build-and-push
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    # Job-level, not step-level: every docker compose -f docker-compose.staging.yml
+    # invocation re-interpolates the whole file (including its ${VERSION:?...}/
+    # ${POSTGRES_PASSWORD:?...} image references) regardless of subcommand - a real
+    # bug found here first-hand: the teardown step failed on a missing POSTGRES_PASSWORD
+    # because these were only set as env: on the "up" step, not the job.
+    env:
+      VERSION: ${{ github.ref_name }}
+      POSTGRES_PASSWORD: staging-ci-only-${{ github.run_id }}
+      FRONTEND_HTTP_PORT: "8081"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login "${{ env.REGISTRY }}" -u "${{ github.actor }}" --password-stdin
+
+      # Pulls the images build-and-push just published (VERSION = the tag that triggered
+      # this workflow) - proves the real release artifact deploys, not a local build.
+      - name: Deploy the staging stack from the just-published images
+        working-directory: infra
+        run: docker compose -p taskira-staging -f docker-compose.staging.yml up -d
+
+      - name: Wait for the staging stack to become healthy
+        run: |
+          for _ in $(seq 1 30); do
+            backend_status=$(docker inspect --format='{{.State.Health.Status}}' taskira-backend-staging 2>/dev/null || echo "starting")
+            frontend_status=$(docker inspect --format='{{.State.Health.Status}}' taskira-frontend-staging 2>/dev/null || echo "starting")
+            echo "backend=$backend_status frontend=$frontend_status"
+            if [ "$backend_status" = "healthy" ] && [ "$frontend_status" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Staging stack never became healthy." >&2
+          exit 1
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 24.19.0
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Use the repository npm version
+        run: npm install --global npm@12.0.2
+
+      # Installed at the repo root, not inside frontend/ - mirrors e2e/playwright/
+      # Dockerfile exactly. A real bug found here first-hand: installing into
+      # frontend/node_modules left @playwright/test unreachable from
+      # e2e/playwright/playwright.config.ts's own module resolution, which walks up
+      # from e2e/playwright/ (a sibling of frontend/, never an ancestor) - "Cannot
+      # find module '@playwright/test'" even though npx itself resolved fine.
+      - name: Install locked frontend dependencies at the repo root
+        run: |
+          cp frontend/package.json frontend/package-lock.json .
+          npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # Same base URL for both: staging's frontend container is the only published
+      # port, and Nginx proxies /api/* internally - exactly how a real browser reaches
+      # the app, unlike the isolated e2e stack where backend also gets its own port.
+      - name: Run the Playwright suite against the staging deployment
+        env:
+          CI: "true"
+          PLAYWRIGHT_BASE_URL: http://localhost:8081
+          TASKIRA_API_BASE_URL: http://localhost:8081/api/v1
+        run: npx playwright test --config=e2e/playwright/playwright.config.ts
+
+      - name: Upload staging smoke test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-smoke-test-report
+          path: e2e/playwright/playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Capture staging Compose logs
+        if: always()
+        working-directory: infra
+        run: docker compose -p taskira-staging -f docker-compose.staging.yml logs --no-color > staging.log 2>&1 || true
+
+      - name: Upload staging diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-diagnostics
+          path: infra/staging.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Tear down the staging stack
+        if: always()
+        working-directory: infra
+        run: docker compose -p taskira-staging -f docker-compose.staging.yml down --volumes --remove-orphans
+
+  publish-release:
+    name: Publish GitHub Release
+    # Only runs after a real, successful staging deployment and smoke test - a release
+    # is never declared official on the strength of a green build alone.
+    needs: staging-smoke-test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Create GitHub Release with auto-generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" --title "Taskira ${{ github.ref_name }}" --generate-notes

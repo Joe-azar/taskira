@@ -822,7 +822,19 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ## Phase 14 — Exports (POI, OpenHTMLtoPDF, PDFBox, ZXing, Spring Batch)
 
-Terminée localement sur `feat/phase14-exports`, pas encore fusionnée dans `main`.
+Terminée et fusionnée dans `main`.
+
+Pull Request :
+
+```text
+#37
+```
+
+Commit de fusion :
+
+```text
+2f84d5b
+```
 
 Module `exports` (Spring Modulith, fermé par défaut) couvre trois cas réels distincts, pas une simple vitrine technologique — voir [ADR-0022](docs/adr/0022-exports-batch.md) pour le détail complet des décisions.
 
@@ -869,7 +881,28 @@ Ces nombres sont historiques et augmenteront normalement avec les futures phases
 
 ---
 
-## Phases 15 à 20
+## Phase 15 — Registry, release et staging (GHCR, SemVer, rollback)
+
+Terminée localement sur `feat/phase15-registry-staging`, pas encore fusionnée dans `main`.
+
+`.github/workflows/release.yml` (déclenché sur `push` d'un tag `v*.*.*`) publie `ghcr.io/joe-azar/taskira-{backend,frontend}` sous deux tags à chaque fois — la version et le SHA du commit, jamais `latest` seul (ADR-0013) — puis déploie réellement la version tout juste publiée via `infra/docker-compose.staging.yml` (le seul fichier Compose du dépôt qui ne construit jamais d'image localement : `image: ghcr.io/...:${VERSION:?...}`) et exécute la suite Playwright complète contre ce déploiement réel avant de publier une `GitHub Release` formelle (notes auto-générées) — la release n'apparaît que si le déploiement et les tests ont réellement réussi, jamais sur la seule force d'un build vert.
+
+`infra/docker-compose.staging.yml` reprend la topologie à trois réseaux de `docker-compose.prodlike.yml` (P11) sans Prometheus/Grafana (déjà validés en P10/P11; staging se concentre sur la vérification de déploiement). Le rollback n'est pas une procédure séparée : redéployer une version antérieure consiste à relancer ce même fichier avec un `VERSION` différent — exactement le chemin de code déjà emprunté par le workflow de release lui-même.
+
+Première version réellement publiée : `v0.1.0`, pas `v1.0.0` — SemVer `0.x` signale explicitement « pré-1.0, en évolution », cohérent avec le fait que les phases 15 à 20 ne sont pas terminées. Le numéro de version n'est pas indexé sur le numéro de phase.
+
+Deux bugs réels trouvés par le premier run réel déclenché par tag (pas supposés, corrigés avant le second run) :
+
+1. **`POSTGRES_PASSWORD`/`VERSION` en `env:` de step, pas de job** : chaque invocation `docker compose -f docker-compose.staging.yml` réinterpole tout le fichier quelle que soit la sous-commande — l'étape de démontage (`down`) échouait avec la même erreur de variable requise absente que le fichier est censé lever volontairement en cas d'absence réelle. Corrigé en déplaçant ces variables au niveau du job.
+2. **`npm ci` exécuté dans `frontend/`** : `e2e/playwright/playwright.config.ts` résout son propre `import ... from '@playwright/test'` relativement à l'emplacement du fichier de configuration (un répertoire frère de `frontend/`, jamais un ancêtre), pas relativement au répertoire depuis lequel `npx` est invoqué — `Cannot find module '@playwright/test'` malgré une résolution `npx` elle-même correcte. Corrigé en installant à la racine du dépôt, reproduisant exactement l'approche déjà utilisée par `e2e/playwright/Dockerfile`.
+
+Second run réel entièrement vert : images GHCR construites et poussées, stack staging démarrée et saine, 10/10 Playwright contre le déploiement réel, `GitHub Release v0.1.0` publiée avec notes auto-générées (<https://github.com/Joe-azar/taskira/releases/tag/v0.1.0>). Rollback vérifié réellement en plus, indépendamment du run CI : `v0.1.0` retiré (`docker pull`) et redéployé localement via `infra/docker-compose.staging.yml`, stack saine, `/api/v1/auth/me` (401 via le proxy Nginx), `/healthz` (200) et le SPA (200) tous confirmés fonctionnels avant démontage propre.
+
+Validé localement avant tout push : `actionlint 1.7.12` (0 problème), `docker compose config` (cas valide et cas de rejet de variable requise absente).
+
+---
+
+## Phases 16 à 20
 
 Planifiées mais non considérées comme terminées tant que leur implémentation et leur validation ne sont pas réellement présentes.
 

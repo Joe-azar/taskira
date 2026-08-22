@@ -5,6 +5,7 @@
 .env.*
 !.env.example
 !.env.prodlike.example
+!.env.staging.example
 
 # Local database backups (may contain real data, never commit)
 /backups/
